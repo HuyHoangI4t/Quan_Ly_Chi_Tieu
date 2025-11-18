@@ -13,18 +13,14 @@
         <div class="container" id="container">
             <div class="form-container sign-up-container">
                 <form id="signUpForm">
-                    <h1>Create Account</h1>
+                    <h1>Tạo tài khoản</h1>
                     <div class="social-container">
                         <a href="#" class="social"><i class="fab fa-google"></i></a>
                     </div>
-                    <span>or use your email for registration</span>
-                    <div class="input-group">
-                        <i class="fas fa-user icon"></i>
-                        <input type="text" placeholder="Full Name" name="full_name" autocomplete="name" required />
-                    </div>
+                    <span>hoặc sử dụng email của bạn để đăng ký</span>
                     <div class="input-group">
                         <i class="fas fa-at icon"></i>
-                        <input type="text" placeholder="Username" name="username" autocomplete="username" required />
+                        <input type="text" placeholder="Họ Tên" name="full_name" autocomplete="fullsername" required />
                     </div>
                     <div class="input-group">
                         <i class="fas fa-envelope icon"></i>
@@ -32,56 +28,56 @@
                     </div>
                     <div class="input-group">
                         <i class="fas fa-lock icon"></i>
-                        <input type="password" placeholder="Password" name="password" id="password2" autocomplete="new-password" required />
+                        <input type="password" placeholder="Mật khẩu" name="password" id="password2" autocomplete="new-password" required />
                         <span class="toggle-password" onclick="togglePassword('password2')">
                             <i class="fas fa-eye"></i>
                         </span>
                     </div>
                     <div class="input-group">
                         <i class="fas fa-lock icon"></i>
-                        <input type="password" placeholder="Confirm Password" name="confirm_password" id="confirmPassword" autocomplete="new-password" required />
+                        <input type="password" placeholder="Xác nhận mật khẩu" name="confirm_password" id="confirmPassword" autocomplete="new-password" required />
                         <span class="toggle-password" onclick="togglePassword('confirmPassword')">
                             <i class="fas fa-eye"></i>
                         </span>
                     </div>
-                    <button class="btn-submit" type="submit">SIGN UP</button>
+                    <button class="btn-submit" type="submit">ĐĂNG KÝ</button>
                 </form>
             </div>
 
             <div class="form-container sign-in-container">
                 <form id="signInForm">
-                    <h1>Sign in to FinTrack</h1>
+                    <h1>Đăng nhập vào FinTrack</h1>
                     <div class="social-container">
                         <a href="#" class="social"><i class="fab fa-google"></i></a>
                     </div>
-                    <span>or use your email account</span>
+                    <span>hoặc sử dụng tài khoản email của bạn</span>
                     <div class="input-group">
                         <i class="fas fa-envelope icon"></i>
                         <input type="email" placeholder="Email" name="email" autocomplete="email" required />
                     </div>
                     <div class="input-group">
                         <i class="fas fa-lock icon"></i>
-                        <input type="password" placeholder="Password" name="password" id="password" autocomplete="current-password" required />
+                        <input type="password" placeholder="Mật khẩu" name="password" id="password" autocomplete="current-password" required />
                         <span class="toggle-password" onclick="togglePassword('password')">
                             <i class="fas fa-eye"></i>
                         </span>
                     </div>
-                    <a href="#">Forgot your password?</a>
-                    <button class="btn-submit" type="submit">SIGN IN</button>
+                    <a href="#">Quên mật khẩu?</a>
+                    <button class="btn-submit" type="submit">ĐĂNG NHẬP</button>
                 </form>
             </div>
 
             <div class="overlay-container">
                 <div class="overlay">
                     <div class="overlay-panel overlay-left">
-                        <h1>Welcome Back!</h1>
-                        <p>To keep connected with us please login with your personal info</p>
-                        <button class="ghost" id="signIn">SIGN IN</button>
+                        <h1>Chào mừng trở lại!</h1>
+                        <p>Để giữ kết nối với chúng tôi, vui lòng đăng nhập bằng thông tin cá nhân của bạn</p>
+                        <button class="ghost" id="signIn">ĐĂNG NHẬP</button>
                     </div>
                     <div class="overlay-panel overlay-right">
-                        <h1>Hello, Friend!</h1>
-                        <p>Enter your personal details and start journey with us</p>
-                        <button class="ghost" id="signUp">SIGN UP</button>
+                        <h1>Chào bạn!</h1>
+                        <p>Nhập thông tin cá nhân của bạn và bắt đầu hành trình với chúng tôi</p>
+                        <button class="ghost" id="signUp">ĐĂNG KÝ</button>
                     </div>
                 </div>
             </div>

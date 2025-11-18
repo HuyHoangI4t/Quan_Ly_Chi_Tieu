@@ -60,7 +60,7 @@ class App
             }
         } else {
             // Nếu không có URL nào được cung cấp, hãy chuyển hướng tới dashboard
-            header('Location: ' . BASE_URL . '/dashboard');
+            header('Location: ' . BASE_URL . '/login_signup');
             exit();
         }
     }
