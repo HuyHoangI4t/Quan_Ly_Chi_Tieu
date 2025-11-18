@@ -7,6 +7,9 @@
     --border: #ecf0f1;
     --bg-main: #f5f7fa;
 }
+html {
+    height: 100%;
+}
 
 * {
     margin: 0;
@@ -17,9 +20,11 @@
 body {
     font-family: 'Segoe UI', -apple-system, system-ui, 'Helvetica Neue', Roboto, sans-serif;
     background: var(--bg-main);
+    min-height: 100vh; 
+    height: 100%; 
+    overflow: hidden; 
 }
 
-/* Page wrapper spacing to match mockup */
 .page-bg {
     display: flex;
     align-items: center;
