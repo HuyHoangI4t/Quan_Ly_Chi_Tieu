@@ -19,7 +19,7 @@ Trước khi chạy ứng dụng này, hãy đảm bảo bạn đã cài đặt 
 - **XAMPP** (hoặc bất kỳ máy chủ web nào hỗ trợ PHP và MySQL)
 - **PHP 7.4 trở lên**
 - **MySQL 5.7 trở lên**
-- **Git** (để sao chép kho lưu trữ)
+- **Git**
 - **Trình duyệt web** (Chrome, Firefox, Safari, v.v.)
 
 ## Cài Đặt
@@ -29,11 +29,9 @@ Trước khi chạy ứng dụng này, hãy đảm bảo bạn đã cài đặt 
 Mở terminal/command prompt và chạy:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/HuyHoangI4t/Quan_Ly_Chi_Tieu.git
 cd Quan_Ly_Chi_Tieu
 ```
-
-Thay thế `<repository-url>` bằng URL kho lưu trữ Git thực tế.
 
 ### Bước 2: Thiết Lập Dự Án
 
@@ -58,7 +56,7 @@ Thay thế `<repository-url>` bằng URL kho lưu trữ Git thực tế.
 1. Mở `config/database.php`
 2. Cập nhật các hằng số nếu cần:
    ```php
-   define('DB_HOST', '127.0.0.1');
+   define('DB_HOST', '127.0.0.1'); // hoặc  define('DB_HOST', 'localhost');
    define('DB_USER', 'root');
    define('DB_PASS', ''); // Thêm mật khẩu nếu đã đặt
    define('DB_NAME', 'quan_ly_chi_tieu');
@@ -95,17 +93,17 @@ Thay thế `<repository-url>` bằng URL kho lưu trữ Git thực tế.
 ```
 Quan_Ly_Chi_Tieu/
 ├── app/
-│   ├── controllers/     # Bộ điều khiển ứng dụng
-│   ├── core/           # Lớp ứng dụng cốt lõi
-│   ├── models/         # Mô hình dữ liệu
-│   └── views/          # Mẫu giao diện
-├── config/             # Tệp cấu hình
-├── database/           # Lược đồ cơ sở dữ liệu và di chuyển
-├── public/             # Tài sản web công khai
-│   ├── css/           # Bảng kiểu
-│   ├── js/            # Tệp JavaScript
-│   └── images/        # Tài sản hình ảnh
-└── README.md          # Tệp này
+│   ├── controllers/       # Bộ điều khiển ứng dụng
+│   ├── core/              # Lớp ứng dụng cốt lõi
+│   ├── models/            # Mô hình dữ liệu
+│   └── views/             # Mẫu giao diện
+├── config/                # Tệp cấu hình
+├── database/              # Lược đồ cơ sở dữ liệu và di chuyển
+├── public/                # Tài sản web công khai
+│   ├── css/               # Bảng kiểu
+│   ├── js/                # Tệp JavaScript
+│   └── images/            # Tài sản hình ảnh
+└── README.md              # Tệp này
 ```
 
 ## Công Nghệ Sử Dụng
