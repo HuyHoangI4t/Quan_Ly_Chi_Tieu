@@ -1,91 +1,81 @@
 <?php
-
+namespace App\Core;
 
 class App
 {
-    private $controller = 'login_signup';
-    private $method = 'index';
-    private $params = [];
+        protected $controller = 'Login_signup'; // Default controller for now
+        protected $method = 'index'; // Default method
+        protected $params = [];
+    
+        public function __construct()
+        {
+        }
+    
+        public function run()
+        {
+            $url = $this->parseUrl();
+    
+            // If no controller is specified, use the default Login_signup controller
+            if (empty($url[0])) {
+                $this->controller = 'Login_signup';
+            } else {
+                // Check if controller file exists for the requested URL
+                if (file_exists(APP_PATH . '/controllers/' . ucfirst($url[0]) . '.php')) {
+                    $this->controller = ucfirst($url[0]);
+                    unset($url[0]);
+                } else {
+                    // Controller not found, default to Login_signup
+                    $this->controller = 'Login_signup'; 
+                }
+            }
+            // Require the controller file (use @ to suppress warnings if it was default Login_signup)
+            @require_once APP_PATH . '/controllers/' . $this->controller . '.php';
+    
+            // Instantiate the controller with its full namespace
+            $controllerClass = 'App\\Controllers\\' . $this->controller;
+            $this->controller = new $controllerClass(); // No params to constructor for now
+    
+            if (isset($url[1])) {
+                // Check if the method exists in the controller
+                if (method_exists($this->controller, $url[1])) {
+                    $this->method = $url[1];
+                    unset($url[1]);
+                } else {
+                    // Method not found, default to index method
+                    $this->method = 'index';
+                }
+            }
+        $this->params = $url ? array_values($url) : [];
 
-    public function __construct()
-    {
-
-        // Tải cấu hình
-        require_once CONFIG_PATH . '/database.php';
-
-        // Bao gồm các lớp lõi
-        require_once APP_PATH . '/core/Controllers.php';
-        require_once APP_PATH . '/core/Views.php';
-        require_once APP_PATH . '/core/ConnectDB.php';
+        call_user_func_array([$this->controller, $this->method], $this->params);
     }
 
-    public function run()
+    public function parseUrl()
     {
-        $this->parseUrl();
-        $this->loadController();
-        $this->callMethod();
-    }
-
-    private function parseUrl()
-    {
+        $url = [];
         if (isset($_GET['url'])) {
-            $url = rtrim($_GET['url'], '/');
-            $url = filter_var($url, FILTER_SANITIZE_URL);
-            $url = explode('/', $url);
-
-            // Chuyển hướng /login và /register tới /login_signup
-            if (isset($url[0]) && ($url[0] == 'login' || $url[0] == 'register') && !isset($url[1])) {
-                header('Location: ' . BASE_URL . '/login_signup');
-                exit();
-            }
-
-            // Xử lý trường hợp đặc biệt cho 'login_signup'
-            if (isset($url[0]) && $url[0] == 'login_signup' && !isset($url[1])) {
-                $url[1] = 'index'; // method = 'index'
-            }
-
-            // Bộ điều khiển
-            if (!empty($url[0])) {
-                $this->controller = ucfirst($url[0]);
-            }
-
-            // Phương thức
-            if (!empty($url[1])) {
-                $this->method = $url[1];
-            }
-
-            // Tham số
-            if (count($url) > 2) {
-                $this->params = array_slice($url, 2);
-            }
+            $url = explode('/', filter_var(rtrim($_GET['url'], '/'), FILTER_SANITIZE_URL));
         } else {
-            // Nếu không có URL nào được cung cấp, hãy chuyển hướng tới dashboard
-            header('Location: ' . BASE_URL . '/login_signup');
-            exit();
-        }
-    }
+            // Fallback for when $_GET['url'] is not populated by mod_rewrite
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+            $baseUrl = BASE_URL; // BASE_URL is defined in public/index.php
 
-    private function loadController()
-    {
-        $controllerFile = APP_PATH . '/controllers/' . $this->controller . '.php';
+            // Remove BASE_URL from REQUEST_URI to get the clean path
+            if ($baseUrl !== '' && strpos($requestUri, $baseUrl) === 0) {
+                $path = substr($requestUri, strlen($baseUrl));
+            } else {
+                $path = $requestUri;
+            }
 
-        if (file_exists($controllerFile)) {
-            require_once $controllerFile;
-            $this->controller = new $this->controller();
-        } else {
-            // Tải bộ điều khiển mặc định
-            require_once APP_PATH . '/controllers/Login_signup.php';
-            $this->controller = new Login_signup();
+            // Remove any query string parameters
+            $path = strtok($path, '?');
+            // Remove leading/trailing slashes
+            $path = trim($path, '/');
+            
+            if (!empty($path)) {
+                $url = explode('/', $path);
+            }
         }
-    }
-
-    private function callMethod()
-    {
-        if (method_exists($this->controller, $this->method)) {
-            call_user_func_array([$this->controller, $this->method], $this->params);
-        } else {
-            // Gọi phương thức mặc định
-            call_user_func([$this->controller, 'index']);
-        }
+        return $url;
     }
 }

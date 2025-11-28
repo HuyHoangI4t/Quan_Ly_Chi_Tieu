@@ -1,0 +1,29 @@
+{
+    "name": "smartspending/app",
+    "description": "Smart Spending - Personal Finance Management",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "HUYHOANG",
+            "email": "huyhoangpro187@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=7.4",
+        "ext-pdo": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "App\\Core\\": "app/core/",
+            "App\\Controllers\\": "app/controllers/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}

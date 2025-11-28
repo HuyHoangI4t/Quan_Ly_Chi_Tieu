@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartSpending - Quản Lý Chi Tiêu</title>
-    <link rel="stylesheet" href="<?= BASE_URL; ?>/css/login_signup.css">
+    <link rel="stylesheet" href="<?= BASE_URL; ?>/public/css/login_signup.css">
+    <script></script>
 </head>
 
 <body>
@@ -20,7 +21,7 @@
                     <span>hoặc sử dụng email của bạn để đăng ký</span>
                     <div class="input-group">
                         <i class="fas fa-at icon"></i>
-                        <input type="text" placeholder="Họ Tên" name="full_name" autocomplete="fullsername" required />
+                        <input type="text" placeholder="Họ Tên" name="full_name"@/>
                     </div>
                     <div class="input-group">
                         <i class="fas fa-envelope icon"></i>

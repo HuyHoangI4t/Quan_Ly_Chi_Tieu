@@ -1,120 +1,140 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener('DOMContentLoaded', function() {
 
-    // --- CHART DESTRUCTION ---
-    // To prevent "Canvas is already in use" error, destroy existing charts before creating new ones.
-    if (window.lineChart && typeof window.lineChart.destroy === 'function') {
-        window.lineChart.destroy();
-    }
-    if (window.pieChart && typeof window.pieChart.destroy === 'function') {
-        window.pieChart.destroy();
+    // --- Data for Line Chart (from PHP) ---
+    let lineLabels = [];
+    let lineIncomeData = [];
+    let lineExpenseData = [];
+    if (window.lineChartData && window.lineChartData.labels) {
+        lineLabels = window.lineChartData.labels;
+        lineIncomeData = window.lineChartData.income;
+        lineExpenseData = window.lineChartData.expense;
     }
 
-    // --- 1. BIỂU ĐỒ ĐƯỜNG (Thu vs Chi) ---
-    const lineChartCanvas = document.getElementById('lineChart');
-    if (lineChartCanvas) {
-        const ctx = lineChartCanvas.getContext('2d');
-        window.lineChart = new Chart(ctx, {
-            type: 'line',
+    // --- Data for Pie Chart (from PHP) ---
+    let pieLabels = ['Không có dữ liệu'];
+    let pieData = [1];
+    if (window.pieChartData && window.pieChartData.length > 0) {
+        pieLabels = window.pieChartData.map(item => item.name);
+        pieData = window.pieChartData.map(item => item.total);
+    }
+
+
+    // Bar Chart: Income vs Expense
+    const lineCtx = document.getElementById('lineChart');
+    if (lineCtx) {
+        new Chart(lineCtx, {
+            type: 'bar',
             data: {
-                labels: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6'],
-                datasets: [
-                    {
-                        label: 'Thu nhập',
-                        data: [12000, 15000, 13000, 16000, 17000, 19000],
-                        borderColor: '#00b083',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2.5,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#00b083',
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Chi tiêu',
-                        data: [9000, 10000, 11000, 12000, 12500, 13000],
-                        borderColor: '#ff6b6b',
-                        backgroundColor: 'transparent',
-                        borderWidth: 2.5,
-                        pointRadius: 0,
-                        tension: 0.4
-                    }
-                ]
+                labels: lineLabels,
+                datasets: [{
+                    label: 'Thu nhập',
+                    data: lineIncomeData,
+                    backgroundColor: '#10B981',
+                    borderRadius: 8,
+                }, {
+                    label: 'Chi tiêu',
+                    data: lineExpenseData,
+                    backgroundColor: '#EF4444',
+                    borderRadius: 8,
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        align: 'center',
-                        labels: {
-                            usePointStyle: true,
-                            boxWidth: 8,
-                            font: { size: 12, family: "'Poppins', sans-serif" },
-                            color: '#888'
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#E5E7EB', // Lighter grid lines
+                            borderDash: [5, 5], // Dashed lines
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                if (value >= 1000000) return (value / 1000000) + 'tr';
+                                if (value >= 1000) return (value / 1000) + 'k';
+                                return value;
+                            }
                         }
                     },
+                    x: {
+                        grid: {
+                            display: false, // Hide X-axis grid lines
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // Hide legend, labels in datasets are enough
+                    },
                     tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#1F2937',
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
                         callbacks: {
-                            // Thêm chữ "đ" vào tooltip khi di chuột
-                            label: function (context) {
+                            label: function(context) {
                                 let label = context.dataset.label || '';
                                 if (label) {
                                     label += ': ';
                                 }
-                                if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('vi-VN').format(context.parsed.y * 1000) + ' ₫';
-                                }
+                                label += new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' ₫';
                                 return label;
                             }
                         }
                     }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#f0f0f0', borderDash: [5, 5] },
-                        ticks: {
-                            font: { size: 10 },
-                            color: '#999',
-                            // Format trục Y thành dạng tiền tệ rút gọn (10tr, 15tr...)
-                            callback: function (value) {
-                                return value / 1000 + ' tr';
-                            }
-                        },
-                        border: { display: false }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 10 }, color: '#999' },
-                        border: { display: false }
-                    }
-                }
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
             }
         });
     }
 
-    // --- 2. BIỂU ĐỒ TRÒN (Phân bổ chi tiêu) ---
-    const pieChartCanvas = document.getElementById('pieChart');
-    if (pieChartCanvas) {
-        const ctxPie = pieChartCanvas.getContext('2d');
-        window.pieChart = new Chart(ctxPie, {
-            type: 'pie',
+    // Pie Chart: Expense Distribution
+    const pieCtx = document.getElementById('pieChart');
+    if (pieCtx) {
+        // A modern, clean color palette
+        const pieColors = [
+            '#0ea5e9', // sky-500
+            '#f97316', // orange-500
+            '#10b981', // emerald-500
+            '#8b5cf6', // violet-500
+            '#f43f5e', // rose-500
+            '#eab308', // amber-500
+            '#3b82f6', // blue-500
+            '#9ca3af', // slate-400 (for remaining balance)
+        ];
+        
+        let backgroundColors = [];
+        let colorIndex = 0;
+        pieLabels.forEach(label => {
+            if (label === 'Số dư còn lại') {
+                backgroundColors.push(pieColors[7]); // Explicitly use grey
+            } else {
+                backgroundColors.push(pieColors[colorIndex % (pieColors.length - 1)]);
+                colorIndex++;
+            }
+        });
+
+        new Chart(pieCtx, {
+            type: 'doughnut',
             data: {
-                // Danh mục tiếng Việt
-                labels: ['Ăn uống', 'Di chuyển', 'Giải trí', 'Mua sắm', 'Khác'],
+                labels: pieLabels,
                 datasets: [{
-                    data: [26.1, 22.8, 16.3, 13.1, 21.7],
-                    backgroundColor: [
-                        '#2ecc71', // Ăn uống - Xanh lá
-                        '#3498db', // Di chuyển - Xanh dương
-                        '#f1c40f', // Giải trí - Vàng
-                        '#ff6b6b', // Mua sắm - Đỏ cam
-                        '#95a5a6'  // Khác - Xám
-                    ],
-                    borderWidth: 0,
-                    hoverOffset: 10
+                    label: 'Phân bổ chi tiêu',
+                    data: pieData,
+                    backgroundColor: backgroundColors,
+                    // Use a thick white border to create spacing, a very modern look
+                    borderWidth: 2,
+                    borderColor: '#ffffff', 
+                    hoverOffset: 15,
+                    hoverBorderWidth: 3,
+                    hoverBorderColor: '#ffffff',
+                    borderRadius: 8, 
                 }]
             },
             options: {
@@ -122,30 +142,35 @@ document.addEventListener("DOMContentLoaded", function () {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'right',
+                        position: 'bottom',
                         labels: {
-                            usePointStyle: true,
-                            boxWidth: 10,
                             padding: 20,
-                            font: { size: 12, family: "'Poppins', sans-serif" },
-                            color: '#555'
+                            usePointStyle: true,
+                            pointStyle: 'circle'
                         }
                     },
                     tooltip: {
+                        backgroundColor: '#1F2937',
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
                         callbacks: {
-                            label: function (context) {
+                            label: function(context) {
                                 let label = context.label || '';
-                                if (label) { label += ': '; }
-                                label += context.parsed + '%';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(context.parsed);
+                                }
                                 return label;
                             }
                         }
                     }
-                },
-                layout: {
-                    padding: { left: 0, right: 0, top: 0, bottom: 0 }
                 }
             }
         });
     }
+
 });
