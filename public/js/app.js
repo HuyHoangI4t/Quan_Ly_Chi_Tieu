@@ -91,6 +91,40 @@ const SmartSpending = {
         if (confirm(message)) {
             callback();
         }
+    },
+
+    // Loading spinner management
+    loaderElement: null,
+    
+    showLoader: () => {
+        if (!SmartSpending.loaderElement) {
+            SmartSpending.loaderElement = document.createElement('div');
+            SmartSpending.loaderElement.className = 'global-loader';
+            SmartSpending.loaderElement.innerHTML = `
+                <div class="loader-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(SmartSpending.loaderElement);
+        }
+        
+        SmartSpending.loaderElement.style.display = 'flex';
+        setTimeout(() => {
+            SmartSpending.loaderElement.classList.add('visible');
+        }, 10);
+    },
+
+    hideLoader: () => {
+        if (SmartSpending.loaderElement) {
+            SmartSpending.loaderElement.classList.remove('visible');
+            setTimeout(() => {
+                if (SmartSpending.loaderElement) {
+                    SmartSpending.loaderElement.style.display = 'none';
+                }
+            }, 300);
+        }
     }
 };
 

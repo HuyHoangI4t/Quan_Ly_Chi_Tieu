@@ -1,50 +1,259 @@
 <?php $this->partial('header'); ?>
 
-<!-- Reports Specific Styles -->
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/public/css/reports.css">
+<section class="reports-section">
+    <!-- Header with Filters -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <i class="fas fa-chart-line me-2"></i>
+            Báo cáo Chi tiêu
+        </h3>
+        <button id="exportReport" class="btn btn-primary">
+            <i class="fas fa-download me-2"></i>
+            Xuất báo cáo
+        </button>
+    </div>
 
-<section>
-    <h3 class="mb-3">Báo cáo</h3>
-
-    <div class="card p-3">
-        <div class="row">
-            <div class="col-md-8">
-                <div class="chart-container">
-                    <h6>Thu Nhập và Chi Tiêu theo Thời Gian</h6>
-                    <canvas id="reportsLine" style="height:200px;"></canvas>
+    <!-- Filters Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="periodFilter" class="form-label">
+                        <i class="fas fa-calendar me-1"></i>
+                        Kỳ báo cáo
+                    </label>
+                    <select id="periodFilter" class="form-select">
+                        <option value="this_month" <?php echo ($current_period ?? 'last_3_months') === 'this_month' ? 'selected' : ''; ?>>
+                            Tháng này
+                        </option>
+                        <option value="last_3_months" <?php echo ($current_period ?? 'last_3_months') === 'last_3_months' ? 'selected' : ''; ?>>
+                            3 tháng gần đây
+                        </option>
+                        <option value="last_6_months" <?php echo ($current_period ?? 'last_3_months') === 'last_6_months' ? 'selected' : ''; ?>>
+                            6 tháng gần đây
+                        </option>
+                        <option value="this_year" <?php echo ($current_period ?? 'last_3_months') === 'this_year' ? 'selected' : ''; ?>>
+                            Năm nay
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="typeFilter" class="form-label">
+                        <i class="fas fa-filter me-1"></i>
+                        Loại giao dịch
+                    </label>
+                    <select id="typeFilter" class="form-select">
+                        <option value="all" <?php echo ($current_type ?? 'all') === 'all' ? 'selected' : ''; ?>>
+                            Tất cả
+                        </option>
+                        <option value="expense" <?php echo ($current_type ?? 'all') === 'expense' ? 'selected' : ''; ?>>
+                            Chi tiêu
+                        </option>
+                        <option value="income" <?php echo ($current_type ?? 'all') === 'income' ? 'selected' : ''; ?>>
+                            Thu nhập
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Biểu đồ sẽ cập nhật tự động
+                    </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="chart-container">
-                    <h6>Phân Bổ Theo Danh Mục</h6>
-                    <canvas id="reportsPie" style="height:200px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4">
+        <!-- Line Chart -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2 text-primary"></i>
+                        Thu nhập và Chi tiêu theo Thời gian
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 350px; position: relative;">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pie Chart -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2 text-success"></i>
+                        Phân bổ theo Danh mục
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 350px; position: relative;">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats (Optional) -->
+    <div class="row g-4 mt-2">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted mb-2">
+                        <i class="fas fa-wallet"></i> Tổng thu nhập
+                    </div>
+                    <h4 class="text-success mb-0" id="totalIncome">-</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted mb-2">
+                        <i class="fas fa-shopping-cart"></i> Tổng chi tiêu
+                    </div>
+                    <h4 class="text-danger mb-0" id="totalExpense">-</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted mb-2">
+                        <i class="fas fa-balance-scale"></i> Chênh lệch
+                    </div>
+                    <h4 class="mb-0" id="balance">-</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted mb-2">
+                        <i class="fas fa-piggy-bank"></i> Tỷ lệ tiết kiệm
+                    </div>
+                    <h4 class="text-info mb-0" id="savingsRate">-</h4>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<?php
-// Move page JS into a registered script so it runs after footer (which loads Chart.js)
-$lineJson = json_encode($reportLine ?? []);
-$pieJson = json_encode($reportPie ?? []);
+<script>
+// Pass initial data to JavaScript
+window.initialReportData = {
+    lineChart: <?php echo json_encode($reportLine ?? []); ?>,
+    pieChart: <?php echo json_encode($reportPie ?? []); ?>
+};
 
-$script = "<script>\n" .
-    "document.addEventListener('DOMContentLoaded', function(){\n" .
-    "    const reportLine = $lineJson;\n" .
-    "    const reportPie = $pieJson;\n" .
-    "    if (reportLine && reportLine.labels) {\n" .
-    "        const ctx = document.getElementById('reportsLine').getContext('2d');\n" .
-    "        new Chart(ctx, { type: 'line', data: { labels: reportLine.labels, datasets: [ { label: 'Thu nhập', data: reportLine.income, borderColor: '#00b083', backgroundColor: 'transparent', tension: 0.4 }, { label: 'Chi tiêu', data: reportLine.expense, borderColor: '#ff6b6b', backgroundColor: 'transparent', tension: 0.4 } ] }, options: { responsive:true, maintainAspectRatio:false } });\n" .
-    "    }\n" .
-    "    if (reportPie && reportPie.labels) {\n" .
-    "        const ctx2 = document.getElementById('reportsPie').getContext('2d');\n" .
-    "        new Chart(ctx2, { type: 'pie', data: { labels: reportPie.labels, datasets:[{ data: reportPie.data, backgroundColor:['#2ecc71','#3498db','#f1c40f','#ff6b6b','#95a5a6'] }] }, options: { responsive:true, maintainAspectRatio:false } });\n" .
-    "    }\n" .
-    "});\n" .
-    "<\/script>";
+// Initialize charts with initial data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.initialReportData && window.initialReportData.lineChart) {
+        const data = window.initialReportData;
+        const styles = getComputedStyle(document.documentElement);
+        const gridColor = styles.getPropertyValue('--chart-grid').trim();
+        const textColor = styles.getPropertyValue('--chart-text').trim();
 
-$this->set('pageScripts', $script);
+        // Line Chart
+        const lineCtx = document.getElementById('lineChart');
+        if (lineCtx && data.lineChart.labels) {
+            new Chart(lineCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.lineChart.labels,
+                    datasets: [{
+                        label: 'Thu nhập',
+                        data: data.lineChart.income,
+                        backgroundColor: '#10B981',
+                        borderRadius: 8
+                    }, {
+                        label: 'Chi tiêu',
+                        data: data.lineChart.expense,
+                        backgroundColor: '#EF4444',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: gridColor },
+                            ticks: {
+                                color: textColor,
+                                callback: function(value) {
+                                    if (value >= 1000000) return (value / 1000000) + 'tr';
+                                    if (value >= 1000) return (value / 1000) + 'k';
+                                    return value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: textColor } }
+                    }
+                }
+            });
+        }
 
-$this->partial('footer');
-?>
+        // Pie Chart
+        const pieCtx = document.getElementById('pieChart');
+        if (pieCtx && data.pieChart.labels) {
+            const pieColors = ['#3B82F6','#F97316','#10B981','#EF4444','#8B5CF6','#F59E0B','#EC4899','#14B8A6','#6366F1','#F43F5E'];
+            new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.pieChart.labels,
+                    datasets: [{
+                        data: data.pieChart.data,
+                        backgroundColor: pieColors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: textColor,
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update summary stats
+        const totalIncome = data.lineChart.income.reduce((a, b) => a + b, 0);
+        const totalExpense = data.lineChart.expense.reduce((a, b) => a + b, 0);
+        const balance = totalIncome - totalExpense;
+        const savingsRate = totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : 0;
+
+        document.getElementById('totalIncome').textContent = new Intl.NumberFormat('vi-VN').format(totalIncome) + ' ₫';
+        document.getElementById('totalExpense').textContent = new Intl.NumberFormat('vi-VN').format(totalExpense) + ' ₫';
+        document.getElementById('balance').textContent = new Intl.NumberFormat('vi-VN').format(balance) + ' ₫';
+        document.getElementById('balance').className = balance >= 0 ? 'text-success mb-0' : 'text-danger mb-0';
+        document.getElementById('savingsRate').textContent = savingsRate + '%';
+    }
+});
+</script>
+
+<?php $this->partial('footer'); ?>

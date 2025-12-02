@@ -2,6 +2,9 @@
 namespace App\Controllers;
 
 use App\Core\Controllers;
+use App\Core\ApiResponse;
+use App\Services\Validator;
+use App\Middleware\CsrfProtection;
 use App\Models\User;
 use App\Models\Transaction;
 use Exception;
@@ -28,77 +31,97 @@ class Profile extends Controllers
     }
 
     public function api_update() {
-        header('Content-Type: application/json');
-        ob_clean();
-        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            ApiResponse::methodNotAllowed();
+        }
+
         try {
+            // Verify CSRF token
+            CsrfProtection::verify();
+            
             $data = json_decode(file_get_contents('php://input'), true);
             
-            if (!$data) {
-                throw new Exception('Invalid data');
+            // Validate data
+            $validator = new Validator();
+            if (!$validator->validateProfile($data)) {
+                ApiResponse::validationError($validator->getErrors(), $validator->getFirstError());
             }
 
             $userModel = $this->model('User');
             $userId = $_SESSION['user_id'];
             
+            // Get validated data
+            $validData = $validator->getData();
+            
             // Update profile
             $success = $userModel->updateProfile($userId, [
-                'name' => $data['name'] ?? '',
-                'email' => $data['email'] ?? ''
+                'name' => $validData['name'],
+                'email' => $validData['email']
             ]);
 
             if ($success) {
-                $_SESSION['user_name'] = $data['name'];
-                $_SESSION['full_name'] = $data['name'];
-                echo json_encode(['success' => true, 'message' => 'Cập nhật thành công']);
+                $_SESSION['user_name'] = $validData['name'];
+                $_SESSION['full_name'] = $validData['name'];
+                ApiResponse::success('Cập nhật thành công', ['user' => $validData]);
             } else {
-                throw new Exception('Update failed');
+                ApiResponse::error('Không thể cập nhật thông tin');
             }
         } catch (Exception $e) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            ApiResponse::serverError($e->getMessage());
         }
     }
 
     public function api_change_password() {
-        header('Content-Type: application/json');
-        ob_clean();
-        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            ApiResponse::methodNotAllowed();
+        }
+
         try {
+            // Verify CSRF token
+            CsrfProtection::verify();
+            
             $data = json_decode(file_get_contents('php://input'), true);
             
-            if (!$data || !isset($data['current_password']) || !isset($data['new_password'])) {
-                throw new Exception('Missing required fields');
+            // Validate data
+            $validator = new Validator();
+            if (!$validator->validatePasswordChange($data)) {
+                ApiResponse::validationError($validator->getErrors(), $validator->getFirstError());
             }
 
             $userModel = $this->model('User');
             $userId = $_SESSION['user_id'];
             
+            // Get validated data
+            $validData = $validator->getData();
+            
             // Verify current password
             $user = $userModel->getUserById($userId);
-            if (!password_verify($data['current_password'], $user['password'])) {
-                throw new Exception('Mật khẩu hiện tại không đúng');
+            if (!password_verify($validData['current_password'], $user['password'])) {
+                ApiResponse::error('Mật khẩu hiện tại không đúng', null, 401);
             }
             
             // Update password
-            $success = $userModel->updatePassword($userId, $data['new_password']);
+            $success = $userModel->updatePassword($userId, $validData['new_password']);
 
             if ($success) {
-                echo json_encode(['success' => true, 'message' => 'Đổi mật khẩu thành công']);
+                ApiResponse::success('Đổi mật khẩu thành công');
             } else {
-                throw new Exception('Update password failed');
+                ApiResponse::error('Không thể đổi mật khẩu');
             }
         } catch (Exception $e) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            ApiResponse::serverError($e->getMessage());
         }
     }
 
     public function api_clear_data() {
-        header('Content-Type: application/json');
-        ob_clean();
-        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            ApiResponse::methodNotAllowed();
+        }
+
         try {
+            // Verify CSRF token
+            CsrfProtection::verify();
+            
             $userModel = $this->model('User');
             $transactionModel = $this->model('Transaction');
             $userId = $_SESSION['user_id'];
@@ -107,13 +130,12 @@ class Profile extends Controllers
             $success = $transactionModel->deleteAllByUser($userId);
 
             if ($success) {
-                echo json_encode(['success' => true, 'message' => 'Đã xóa tất cả dữ liệu']);
+                ApiResponse::success('Đã xóa tất cả dữ liệu');
             } else {
-                throw new Exception('Delete failed');
+                ApiResponse::error('Không thể xóa dữ liệu');
             }
         } catch (Exception $e) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            ApiResponse::serverError($e->getMessage());
         }
     }
 

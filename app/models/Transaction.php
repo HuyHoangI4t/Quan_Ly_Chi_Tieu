@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use App\Core\ConnectDB;
+use App\Services\FinancialUtils;
 use \PDO;
 
 class Transaction
@@ -21,25 +22,16 @@ class Transaction
      */
     public function getDashboardData($userId, $range = 'this_month')
     {
-        // 1. Determine Current and Previous Date Ranges
-        // Check if range is in YYYY-MM format (specific month)
-        if (preg_match('/^\d{4}-\d{2}$/', $range)) {
-            $startDate = $range . '-01';
-            $endDate = date('Y-m-t', strtotime($startDate));
-            // Previous month for comparison
-            $prevStartDate = date('Y-m-01', strtotime($startDate . ' -1 month'));
-            $prevEndDate = date('Y-m-t', strtotime($prevStartDate));
-        } else {
-            list($startDate, $endDate, $prevStartDate, $prevEndDate) = $this->getPeriodDates($range);
-        }
+        // 1. Determine Current and Previous Date Ranges using FinancialUtils
+        list($startDate, $endDate, $prevStartDate, $prevEndDate) = FinancialUtils::getPeriodDates($range);
 
         // 2. Get Totals for Both Periods
         $currentTotals = $this->getTotalsForPeriod($userId, $startDate, $endDate);
         $previousTotals = $this->getTotalsForPeriod($userId, $prevStartDate, $prevEndDate);
 
-        // 3. Calculate Trends
-        $incomeTrend = $this->calculatePercentageChange($previousTotals['income'], $currentTotals['income']);
-        $expenseTrend = $this->calculatePercentageChange($previousTotals['expense'], $currentTotals['expense']);
+        // 3. Calculate Trends using FinancialUtils
+        $incomeTrend = FinancialUtils::calculatePercentageChange($previousTotals['income'], $currentTotals['income']);
+        $expenseTrend = FinancialUtils::calculatePercentageChange($previousTotals['expense'], $currentTotals['expense']);
         
         // --- Get Total Balance (unaffected by date range) ---
         // Balance = Total Income - Total Expense (absolute value)
@@ -53,8 +45,9 @@ class Transaction
         $stmtTotalBalance->execute([$userId]);
         $totalBalance = $stmtTotalBalance->fetch(PDO::FETCH_ASSOC);
 
-        $currentSavingsRate = $currentTotals['income'] > 0 ? round((($currentTotals['income'] - $currentTotals['expense']) / $currentTotals['income']) * 100) : 0;
-        $previousSavingsRate = $previousTotals['income'] > 0 ? round((($previousTotals['income'] - $previousTotals['expense']) / $previousTotals['income']) * 100) : 0;
+        // Calculate savings rate using FinancialUtils
+        $currentSavingsRate = FinancialUtils::calculateSavingsRate($currentTotals['income'], $currentTotals['expense']);
+        $previousSavingsRate = FinancialUtils::calculateSavingsRate($previousTotals['income'], $previousTotals['expense']);
         $savingsRateTrend = $currentSavingsRate - $previousSavingsRate;
 
         $totals = [
@@ -70,11 +63,11 @@ class Transaction
 
         // --- Get Recent Transactions ---
         $stmtRecent = $this->db->prepare("
-            SELECT t.description, t.amount, t.transaction_date, c.name as category_name
+            SELECT t.description, t.amount, t.date, c.name as category_name
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = ?
-            ORDER BY t.transaction_date DESC
+            ORDER BY t.date DESC
             LIMIT 5
         ");
         $stmtRecent->execute([$userId]);
@@ -86,7 +79,7 @@ class Transaction
             SELECT c.name, SUM(ABS(t.amount)) as total
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
-            WHERE t.user_id = ? AND t.amount < 0 AND t.transaction_date BETWEEN ? AND ?
+            WHERE t.user_id = ? AND t.amount < 0 AND t.date BETWEEN ? AND ?
             GROUP BY c.name
             ORDER BY total DESC
         ");
@@ -123,11 +116,11 @@ class Transaction
         
         $sql = "
             SELECT 
-                DATE_FORMAT(transaction_date, '{$format}') as period,
+                DATE_FORMAT(date, '{$format}') as period,
                 SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expense
             FROM transactions
-            WHERE user_id = ? AND transaction_date BETWEEN ? AND ?
+            WHERE user_id = ? AND date BETWEEN ? AND ?
             GROUP BY period
             ORDER BY period ASC
         ";
@@ -189,7 +182,7 @@ class Transaction
                 COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) AS income,
                 COALESCE(SUM(ABS(CASE WHEN t.amount < 0 THEN t.amount ELSE 0 END)), 0) AS expense
             FROM transactions t
-            WHERE t.user_id = ? AND t.transaction_date BETWEEN ? AND ?
+            WHERE t.user_id = ? AND t.date BETWEEN ? AND ?
         ");
         $stmt->execute([$userId, $startDate, $endDate]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -253,11 +246,11 @@ class Transaction
         $categoryStmt->execute([$categoryId]);
         $category = $categoryStmt->fetch(PDO::FETCH_ASSOC);
         
-        // Ensure amount is stored correctly: negative for expense, positive for income
-        $finalAmount = ($category && $category['type'] === 'income') ? abs($amount) : -abs($amount);
+        // Use FinancialUtils to normalize amount
+        $finalAmount = FinancialUtils::normalizeAmount($amount, $category['type'] ?? 'expense');
 
         $stmt = $this->db->prepare(
-            "INSERT INTO transactions (user_id, category_id, amount, transaction_date, description) VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO transactions (user_id, category_id, amount, date, description) VALUES (?, ?, ?, ?, ?)"
         );
         
         return $stmt->execute([$userId, $categoryId, $finalAmount, $date, $description]);
@@ -266,7 +259,7 @@ class Transaction
     public function getAllByUser($userId, $filters = [])
     {
         $sql = "
-            SELECT t.id, t.description, t.amount, t.transaction_date, c.name as category_name, t.category_id
+            SELECT t.id, t.description, t.amount, t.date, c.name as category_name, t.category_id
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
         ";
@@ -274,14 +267,9 @@ class Transaction
         $params = [$userId];
 
         if (!empty($filters['range'])) {
-            // Check if range is in YYYY-MM format (specific month)
-            if (preg_match('/^\d{4}-\d{2}$/', $filters['range'])) {
-                $startDate = $filters['range'] . '-01';
-                $endDate = date('Y-m-t', strtotime($startDate));
-            } else {
-                list($startDate, $endDate) = $this->getPeriodDates($filters['range']);
-            }
-            $where[] = "t.transaction_date BETWEEN ? AND ?";
+            // Use FinancialUtils to get period dates
+            list($startDate, $endDate) = FinancialUtils::getPeriodDates($filters['range']);
+            $where[] = "t.date BETWEEN ? AND ?";
             $params[] = $startDate;
             $params[] = $endDate;
         }
@@ -295,7 +283,7 @@ class Transaction
             $sql .= " WHERE " . implode(" AND ", $where);
         }
 
-        $sql .= " ORDER BY t.transaction_date DESC, t.id DESC";
+        $sql .= " ORDER BY t.date DESC, t.id DESC";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -316,10 +304,11 @@ class Transaction
         $categoryStmt->execute([$categoryId]);
         $category = $categoryStmt->fetch(PDO::FETCH_ASSOC);
         
-        $finalAmount = ($category && $category['type'] === 'income') ? abs($amount) : -abs($amount);
+        // Use FinancialUtils to normalize amount
+        $finalAmount = FinancialUtils::normalizeAmount($amount, $category['type'] ?? 'expense');
         
         $sql = "UPDATE transactions 
-                SET category_id = ?, amount = ?, description = ?, transaction_date = ?
+                SET category_id = ?, amount = ?, description = ?, date = ?
                 WHERE id = ? AND user_id = ?";
         
         $stmt = $this->db->prepare($sql);
@@ -334,27 +323,40 @@ class Transaction
                 SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expense
             FROM transactions 
             WHERE user_id = ? 
-            AND transaction_date BETWEEN ? AND ?
+            AND date BETWEEN ? AND ?
         ");
         $stmt->execute([$userId, $startDate, $endDate]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function getCategoryBreakdown($userId, $startDate, $endDate)
+    public function getCategoryBreakdown($userId, $startDate, $endDate, $type = 'all')
     {
-        $stmt = $this->db->prepare("
+        $sql = "
             SELECT c.name, SUM(ABS(t.amount)) as total
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
             WHERE t.user_id = ? 
-            AND t.amount < 0
-            AND t.transaction_date BETWEEN ? AND ?
+            AND t.date BETWEEN ? AND ?
+        ";
+        
+        $params = [$userId, $startDate, $endDate];
+        
+        // Add type filter if specified
+        if ($type === 'expense') {
+            $sql .= " AND t.amount < 0";
+        } elseif ($type === 'income') {
+            $sql .= " AND t.amount > 0";
+        }
+        
+        $sql .= "
             GROUP BY c.id, c.name
             ORDER BY total DESC
-            LIMIT 5
-        ");
-        $stmt->execute([$userId, $startDate, $endDate]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            LIMIT 10
+        ";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function deleteAllByUser($userId)
@@ -370,7 +372,7 @@ class Transaction
                 FROM transactions t
                 LEFT JOIN categories c ON t.category_id = c.id
                 WHERE t.user_id = ?
-                ORDER BY t.transaction_date DESC, t.id DESC";
+                ORDER BY t.date DESC, t.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

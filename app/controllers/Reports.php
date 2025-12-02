@@ -16,31 +16,79 @@ class Reports extends Controllers
         $this->transactionModel = $this->model('Transaction');
     }
 
-    public function index()
+    public function index($period = 'last_3_months', $type = 'all')
     {
         $userId = $this->getCurrentUserId();
         
-        // Get last 3 months data (current month - 2 months)
-        $reportLine = $this->getLineChartData($userId);
-        $reportPie = $this->getPieChartData($userId);
+        // Get data based on filters
+        $reportLine = $this->getLineChartData($userId, $period);
+        $reportPie = $this->getPieChartData($userId, $period, $type);
 
         $data = [
             'title' => 'Báo cáo',
             'reportLine' => $reportLine,
-            'reportPie' => $reportPie
+            'reportPie' => $reportPie,
+            'current_period' => $period,
+            'current_type' => $type
         ];
 
         $this->view('reports/index', $data);
     }
 
-    private function getLineChartData($userId)
+    /**
+     * API endpoint to get report data dynamically
+     */
+    public function api_get_report_data()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        try {
+            $userId = $this->getCurrentUserId();
+            $period = $_GET['period'] ?? 'last_3_months';
+            $type = $_GET['type'] ?? 'all';
+
+            $reportLine = $this->getLineChartData($userId, $period);
+            $reportPie = $this->getPieChartData($userId, $period, $type);
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'lineChart' => $reportLine,
+                    'pieChart' => $reportPie
+                ]
+            ]);
+        } catch (\Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+
+    private function getLineChartData($userId, $period = 'last_3_months')
     {
         $months = [];
         $income = [];
         $expense = [];
 
-        // Get last 3 months (current month and previous 2 months)
-        for ($i = 2; $i >= 0; $i--) {
+        // Determine the number of months based on period
+        $monthCount = match($period) {
+            'this_month' => 1,
+            'last_3_months' => 3,
+            'last_6_months' => 6,
+            'this_year' => 12,
+            default => 3
+        };
+
+        // Get data for the specified period
+        for ($i = $monthCount - 1; $i >= 0; $i--) {
             $date = date('Y-m', strtotime("-$i months"));
             $monthName = date('m/Y', strtotime("-$i months"));
             
@@ -62,13 +110,19 @@ class Reports extends Controllers
         ];
     }
 
-    private function getPieChartData($userId)
+    private function getPieChartData($userId, $period = 'last_3_months', $type = 'all')
     {
-        // Get category breakdown for last 3 months
-        $startDate = date('Y-m-01', strtotime('-2 months'));
-        $endDate = date('Y-m-t');
+        // Determine date range based on period
+        list($startDate, $endDate) = match($period) {
+            'this_month' => [date('Y-m-01'), date('Y-m-t')],
+            'last_3_months' => [date('Y-m-01', strtotime('-2 months')), date('Y-m-t')],
+            'last_6_months' => [date('Y-m-01', strtotime('-5 months')), date('Y-m-t')],
+            'this_year' => [date('Y-01-01'), date('Y-12-31')],
+            default => [date('Y-m-01', strtotime('-2 months')), date('Y-m-t')]
+        };
 
-        $results = $this->transactionModel->getCategoryBreakdown($userId, $startDate, $endDate);
+        // Get category breakdown with optional type filter
+        $results = $this->transactionModel->getCategoryBreakdown($userId, $startDate, $endDate, $type);
 
         $labels = [];
         $data = [];

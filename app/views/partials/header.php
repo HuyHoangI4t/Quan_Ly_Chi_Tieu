@@ -48,14 +48,12 @@
         <div class="user-actions">
             <i class="fas fa-wallet icon-action" title="Ví của tôi"></i> 
             
-            <!-- User Dropdown from previous header -->
             <div class="dropdown">
                 <a class="icon-action dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="far fa-user-circle" title="Tài khoản"></i>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                     <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>/profile"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>
-                    
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>/login_signup/logout"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
                 </ul>

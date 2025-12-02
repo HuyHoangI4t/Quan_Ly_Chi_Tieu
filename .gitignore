@@ -1,0 +1,73 @@
+# ========================================
+# SmartSpending Project - .gitignore
+# ========================================
+
+# Composer
+/vendor/
+composer.phar
+composer.lock
+
+# Environment & Config
+.env
+.env.local
+.env.*.local
+config/database.php
+
+# IDE & Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Logs & Cache
+*.log
+/logs/
+/cache/
+/tmp/
+
+# Session files
+/storage/sessions/
+/storage/cache/
+/storage/logs/
+
+# Uploads (nếu có)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# Node modules (nếu có)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build files
+*.map
+dist/
+build/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# Test files
+/tests/coverage/
+phpunit.xml
+.phpunit.result.cache
+
+# Documentation drafts
+/docs/drafts/
+*.draft.md

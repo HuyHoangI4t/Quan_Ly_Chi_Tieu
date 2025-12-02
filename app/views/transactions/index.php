@@ -198,7 +198,7 @@
                     
                     <!-- 5. Amount -->
                     <div class="mb-3">
-                        <input type="number" name="amount" class="form-control transactions-modal-input" required min="0" step="1000" placeholder="0">
+                        <input type="number" name="amount" class="form-control transactions-modal-input amount-input" required min="0" step="1000" placeholder="0" id="add_amount">
                     </div>
                 </div>
                 <div class="modal-footer transactions-modal-footer">
@@ -256,7 +256,7 @@
                     
                     <!-- 5. Amount -->
                     <div class="mb-3">
-                        <input type="number" name="amount" id="edit_amount" class="form-control transactions-modal-input" required min="0" step="1000" placeholder="0">
+                        <input type="number" name="amount" id="edit_amount" class="form-control transactions-modal-input amount-input" required min="0" step="1000" placeholder="0">
                     </div>
                 </div>
                 <div class="modal-footer transactions-modal-footer">

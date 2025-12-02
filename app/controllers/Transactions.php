@@ -2,6 +2,9 @@
 namespace App\Controllers;
 
 use App\Core\Controllers;
+use App\Core\ApiResponse;
+use App\Services\Validator;
+use App\Middleware\CsrfProtection;
 
 class Transactions extends Controllers
 {
@@ -90,130 +93,178 @@ class Transactions extends Controllers
 
     public function api_add()
     {
-        // Clear any output buffer to prevent PHP errors from corrupting JSON
-        if (ob_get_length()) ob_clean();
-        
-        header('Content-Type: application/json');
-        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-            exit;
+            ApiResponse::methodNotAllowed();
         }
 
         try {
+            // Verify CSRF token
+            CsrfProtection::verify();
+            
             $userId = $this->getCurrentUserId();
             
             // Get JSON data
             $data = json_decode(file_get_contents('php://input'), true);
             
-            $type = $data['type'] ?? 'expense';
-            $amount = floatval($data['amount'] ?? 0);
-            $categoryId = intval($data['category_id'] ?? 0);
-            $date = $data['date'] ?? date('Y-m-d');
-            $description = trim($data['description'] ?? '');
-
-            // Validation
-            if ($amount <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Số tiền phải lớn hơn 0']);
-                exit;
+            // Validate data
+            $validator = new Validator();
+            if (!$validator->validateTransaction($data)) {
+                ApiResponse::validationError($validator->getErrors(), $validator->getFirstError());
             }
 
-            if (empty($categoryId)) {
-                echo json_encode(['success' => false, 'message' => 'Vui lòng chọn danh mục']);
-                exit;
-            }
+            // Get validated data
+            $validData = $validator->getData();
 
             // Create transaction
             $result = $this->transactionModel->createTransaction(
                 $userId,
-                $categoryId,
-                $amount,
-                $type,
-                $date,
-                $description
+                $validData['category_id'],
+                $validData['amount'],
+                $validData['type'] ?? 'expense',
+                $validData['date'],
+                $validData['description']
             );
 
             if ($result) {
-                echo json_encode(['success' => true, 'message' => 'Thêm giao dịch thành công']);
+                ApiResponse::success('Thêm giao dịch thành công');
             } else {
-                echo json_encode(['success' => false, 'message' => 'Không thể thêm giao dịch']);
+                ApiResponse::error('Không thể thêm giao dịch');
             }
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+            ApiResponse::serverError('Lỗi: ' . $e->getMessage());
         }
-        exit;
     }
 
     public function api_update($id)
     {
-        // Clear any output buffer to prevent PHP errors from corrupting JSON
-        if (ob_get_length()) ob_clean();
-        
-        header('Content-Type: application/json');
-        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-            exit;
+            ApiResponse::methodNotAllowed();
         }
 
         try {
+            // Verify CSRF token
+            CsrfProtection::verify();
+            
             $userId = $this->getCurrentUserId();
             $data = json_decode(file_get_contents('php://input'), true);
             
-            $type = $data['type'] ?? 'expense';
-            $amount = floatval($data['amount'] ?? 0);
-            $categoryId = intval($data['category_id'] ?? 0);
-            $date = $data['transaction_date'] ?? $data['date'] ?? date('Y-m-d');
-            $description = trim($data['description'] ?? '');
-
-            if ($amount <= 0 || empty($categoryId)) {
-                echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
-                exit;
+            // Validate data
+            $validator = new Validator();
+            if (!$validator->validateTransaction($data)) {
+                ApiResponse::validationError($validator->getErrors(), $validator->getFirstError());
             }
 
-            $result = $this->transactionModel->updateTransaction($id, $userId, $categoryId, $amount, $type, $date, $description);
+            // Get validated data
+            $validData = $validator->getData();
+
+            $result = $this->transactionModel->updateTransaction(
+                $id, 
+                $userId, 
+                $validData['category_id'], 
+                $validData['amount'], 
+                $validData['type'] ?? 'expense', 
+                $validData['date'], 
+                $validData['description']
+            );
 
             if ($result) {
-                echo json_encode(['success' => true, 'message' => 'Cập nhật thành công']);
+                ApiResponse::success('Cập nhật thành công', ['id' => $id]);
             } else {
-                echo json_encode(['success' => false, 'message' => 'Không thể cập nhật']);
+                ApiResponse::error('Không thể cập nhật');
             }
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+            ApiResponse::serverError('Lỗi: ' . $e->getMessage());
         }
-        exit;
     }
 
     public function api_delete($id)
     {
-        // Clear any output buffer to prevent PHP errors from corrupting JSON
-        if (ob_get_length()) ob_clean();
-        
-        header('Content-Type: application/json');
-        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-            exit;
+            ApiResponse::methodNotAllowed();
         }
 
         try {
+            // Verify CSRF token
+            CsrfProtection::verify();
+            
             $userId = $this->getCurrentUserId();
             $result = $this->transactionModel->deleteTransaction($id, $userId);
 
             if ($result) {
-                echo json_encode(['success' => true, 'message' => 'Xóa giao dịch thành công']);
+                ApiResponse::success('Xóa giao dịch thành công', ['id' => $id]);
             } else {
-                echo json_encode(['success' => false, 'message' => 'Không thể xóa giao dịch']);
+                ApiResponse::error('Không thể xóa giao dịch');
             }
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()]);
+            ApiResponse::serverError('Lỗi: ' . $e->getMessage());
         }
-        exit;
+    }
+
+    /**
+     * API endpoint to fetch transactions with filtering and pagination
+     * GET /transactions/api_get_transactions?range=2025-01&category=all&page=1
+     */
+    public function api_get_transactions()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            ApiResponse::methodNotAllowed();
+        }
+
+        try {
+            $userId = $this->getCurrentUserId();
+            
+            // Get filters from query params
+            $range = $_GET['range'] ?? date('Y-m');
+            $categoryId = $_GET['category'] ?? 'all';
+            $page = (int)($_GET['page'] ?? 1);
+            $perPage = (int)($_GET['per_page'] ?? 7);
+            
+            $filters = [
+                'range' => $range,
+                'category_id' => ($categoryId === 'all') ? null : $categoryId,
+            ];
+            
+            // Get all matching transactions
+            $allTransactions = $this->transactionModel->getAllByUser($userId, $filters);
+            $totalTransactions = count($allTransactions);
+            $totalPages = ceil($totalTransactions / $perPage);
+            
+            // Apply pagination
+            $offset = ($page - 1) * $perPage;
+            $transactions = array_slice($allTransactions, $offset, $perPage);
+            
+            // Format transactions for response
+            $formattedTransactions = array_map(function($t) {
+                return [
+                    'id' => $t['id'],
+                    'amount' => $t['amount'],
+                    'description' => $t['description'],
+                    'transaction_date' => $t['transaction_date'],
+                    'category_id' => $t['category_id'],
+                    'category_name' => $t['category_name'],
+                    'type' => $t['amount'] >= 0 ? 'income' : 'expense',
+                    'formatted_amount' => number_format(abs($t['amount']), 0, ',', '.') . ' ₫',
+                    'formatted_date' => date('d M Y', strtotime($t['transaction_date']))
+                ];
+            }, $transactions);
+            
+            ApiResponse::success('Lấy danh sách giao dịch thành công', [
+                'transactions' => $formattedTransactions,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                    'total_items' => $totalTransactions,
+                    'per_page' => $perPage,
+                    'has_next' => $page < $totalPages,
+                    'has_prev' => $page > 1
+                ],
+                'filters' => [
+                    'range' => $range,
+                    'category' => $categoryId
+                ]
+            ]);
+        } catch (\Exception $e) {
+            ApiResponse::serverError('Lỗi: ' . $e->getMessage());
+        }
     }
 }

@@ -30,7 +30,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); */
+   
     min-height: 100vh;
     position: relative;
     padding: 20px;
@@ -351,12 +351,12 @@ form .form-subtitle {
 .container {
     background-color: #fff;
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
     position: relative;
     overflow: hidden;
     width: 850px;
     max-width: 95%;
-    min-height: 550px;
+    min-height: 600px;
 }
 
 .form-container {
@@ -413,6 +413,7 @@ form .form-subtitle {
 
 .overlay {
     background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+    background-size: 100% 100%;
     width: 250%;
     height: 100%;
     color: #FFFFFF;

@@ -20,6 +20,9 @@
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- Input Masking -->
+    <script src="<?php echo BASE_URL; ?>/public/js/input-masking.js"></script>
+    
     <!-- App.js - Shared utilities -->
     <script src="<?php echo BASE_URL; ?>/public/js/app.js"></script>
     
@@ -45,11 +48,6 @@
         echo $pageScripts;
     }
     ?>
-
-    <!-- Floating Action Button for Add Transaction -->
-    <button class="btn btn-primary fab-add-transaction" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
-        <i class="fas fa-plus"></i>
-    </button>
 
     <!-- Add Transaction Modal -->
     <div class="modal fade" id="addTransactionModal" tabindex="-1" aria-labelledby="addTransactionModalLabel" aria-hidden="true">

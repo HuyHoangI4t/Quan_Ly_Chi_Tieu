@@ -26,6 +26,9 @@ define('BASE_URL', $baseUrl); // Define it once and correctly
 error_reporting(E_ALL); // Ensure error reporting is ON
 ini_set('display_errors', 1); // Display errors on screen
 
+// Set timezone to Vietnam
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+
 // Composer Autoloader
 require_once dirname(__DIR__) . '/vendor/autoload.php'; 
 
