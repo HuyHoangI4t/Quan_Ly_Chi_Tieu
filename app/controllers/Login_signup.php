@@ -21,7 +21,7 @@ class Login_signup extends Controllers
             $this->redirect('/dashboard'); // Placeholder for now
         }
         $this->view->set('title', 'Đăng nhập & Đăng ký - Smart Spending');
-        $this->view->render('login_signup/index');
+        $this->view->render('login_signup');
     }
 
     /**
@@ -63,6 +63,7 @@ class Login_signup extends Controllers
                         $_SESSION['user_id'] = $userId;
                         $_SESSION['username'] = $username;
                         $_SESSION['full_name'] = $fullName;
+                        $_SESSION['role'] = ($userId == 1) ? 'admin' : 'user';
                         $response['success'] = true;
                         $response['message'] = 'Đăng ký thành công!';
                         $response['redirect_url'] = BASE_URL . '/dashboard'; // Placeholder
@@ -102,6 +103,7 @@ class Login_signup extends Controllers
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['full_name'] = $user['full_name'];
+                    $_SESSION['role'] = $user['role'] ?? 'user';
                     $response['success'] = true;
                     $response['message'] = 'Đăng nhập thành công!';
                     $response['redirect_url'] = BASE_URL . '/dashboard'; // Placeholder

@@ -15,8 +15,14 @@ class User
     public function createUser($username, $email, $password, $fullName)
     {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $this->db->prepare("INSERT INTO users (username, email, password, full_name) VALUES (?, ?, ?, ?)");
-        if ($stmt->execute([$username, $email, $hashedPassword, $fullName])) {
+        
+        // Check if this is the first user (will be admin)
+        $countStmt = $this->db->query("SELECT COUNT(*) FROM users");
+        $userCount = $countStmt->fetchColumn();
+        $role = ($userCount == 0) ? 'admin' : 'user';
+        
+        $stmt = $this->db->prepare("INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)");
+        if ($stmt->execute([$username, $email, $hashedPassword, $fullName, $role])) {
             return $this->db->lastInsertId();
         }
         return false;
@@ -24,7 +30,7 @@ class User
 
     public function authenticate($emailOrUsername, $password)
     {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = ? OR username = ?");
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE (email = ? OR username = ?) AND is_active = 1");
         $stmt->execute([$emailOrUsername, $emailOrUsername]);
         $user = $stmt->fetch(\PDO::FETCH_ASSOC);
 
@@ -32,6 +38,32 @@ class User
             return $user;
         }
         return false;
+    }
+
+    public function isAdmin($userId)
+    {
+        $stmt = $this->db->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $user && $user['role'] === 'admin';
+    }
+
+    public function getAllUsers()
+    {
+        $stmt = $this->db->query("SELECT id, username, email, full_name, role, is_active, created_at FROM users ORDER BY created_at DESC");
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function updateUserStatus($userId, $isActive)
+    {
+        $stmt = $this->db->prepare("UPDATE users SET is_active = ? WHERE id = ?");
+        return $stmt->execute([$isActive, $userId]);
+    }
+
+    public function updateUserRole($userId, $role)
+    {
+        $stmt = $this->db->prepare("UPDATE users SET role = ? WHERE id = ?");
+        return $stmt->execute([$role, $userId]);
     }
 
     public function getUserByUsername($username)

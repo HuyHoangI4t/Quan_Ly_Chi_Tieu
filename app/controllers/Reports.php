@@ -32,7 +32,7 @@ class Reports extends Controllers
             'current_type' => $type
         ];
 
-        $this->view('reports/index', $data);
+        $this->view('reports', $data);
     }
 
     /**

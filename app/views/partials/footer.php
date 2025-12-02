@@ -21,10 +21,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Input Masking -->
-    <script src="<?php echo BASE_URL; ?>/public/js/input-masking.js"></script>
+    <script src="<?php echo BASE_URL; ?>/public/shared/input-masking.js"></script>
     
     <!-- App.js - Shared utilities -->
-    <script src="<?php echo BASE_URL; ?>/public/js/app.js"></script>
+    <script src="<?php echo BASE_URL; ?>/public/shared/app.js"></script>
     
     <!-- Page-specific JavaScript -->
     <?php
@@ -38,7 +38,7 @@
         
         // Load page-specific JS if it exists
         if ($page && in_array($page, ['dashboard', 'transactions', 'budgets', 'goals', 'reports', 'profile'])) {
-            echo '<script src="' . BASE_URL . '/public/js/' . $page . '.js"></script>' . "\n";
+            echo '<script src="' . BASE_URL . '/public/' . $page . '/' . $page . '.js"></script>' . "\n";
         }
     ?>
 

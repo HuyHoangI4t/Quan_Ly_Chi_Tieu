@@ -1,7 +1,7 @@
 <?php $this->partial('header', ['title' => 'SmartSpending - Quản Lý Tài Chính']); ?>
 
 <!-- Dashboard Specific Styles -->
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/public/css/dashboard.css">
+<link rel="stylesheet" href="<?php echo BASE_URL; ?>/public/dashboard/dashboard.css">
 
 <div class="dashboard-container">
     <!-- Stats Grid -->
@@ -84,7 +84,7 @@
                     $monthDate = date('Y-m', strtotime("-$i months"));
                     $monthNumber = date('n', strtotime($monthDate . '-01'));
                     $isActive = ($monthDate === ($range ?? date('Y-m'))) ? 'active' : '';
-                    echo '<li><a class="dropdown-item ' . $isActive . '" href="' . BASE_URL . '/dashboard/index/' . $monthDate . '">Tháng ' . $monthNumber . '</a></li>';
+                    echo '<li><a class="dropdown-item ' . $isActive . '" href="' . BASE_URL . '/dashboard/' . $monthDate . '">Tháng ' . $monthNumber . '</a></li>';
                 }
                 ?>
             </ul>
@@ -162,6 +162,6 @@
     window.lineChartData = <?php echo $lineChartData ?? '[]'; ?>;
 </script>
 
-<script src="<?php echo BASE_URL; ?>/public/js/dashboard.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/dashboard/dashboard.js"></script>
 
 <?php $this->partial('footer'); ?>

@@ -50,7 +50,7 @@ class Goals extends Controllers {
             'csrf_token' => $this->csrfProtection->generateToken()
         ];
         
-        $this->view('goals/index', $data);
+        $this->view('goals', $data);
     }
     
     /**

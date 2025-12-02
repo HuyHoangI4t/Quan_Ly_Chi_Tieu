@@ -1,8 +1,8 @@
 -- ============================================
 -- SmartSpending - Full Database Schema
--- Version: 3.0.0
--- Date: December 1, 2025
--- Description: Schema đầy đủ cho hệ thống quản lý chi tiêu
+-- Version: 4.0.0
+-- Date: December 2, 2025
+-- Description: Schema đầy đủ với phân quyền Admin/User
 -- ============================================
 
 -- Create database
@@ -41,11 +41,14 @@ CREATE TABLE `users` (
   `email` varchar(100) NOT NULL UNIQUE COMMENT 'Email người dùng',
   `password` varchar(255) NOT NULL COMMENT 'Mật khẩu đã mã hóa (bcrypt)',
   `full_name` varchar(100) DEFAULT NULL COMMENT 'Họ và tên',
+  `role` enum('user','admin') NOT NULL DEFAULT 'user' COMMENT 'Vai trò: user hoặc admin',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Trạng thái tài khoản: 1=active, 0=disabled',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_username` (`username`),
-  KEY `idx_email` (`email`)
+  KEY `idx_email` (`email`),
+  KEY `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng người dùng';
 
 -- ============================================
@@ -342,6 +345,32 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+
+
+ALTER TABLE `users` 
+ADD COLUMN `role` enum('user','admin') NOT NULL DEFAULT 'user' COMMENT 'Vai trò: user hoặc admin' AFTER `full_name`;
+
+-- Add is_active column
+ALTER TABLE `users` 
+ADD COLUMN `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Trạng thái tài khoản: 1=active, 0=disabled' AFTER `role`;
+
+-- Add index for role
+ALTER TABLE `users` 
+ADD KEY `idx_role` (`role`);
+
+-- Update existing users to be active
+UPDATE `users` SET `is_active` = 1 WHERE `is_active` IS NULL;
+
+-- Set user id = 1 as admin
+UPDATE `users` SET `role` = 'admin' WHERE `id` = 1;
+
+-- ============================================
+-- ADMIN SETUP (Optional - For existing users)
+-- ============================================
+
+-- Uncomment line below to set specific user as admin
+-- UPDATE `users` SET `role` = 'admin' WHERE `email` = 'your_email@example.com';
 
 -- ============================================
 -- END OF SCHEMA

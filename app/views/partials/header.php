@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE_URL; ?>/public/css/style.css" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>/public/shared/style.css" rel="stylesheet">
     
     <script>
         const BASE_URL = '<?php echo BASE_URL; ?>';

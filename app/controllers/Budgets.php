@@ -43,7 +43,7 @@ class Budgets extends Controllers
             'current_period' => $period
         ];
 
-        $this->view('budgets/index', $data);
+        $this->view('budgets', $data);
     }
     
     /**

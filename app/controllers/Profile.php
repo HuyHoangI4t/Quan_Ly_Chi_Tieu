@@ -24,7 +24,7 @@ class Profile extends Controllers
         $userModel = $this->model('User');
         $user = $userModel->getUserById($_SESSION['user_id']);
         
-        $this->view('profile/index', [
+        $this->view('profile', [
             'user' => $user,
             'page' => 'profile'
         ]);

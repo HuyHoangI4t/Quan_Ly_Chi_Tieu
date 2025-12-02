@@ -9,12 +9,6 @@
 USE `quan_ly_chi_tieu`;
 
 -- ============================================
--- TEST USERS
--- ============================================
--- Password: password123
-INSERT INTO `users` (`username`, `email`, `password`, `full_name`) VALUES
-('testuser', 'testuser@smartspending.vn', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Nguyễn Văn Test');
-
 -- ============================================
 -- CUSTOM CATEGORIES (User specific)
 -- ============================================
