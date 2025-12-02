@@ -43,6 +43,6 @@ class Dashboard extends Controllers
             'lineChartSubtitle' => $lineChartSubtitle
         ];
         
-        $this->view->render('dashboard', $data);
+        $this->view->render('user/dashboard', $data);
     }
 }

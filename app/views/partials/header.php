@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $this->escape($title ?? 'Quản Lý Chi Tiêu'); ?></title>
-    <link rel="icon" type="image/x-icon" href="<?php echo BASE_URL; ?>/public/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="<?php echo BASE_URL; ?>/favicon.ico">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="<?php echo BASE_URL; ?>/public/shared/style.css" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>/shared/style.css" rel="stylesheet">
     
     <script>
         const BASE_URL = '<?php echo BASE_URL; ?>';
@@ -24,9 +24,12 @@
             $page = 'dashboard';
         }
         
-        // Load page-specific CSS if it exists
-        $cssFile = BASE_URL . '/public/css/' . $page . '.css';
+        // Load page-specific CSS if it exists (from module-specific folders)
         if ($page && in_array($page, ['dashboard', 'transactions', 'budgets', 'goals', 'reports', 'profile'])) {
+            $cssFile = BASE_URL . '/user/' . $page . '/' . $page . '.css';
+            echo '<link href="' . $cssFile . '" rel="stylesheet">' . "\n";
+        } elseif ($page === 'admin') {
+            $cssFile = BASE_URL . '/admin/dashboard.css';
             echo '<link href="' . $cssFile . '" rel="stylesheet">' . "\n";
         }
     ?>

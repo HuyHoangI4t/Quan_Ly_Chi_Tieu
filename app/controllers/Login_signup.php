@@ -60,13 +60,20 @@ class Login_signup extends Controllers
                 } else {
                     $userId = $this->userModel->createUser($username, $email, $password, $fullName);
                     if ($userId) {
+                        // Get user data to retrieve role from database
+                        $user = $this->userModel->getUserById($userId);
                         $_SESSION['user_id'] = $userId;
                         $_SESSION['username'] = $username;
                         $_SESSION['full_name'] = $fullName;
-                        $_SESSION['role'] = ($userId == 1) ? 'admin' : 'user';
+                        $_SESSION['role'] = $user['role'] ?? 'user';
                         $response['success'] = true;
                         $response['message'] = 'Đăng ký thành công!';
-                        $response['redirect_url'] = BASE_URL . '/dashboard'; // Placeholder
+                        // Redirect based on role
+                        if ($user['role'] === 'admin') {
+                            $response['redirect_url'] = BASE_URL . '/admin/dashboard';
+                        } else {
+                            $response['redirect_url'] = BASE_URL . '/dashboard';
+                        }
                     } else {
                         $response['message'] = 'Đã có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại.';
                     }
@@ -106,7 +113,12 @@ class Login_signup extends Controllers
                     $_SESSION['role'] = $user['role'] ?? 'user';
                     $response['success'] = true;
                     $response['message'] = 'Đăng nhập thành công!';
-                    $response['redirect_url'] = BASE_URL . '/dashboard'; // Placeholder
+                    // Redirect based on role
+                    if ($user['role'] === 'admin') {
+                        $response['redirect_url'] = BASE_URL . '/admin/dashboard';
+                    } else {
+                        $response['redirect_url'] = BASE_URL . '/dashboard';
+                    }
                 } else {
                     $response['message'] = 'Email hoặc mật khẩu không chính xác.';
                 }
@@ -120,6 +132,6 @@ class Login_signup extends Controllers
     public function logout()
     {
         session_destroy();
-        $this->redirect('/login_signup'); // Redirect to the main login/signup page
+        $this->redirect('/'); // Redirect to the main login/signup page
     }
 }

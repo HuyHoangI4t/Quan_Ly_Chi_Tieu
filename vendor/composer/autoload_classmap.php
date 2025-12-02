@@ -6,11 +6,26 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'App\\Controllers\\Home' => $baseDir . '/app/controllers/Home.php',
+    'App\\Controllers\\Admin\\Users' => $baseDir . '/app/controllers/Admin/Users.php',
     'App\\Controllers\\Login_signup' => $baseDir . '/app/controllers/Login_signup.php',
+    'App\\Controllers\\User\\Budgets' => $baseDir . '/app/controllers/User/Budgets.php',
+    'App\\Controllers\\User\\Dashboard' => $baseDir . '/app/controllers/User/Dashboard.php',
+    'App\\Controllers\\User\\Goals' => $baseDir . '/app/controllers/User/Goals.php',
+    'App\\Controllers\\User\\Profile' => $baseDir . '/app/controllers/User/Profile.php',
+    'App\\Controllers\\User\\Reports' => $baseDir . '/app/controllers/User/Reports.php',
+    'App\\Controllers\\User\\Transactions' => $baseDir . '/app/controllers/User/Transactions.php',
+    'App\\Core\\ApiResponse' => $baseDir . '/app/core/ApiResponse.php',
     'App\\Core\\App' => $baseDir . '/app/core/App.php',
     'App\\Core\\ConnectDB' => $baseDir . '/app/core/ConnectDB.php',
     'App\\Core\\Controllers' => $baseDir . '/app/core/Controllers.php',
+    'App\\Core\\Request' => $baseDir . '/app/core/Request.php',
+    'App\\Core\\Response' => $baseDir . '/app/core/Response.php',
     'App\\Core\\Views' => $baseDir . '/app/core/Views.php',
+    'App\\Models\\Category' => $baseDir . '/app/models/Category.php',
+    'App\\Models\\Goal' => $baseDir . '/app/models/Goal.php',
+    'App\\Models\\Transaction' => $baseDir . '/app/models/Transaction.php',
+    'App\\Models\\User' => $baseDir . '/app/models/User.php',
+    'App\\Services\\FinancialUtils' => $baseDir . '/app/services/FinancialUtils.php',
+    'App\\Services\\Validator' => $baseDir . '/app/services/Validator.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
 );

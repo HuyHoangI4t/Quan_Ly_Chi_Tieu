@@ -352,11 +352,15 @@ END$$
 DELIMITER ;
 
 -- ============================================
--- ADMIN SETUP (Optional - For existing users)
+-- ADMIN SETUP & DEFAULT USERS
 -- ============================================
 
--- Uncomment line below to set specific user as admin
--- UPDATE `users` SET `role` = 'admin' WHERE `email` = 'your_email@example.com';
+-- Default admin user
+INSERT INTO `users` (`username`, `email`, `password`, `full_name`, `role`, `is_active`) VALUES
+('huyhoang', 'huyhoangpro187@gmail.com', '$2y$10$tE9OsWy4Vlp414PXUsfBbevRm3i4TNeiwJN3vaVHF7gHMjqX3cUV.', 'Nguyễn Huy Hoàng', 'admin', 1);
+
+-- Default password for admin: Huyhoang@123
+-- Note: Change password after first login for security
 
 -- ============================================
 -- END OF SCHEMA

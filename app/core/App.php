@@ -11,46 +11,68 @@ class App
         {
         }
     
-        public function run()
-        {
-            $url = $this->parseUrl();
-    
-            // If no controller is specified, use the default Login_signup controller
-            if (empty($url[0])) {
-                $this->controller = 'Login_signup';
-            } else {
-                // Check if controller file exists for the requested URL
-                if (file_exists(APP_PATH . '/controllers/' . ucfirst($url[0]) . '.php')) {
+    public function run()
+    {
+        $url = $this->parseUrl();
+        $namespace = 'App\\Controllers';
+        $folderPath = '/controllers';
+
+        // If no controller is specified, use the default Login_signup controller
+        if (empty($url[0])) {
+            $this->controller = 'Login_signup';
+        } else {
+            // Check if this is an admin route
+            if ($url[0] === 'admin') {
+                $namespace = 'App\\Controllers\\Admin';
+                $folderPath = '/controllers/Admin';
+                unset($url[0]);
+                $url = array_values($url);
+                
+                // Set admin controller (default to Users)
+                if (empty($url[0])) {
+                    $this->controller = 'Users';
+                } else {
                     $this->controller = ucfirst($url[0]);
                     unset($url[0]);
-                } else {
-                    // Controller not found, default to Login_signup
-                    $this->controller = 'Login_signup'; 
                 }
+            } else {
+                // User routes
+                $namespace = 'App\\Controllers\\User';
+                $folderPath = '/controllers/User';
+                $this->controller = ucfirst($url[0]);
+                unset($url[0]);
             }
-            // Require the controller file (use @ to suppress warnings if it was default Login_signup)
-            @require_once APP_PATH . '/controllers/' . $this->controller . '.php';
-    
-            // Instantiate the controller with its full namespace
-            $controllerClass = 'App\\Controllers\\' . $this->controller;
-            $this->controller = new $controllerClass(); // No params to constructor for now
-    
-            if (isset($url[1])) {
-                // Check if the method exists in the controller
-                if (method_exists($this->controller, $url[1])) {
-                    $this->method = $url[1];
-                    unset($url[1]);
-                } else {
-                    // Method not found, default to index method
-                    $this->method = 'index';
-                }
+        }
+
+        // Require the controller file
+        $controllerFile = APP_PATH . $folderPath . '/' . $this->controller . '.php';
+        if (!file_exists($controllerFile)) {
+            // Fallback to Login_signup if controller not found
+            $namespace = 'App\\Controllers';
+            $this->controller = 'Login_signup';
+            $controllerFile = APP_PATH . '/controllers/Login_signup.php';
+        }
+        
+        require_once $controllerFile;
+
+        // Instantiate the controller with its full namespace
+        $controllerClass = $namespace . '\\' . $this->controller;
+        $this->controller = new $controllerClass();
+
+        if (isset($url[1])) {
+            // Check if the method exists in the controller
+            if (method_exists($this->controller, $url[1])) {
+                $this->method = $url[1];
+                unset($url[1]);
+            } else {
+                // Method not found, default to index method
+                $this->method = 'index';
             }
+        }
+        
         $this->params = $url ? array_values($url) : [];
-
         call_user_func_array([$this->controller, $this->method], $this->params);
-    }
-
-    public function parseUrl()
+    }    public function parseUrl()
     {
         $url = [];
         if (isset($_GET['url'])) {

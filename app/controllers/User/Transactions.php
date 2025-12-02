@@ -59,7 +59,7 @@ class Transactions extends Controllers
             'per_page' => $perPage
         ];
 
-        $this->view('transactions', $data);
+        $this->view('user/transactions', $data);
     }
 
     public function add()

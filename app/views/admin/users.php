@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $title ?? 'Quản lý người dùng - Admin'; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE_URL; ?>/public/shared/style.css" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>/shared/style.css" rel="stylesheet">
     <style>
         .admin-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -98,7 +98,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE_URL; ?>/public/shared/app.js"></script>
+    <script src="<?php echo BASE_URL; ?>/shared/app.js"></script>
     <script>
         async function toggleRole(userId, currentRole) {
             const newRole = currentRole === 'admin' ? 'user' : 'admin';

@@ -1,7 +1,7 @@
 <?php $this->partial('header'); ?>
 
 <!-- Transactions Specific Styles -->
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/public/transactions/transactions.css">
+<link rel="stylesheet" href="<?php echo BASE_URL; ?>/user/transactions/transactions.css">
 
 <div class="container-fluid" style="background: white; min-height: 100vh; padding: 40px 20px;">
     <div class="container" style="max-width: 1200px;">
@@ -272,6 +272,6 @@
     // Pass PHP variables to JavaScript
     window.BASE_URL = "<?php echo BASE_URL; ?>";
 </script>
-<script src="<?php echo BASE_URL; ?>/public/transactions/transactions.js"></script>
+<script src="<?php echo BASE_URL; ?>/user/transactions/transactions.js"></script>
 
 <?php $this->partial('footer'); ?>

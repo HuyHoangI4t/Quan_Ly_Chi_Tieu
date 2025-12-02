@@ -9,16 +9,41 @@ class ComposerStaticInit4fadebf17455cbe745e42b659de1791f
     public static $prefixLengthsPsr4 = array (
         'A' => 
         array (
+            'App\\Services\\' => 13,
+            'App\\Models\\' => 11,
+            'App\\Middleware\\' => 15,
             'App\\Core\\' => 9,
+            'App\\Controllers\\User\\' => 21,
+            'App\\Controllers\\Admin\\' => 22,
             'App\\Controllers\\' => 16,
             'App\\' => 4,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'App\\Services\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app/services',
+        ),
+        'App\\Models\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app/models',
+        ),
+        'App\\Middleware\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app/middleware',
+        ),
         'App\\Core\\' => 
         array (
             0 => __DIR__ . '/../..' . '/app/core',
+        ),
+        'App\\Controllers\\User\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app/controllers/User',
+        ),
+        'App\\Controllers\\Admin\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app/controllers/Admin',
         ),
         'App\\Controllers\\' => 
         array (
@@ -31,12 +56,27 @@ class ComposerStaticInit4fadebf17455cbe745e42b659de1791f
     );
 
     public static $classMap = array (
-        'App\\Controllers\\Home' => __DIR__ . '/../..' . '/app/controllers/Home.php',
+        'App\\Controllers\\Admin\\Users' => __DIR__ . '/../..' . '/app/controllers/Admin/Users.php',
         'App\\Controllers\\Login_signup' => __DIR__ . '/../..' . '/app/controllers/Login_signup.php',
+        'App\\Controllers\\User\\Budgets' => __DIR__ . '/../..' . '/app/controllers/User/Budgets.php',
+        'App\\Controllers\\User\\Dashboard' => __DIR__ . '/../..' . '/app/controllers/User/Dashboard.php',
+        'App\\Controllers\\User\\Goals' => __DIR__ . '/../..' . '/app/controllers/User/Goals.php',
+        'App\\Controllers\\User\\Profile' => __DIR__ . '/../..' . '/app/controllers/User/Profile.php',
+        'App\\Controllers\\User\\Reports' => __DIR__ . '/../..' . '/app/controllers/User/Reports.php',
+        'App\\Controllers\\User\\Transactions' => __DIR__ . '/../..' . '/app/controllers/User/Transactions.php',
+        'App\\Core\\ApiResponse' => __DIR__ . '/../..' . '/app/core/ApiResponse.php',
         'App\\Core\\App' => __DIR__ . '/../..' . '/app/core/App.php',
         'App\\Core\\ConnectDB' => __DIR__ . '/../..' . '/app/core/ConnectDB.php',
         'App\\Core\\Controllers' => __DIR__ . '/../..' . '/app/core/Controllers.php',
+        'App\\Core\\Request' => __DIR__ . '/../..' . '/app/core/Request.php',
+        'App\\Core\\Response' => __DIR__ . '/../..' . '/app/core/Response.php',
         'App\\Core\\Views' => __DIR__ . '/../..' . '/app/core/Views.php',
+        'App\\Models\\Category' => __DIR__ . '/../..' . '/app/models/Category.php',
+        'App\\Models\\Goal' => __DIR__ . '/../..' . '/app/models/Goal.php',
+        'App\\Models\\Transaction' => __DIR__ . '/../..' . '/app/models/Transaction.php',
+        'App\\Models\\User' => __DIR__ . '/../..' . '/app/models/User.php',
+        'App\\Services\\FinancialUtils' => __DIR__ . '/../..' . '/app/services/FinancialUtils.php',
+        'App\\Services\\Validator' => __DIR__ . '/../..' . '/app/services/Validator.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
     );
 

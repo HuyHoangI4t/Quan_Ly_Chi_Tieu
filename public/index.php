@@ -10,17 +10,18 @@ define('PUBLIC_PATH', dirname(__DIR__) . '/public');
 // Dynamically determine BASE_URL
 $baseUrl = '';
 if (isset($_SERVER['SCRIPT_NAME'])) {
-    $script_name = $_SERVER['SCRIPT_NAME']; // e.g. /myproject/public/index.php
+    $script_name = $_SERVER['SCRIPT_NAME']; // e.g. /Quan_Ly_Chi_Tieu/public/index.php or /index.php
     $base_path = str_replace('/index.php', '', $script_name);
     $public_pos = strrpos($base_path, '/public');
     if ($public_pos !== false) {
-        $base_path = substr($base_path, 0, $public_pos);
+        // XAMPP: /Quan_Ly_Chi_Tieu/public -> /Quan_Ly_Chi_Tieu/public (keep /public for assets)
+        $base_path = substr($base_path, 0, $public_pos) . '/public';
     }
     if (!empty($base_path) && $base_path !== '/') {
         $baseUrl = $base_path;
     }
 }
-define('BASE_URL', $baseUrl); // Define it once and correctly
+define('BASE_URL', $baseUrl); // e.g. /Quan_Ly_Chi_Tieu/public or empty for dev server
 
 
 error_reporting(E_ALL); // Ensure error reporting is ON

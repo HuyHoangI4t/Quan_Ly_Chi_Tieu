@@ -3,8 +3,26 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-blue)](https://www.php.net/)
 [![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange)](https://www.mysql.com/)
+[![Architecture](https://img.shields.io/badge/Architecture-Modular%20MVC-green)](https://github.com)
 
-Hệ thống quản lý chi tiêu cá nhân chuyên nghiệp với PHP MVC, tích hợp phương pháp **6 Jars** (T. Harv Eker), phân quyền Admin/User, và phân tích tài chính chi tiết.
+Hệ thống quản lý chi tiêu cá nhân chuyên nghiệp với **Modular PHP MVC Architecture**, tích hợp phương pháp **6 Jars** (T. Harv Eker), phân quyền Admin/User, và phân tích tài chính chi tiết.
+
+## 🚀 Quick Start
+
+```powershell
+# 1. Start PHP server
+cd c:\xampp\htdocs\Quan_Ly_Chi_Tieu
+php -S localhost:8000 -t public
+
+# 2. Open browser
+http://localhost:8000
+
+# 3. Login
+# Admin: admin@test.com / password
+# User: user1@test.com / password
+```
+
+📖 **[Full Quick Start Guide →](QUICKSTART.md)**
 
 ---
 
@@ -191,12 +209,16 @@ Truy cập: `http://localhost:8000`
 
 #### 7. Đăng ký & Đăng nhập
 
-**User đầu tiên tự động là Admin:**
-- Đăng ký tài khoản đầu tiên → Tự động có quyền Admin
-- Các user sau → Role mặc định là User
+**Test Accounts:**
+- Admin: admin@test.com / password
+- User: user1@test.com / password
+
+**Đăng ký mới:**
+- User mới đăng ký sẽ có role mặc định là 'user'
+- Admin có thể thăng cấp user lên admin qua Admin Panel
 
 **Admin có thể:**
-- Truy cập `/admin/users` để quản lý người dùng
+- Truy cập `/admin/dashboard` và `/admin/users` để quản lý hệ thống
 ## 📖 Hướng Dẫn Sử Dụng
 
 ### Cho User thường:
