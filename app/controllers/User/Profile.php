@@ -5,6 +5,7 @@ use App\Core\Controllers;
 use App\Core\ApiResponse;
 use App\Services\Validator;
 use App\Middleware\CsrfProtection;
+use App\Middleware\AuthCheck;
 use App\Models\User;
 use App\Models\Transaction;
 use Exception;
@@ -14,10 +15,8 @@ class Profile extends Controllers
     public function __construct()
     {
         parent::__construct();
-        // Redirect to login if not logged in
-        if (!$this->isLoggedIn()) {
-            $this->redirect('/login_signup');
-        }
+        // Kiểm tra quyền user
+        AuthCheck::requireUser();
     }
 
     public function index() {

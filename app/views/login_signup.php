@@ -256,11 +256,25 @@
 
                 if (result.success) {
                     // Show success message
-                    showAlert('Đăng ký thành công!', 'success');
-                    // Redirect after 1 second
-                    setTimeout(() => {
-                        window.location.href = result.redirect_url || '<?= BASE_URL; ?>/dashboard';
-                    }, 1000);
+                    showAlert(result.message || 'Đăng ký thành công!', 'success');
+                    
+                    // Switch to login tab and fill in the credentials
+                    if (result.switch_to_login) {
+                        setTimeout(() => {
+                            // Switch to login panel
+                            container.classList.remove('right-panel-active');
+                            
+                            // Fill in login form
+                            const loginForm = document.getElementById('signInForm');
+                            loginForm.querySelector('input[name="email"]').value = result.login_email || '';
+                            loginForm.querySelector('input[name="password"]').value = result.login_password || '';
+                            
+                            // Focus on submit button
+                            loginForm.querySelector('.btn-submit').focus();
+                            
+                            showAlert('Thông tin đã được điền sẵn. Vui lòng nhấn Đăng nhập.', 'info');
+                        }, 1000);
+                    }
                 } else {
                     showAlert(result.message || 'Đăng ký thất bại', 'error');
                 }

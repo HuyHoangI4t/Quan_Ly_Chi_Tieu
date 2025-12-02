@@ -5,6 +5,7 @@ use App\Core\Controllers;
 use App\Models\User;
 use App\Models\Transaction;
 use App\Models\Category;
+use App\Middleware\AuthCheck;
 
 class Dashboard extends Controllers
 {
@@ -16,11 +17,8 @@ class Dashboard extends Controllers
     {
         parent::__construct();
         
-        // Check admin permission
-        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-            http_response_code(403);
-            die('Access Denied: Admin only');
-        }
+        // Kiểm tra quyền admin
+        AuthCheck::requireAdmin();
         
         $this->userModel = $this->model('User');
         $this->transactionModel = $this->model('Transaction');
@@ -80,8 +78,9 @@ class Dashboard extends Controllers
     private function getRecentUsers($limit = 5)
     {
         $db = (new \App\Core\ConnectDB())->getConnection();
-        $stmt = $db->prepare("SELECT id, username, email, full_name, role, created_at FROM users ORDER BY created_at DESC LIMIT ?");
-        $stmt->execute([$limit]);
+        $stmt = $db->prepare("SELECT id, username, email, full_name, role, created_at FROM users ORDER BY created_at DESC LIMIT :limit");
+        $stmt->bindValue(':limit', (int)$limit, \PDO::PARAM_INT);
+        $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 

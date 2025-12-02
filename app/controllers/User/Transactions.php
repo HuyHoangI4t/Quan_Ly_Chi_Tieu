@@ -5,6 +5,7 @@ use App\Core\Controllers;
 use App\Core\ApiResponse;
 use App\Services\Validator;
 use App\Middleware\CsrfProtection;
+use App\Middleware\AuthCheck;
 
 class Transactions extends Controllers
 {
@@ -14,9 +15,8 @@ class Transactions extends Controllers
     public function __construct()
     {
         parent::__construct();
-        if (!$this->isLoggedIn()) {
-            $this->redirect('/login_signup');
-        }
+        // Kiểm tra quyền user
+        AuthCheck::requireUser();
         $this->transactionModel = $this->model('Transaction');
         $this->categoryModel = $this->model('Category');
     }

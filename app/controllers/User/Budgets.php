@@ -5,6 +5,7 @@ use App\Core\Controllers;
 use App\Core\ApiResponse;
 use App\Services\Validator;
 use App\Middleware\CsrfProtection;
+use App\Middleware\AuthCheck;
 
 class Budgets extends Controllers
 {
@@ -13,9 +14,8 @@ class Budgets extends Controllers
     public function __construct()
     {
         parent::__construct();
-        if (!$this->isLoggedIn()) {
-            $this->redirect('/login_signup');
-        }
+        // Kiểm tra quyền user (ngăn admin truy cập)
+        AuthCheck::requireUser();
         $this->db = (new \App\Core\ConnectDB())->getConnection();
     }
 

@@ -3,6 +3,7 @@ namespace App\Controllers\User;
 
 use App\Core\Controllers;
 use App\Middleware\CsrfProtection;
+use App\Middleware\AuthCheck;
 use App\Core\ApiResponse;
 use App\Services\Validator;
 use Exception;
@@ -19,6 +20,8 @@ class Goals extends Controllers {
     
     public function __construct() {
         parent::__construct();
+        // Kiểm tra quyền user
+        AuthCheck::requireUser();
         $this->goalModel = $this->model('Goal');
         $this->transactionModel = $this->model('Transaction');
         $this->csrfProtection = new CsrfProtection();

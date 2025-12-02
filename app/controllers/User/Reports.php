@@ -2,6 +2,7 @@
 namespace App\Controllers\User;
 
 use App\Core\Controllers;
+use App\Middleware\AuthCheck;
 
 class Reports extends Controllers
 {
@@ -10,9 +11,8 @@ class Reports extends Controllers
     public function __construct()
     {
         parent::__construct();
-        if (!$this->isLoggedIn()) {
-            $this->redirect('/login_signup');
-        }
+        // Kiểm tra quyền user
+        AuthCheck::requireUser();
         $this->transactionModel = $this->model('Transaction');
     }
 

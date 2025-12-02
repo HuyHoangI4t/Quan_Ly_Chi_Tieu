@@ -3,6 +3,7 @@ namespace App\Controllers\Admin;
 
 use App\Core\Controllers;
 use App\Models\User;
+use App\Middleware\AuthCheck;
 
 class Users extends Controllers
 {
@@ -12,11 +13,8 @@ class Users extends Controllers
     {
         parent::__construct();
         
-        // Check admin permission
-        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-            http_response_code(403);
-            die('Access Denied: Admin only');
-        }
+        // Kiểm tra quyền admin
+        AuthCheck::requireAdmin();
         
         $this->userModel = $this->model('User');
     }

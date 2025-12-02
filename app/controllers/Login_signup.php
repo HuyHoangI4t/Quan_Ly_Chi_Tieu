@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Core\Controllers;
 use App\Models\User; // Use the User model
+use App\Middleware\AuthCheck;
 
 class Login_signup extends Controllers
 {
@@ -16,9 +17,14 @@ class Login_signup extends Controllers
 
     public function index()
     {
-        // If already logged in, redirect to dashboard (will create dashboard later)
+        // If already logged in, redirect based on role
         if ($this->isLoggedIn()) {
-            $this->redirect('/dashboard'); // Placeholder for now
+            if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+                $this->redirect('/admin/dashboard');
+            } else {
+                $this->redirect('/dashboard');
+            }
+            exit();
         }
         $this->view->set('title', 'Đăng nhập & Đăng ký - Smart Spending');
         $this->view->render('login_signup');
@@ -60,20 +66,11 @@ class Login_signup extends Controllers
                 } else {
                     $userId = $this->userModel->createUser($username, $email, $password, $fullName);
                     if ($userId) {
-                        // Get user data to retrieve role from database
-                        $user = $this->userModel->getUserById($userId);
-                        $_SESSION['user_id'] = $userId;
-                        $_SESSION['username'] = $username;
-                        $_SESSION['full_name'] = $fullName;
-                        $_SESSION['role'] = $user['role'] ?? 'user';
                         $response['success'] = true;
-                        $response['message'] = 'Đăng ký thành công!';
-                        // Redirect based on role
-                        if ($user['role'] === 'admin') {
-                            $response['redirect_url'] = BASE_URL . '/admin/dashboard';
-                        } else {
-                            $response['redirect_url'] = BASE_URL . '/dashboard';
-                        }
+                        $response['message'] = 'Đăng ký thành công! Vui lòng đăng nhập.';
+                        $response['switch_to_login'] = true;
+                        $response['login_email'] = $email;
+                        $response['login_password'] = $password;
                     } else {
                         $response['message'] = 'Đã có lỗi xảy ra trong quá trình đăng ký. Vui lòng thử lại.';
                     }

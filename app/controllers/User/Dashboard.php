@@ -3,6 +3,7 @@ namespace App\Controllers\User;
 
 use App\Core\Controllers;
 use App\Models\Transaction;
+use App\Middleware\AuthCheck;
 
 class Dashboard extends Controllers
 {
@@ -11,10 +12,8 @@ class Dashboard extends Controllers
     public function __construct()
     {
         parent::__construct();
-        // Redirect to login if not logged in
-        if (!$this->isLoggedIn()) {
-            $this->redirect('/login_signup');
-        }
+        // Kiểm tra quyền user (ngăn admin truy cập)
+        AuthCheck::requireUser();
         $this->transactionModel = $this->model('Transaction');
     }
 
