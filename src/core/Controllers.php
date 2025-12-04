@@ -5,10 +5,14 @@ class Controllers
 {
     protected $view;
     protected $userModel;
+    protected $request;
+    protected $response;
 
     public function __construct()
     {
         $this->view = new Views();
+        $this->request = new Request();
+        $this->response = new Response();
         // Ensure session is started
         if (session_status() == PHP_SESSION_NONE) {
             session_start();

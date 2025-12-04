@@ -2,19 +2,19 @@
 namespace App\Controllers\User;
 
 use App\Core\Controllers;
-use App\Models\Transaction;
+use App\Services\DashboardService;
 use App\Middleware\AuthCheck;
 
 class Dashboard extends Controllers
 {
-    private $transactionModel;
+    private $dashboardService;
 
     public function __construct()
     {
         parent::__construct();
         // Kiểm tra quyền user (ngăn admin truy cập)
         AuthCheck::requireUser();
-        $this->transactionModel = $this->model('Transaction');
+        $this->dashboardService = new DashboardService();
     }
 
     public function index($range = null)
@@ -27,7 +27,7 @@ class Dashboard extends Controllers
             $range = date('Y-m');
         }
         
-        $dashboardData = $this->transactionModel->getDashboardData($userId, $range);
+        $dashboardData = $this->dashboardService->getDashboardData($userId, $range);
 
         // Determine subtitle for line chart (always shows 3 recent months)
         $lineChartSubtitle = '3 tháng gần nhất';

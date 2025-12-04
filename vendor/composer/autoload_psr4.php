@@ -6,13 +6,13 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'App\\Services\\' => array($baseDir . '/app/services'),
-    'App\\Models\\' => array($baseDir . '/app/models'),
-    'App\\Middleware\\' => array($baseDir . '/app/middleware'),
-    'App\\Core\\' => array($baseDir . '/app/core'),
-    'App\\Controllers\\User\\' => array($baseDir . '/app/controllers/User'),
-    'App\\Controllers\\Auth\\' => array($baseDir . '/app/controllers/Auth'),
-    'App\\Controllers\\Admin\\' => array($baseDir . '/app/controllers/Admin'),
-    'App\\Controllers\\' => array($baseDir . '/app/controllers'),
-    'App\\' => array($baseDir . '/app'),
+    'App\\Services\\' => array($baseDir . '/src/services'),
+    'App\\Models\\' => array($baseDir . '/src/models'),
+    'App\\Middleware\\' => array($baseDir . '/src/middleware'),
+    'App\\Core\\' => array($baseDir . '/src/core'),
+    'App\\Controllers\\User\\' => array($baseDir . '/src/controllers/User'),
+    'App\\Controllers\\Auth\\' => array($baseDir . '/src/controllers/Auth'),
+    'App\\Controllers\\Admin\\' => array($baseDir . '/src/controllers/Admin'),
+    'App\\Controllers\\' => array($baseDir . '/src/controllers'),
+    'App\\' => array($baseDir . '/src'),
 );

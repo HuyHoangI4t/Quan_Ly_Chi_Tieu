@@ -24,68 +24,69 @@ class ComposerStaticInit4fadebf17455cbe745e42b659de1791f
     public static $prefixDirsPsr4 = array (
         'App\\Services\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/services',
+            0 => __DIR__ . '/../..' . '/src/services',
         ),
         'App\\Models\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/models',
+            0 => __DIR__ . '/../..' . '/src/models',
         ),
         'App\\Middleware\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/middleware',
+            0 => __DIR__ . '/../..' . '/src/middleware',
         ),
         'App\\Core\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/core',
+            0 => __DIR__ . '/../..' . '/src/core',
         ),
         'App\\Controllers\\User\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/controllers/User',
+            0 => __DIR__ . '/../..' . '/src/controllers/User',
         ),
         'App\\Controllers\\Auth\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/controllers/Auth',
+            0 => __DIR__ . '/../..' . '/src/controllers/Auth',
         ),
         'App\\Controllers\\Admin\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/controllers/Admin',
+            0 => __DIR__ . '/../..' . '/src/controllers/Admin',
         ),
         'App\\Controllers\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app/controllers',
+            0 => __DIR__ . '/../..' . '/src/controllers',
         ),
         'App\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/app',
+            0 => __DIR__ . '/../..' . '/src',
         ),
     );
 
     public static $classMap = array (
-        'App\\Controllers\\Admin\\Dashboard' => __DIR__ . '/../..' . '/app/controllers/Admin/Dashboard.php',
-        'App\\Controllers\\Admin\\Users' => __DIR__ . '/../..' . '/app/controllers/Admin/Users.php',
-        'App\\Controllers\\Auth\\Login' => __DIR__ . '/../..' . '/app/controllers/Auth/Login.php',
-        'App\\Controllers\\Login_signup' => __DIR__ . '/../..' . '/app/controllers/Login_signup.php',
-        'App\\Controllers\\User\\Budgets' => __DIR__ . '/../..' . '/app/controllers/User/Budgets.php',
-        'App\\Controllers\\User\\Dashboard' => __DIR__ . '/../..' . '/app/controllers/User/Dashboard.php',
-        'App\\Controllers\\User\\Goals' => __DIR__ . '/../..' . '/app/controllers/User/Goals.php',
-        'App\\Controllers\\User\\Profile' => __DIR__ . '/../..' . '/app/controllers/User/Profile.php',
-        'App\\Controllers\\User\\Reports' => __DIR__ . '/../..' . '/app/controllers/User/Reports.php',
-        'App\\Controllers\\User\\Transactions' => __DIR__ . '/../..' . '/app/controllers/User/Transactions.php',
-        'App\\Core\\ApiResponse' => __DIR__ . '/../..' . '/app/core/ApiResponse.php',
-        'App\\Core\\App' => __DIR__ . '/../..' . '/app/core/App.php',
-        'App\\Core\\ConnectDB' => __DIR__ . '/../..' . '/app/core/ConnectDB.php',
-        'App\\Core\\Controllers' => __DIR__ . '/../..' . '/app/core/Controllers.php',
-        'App\\Core\\Request' => __DIR__ . '/../..' . '/app/core/Request.php',
-        'App\\Core\\Response' => __DIR__ . '/../..' . '/app/core/Response.php',
-        'App\\Core\\Views' => __DIR__ . '/../..' . '/app/core/Views.php',
-        'App\\Middleware\\AuthCheck' => __DIR__ . '/../..' . '/app/middleware/AuthCheck.php',
-        'App\\Middleware\\CsrfProtection' => __DIR__ . '/../..' . '/app/middleware/CsrfProtection.php',
-        'App\\Models\\Category' => __DIR__ . '/../..' . '/app/models/Category.php',
-        'App\\Models\\Goal' => __DIR__ . '/../..' . '/app/models/Goal.php',
-        'App\\Models\\Transaction' => __DIR__ . '/../..' . '/app/models/Transaction.php',
-        'App\\Models\\User' => __DIR__ . '/../..' . '/app/models/User.php',
-        'App\\Services\\FinancialUtils' => __DIR__ . '/../..' . '/app/services/FinancialUtils.php',
-        'App\\Services\\Validator' => __DIR__ . '/../..' . '/app/services/Validator.php',
+        'App\\Controllers\\Admin\\Dashboard' => __DIR__ . '/../..' . '/src/controllers/Admin/Dashboard.php',
+        'App\\Controllers\\Admin\\Users' => __DIR__ . '/../..' . '/src/controllers/Admin/Users.php',
+        'App\\Controllers\\Auth\\Login' => __DIR__ . '/../..' . '/src/controllers/Auth/Login.php',
+        'App\\Controllers\\Login_signup' => __DIR__ . '/../..' . '/src/controllers/Login_signup.php',
+        'App\\Controllers\\User\\Budgets' => __DIR__ . '/../..' . '/src/controllers/User/Budgets.php',
+        'App\\Controllers\\User\\Dashboard' => __DIR__ . '/../..' . '/src/controllers/User/Dashboard.php',
+        'App\\Controllers\\User\\Goals' => __DIR__ . '/../..' . '/src/controllers/User/Goals.php',
+        'App\\Controllers\\User\\Profile' => __DIR__ . '/../..' . '/src/controllers/User/Profile.php',
+        'App\\Controllers\\User\\Reports' => __DIR__ . '/../..' . '/src/controllers/User/Reports.php',
+        'App\\Controllers\\User\\Transactions' => __DIR__ . '/../..' . '/src/controllers/User/Transactions.php',
+        'App\\Core\\ApiResponse' => __DIR__ . '/../..' . '/src/core/ApiResponse.php',
+        'App\\Core\\App' => __DIR__ . '/../..' . '/src/core/App.php',
+        'App\\Core\\ConnectDB' => __DIR__ . '/../..' . '/src/core/ConnectDB.php',
+        'App\\Core\\Controllers' => __DIR__ . '/../..' . '/src/core/Controllers.php',
+        'App\\Core\\Request' => __DIR__ . '/../..' . '/src/core/Request.php',
+        'App\\Core\\Response' => __DIR__ . '/../..' . '/src/core/Response.php',
+        'App\\Core\\Views' => __DIR__ . '/../..' . '/src/core/Views.php',
+        'App\\Middleware\\AuthCheck' => __DIR__ . '/../..' . '/src/middleware/AuthCheck.php',
+        'App\\Middleware\\CsrfProtection' => __DIR__ . '/../..' . '/src/middleware/CsrfProtection.php',
+        'App\\Models\\Category' => __DIR__ . '/../..' . '/src/models/Category.php',
+        'App\\Models\\Goal' => __DIR__ . '/../..' . '/src/models/Goal.php',
+        'App\\Models\\JarTemplate' => __DIR__ . '/../..' . '/src/models/JarTemplate.php',
+        'App\\Models\\Transaction' => __DIR__ . '/../..' . '/src/models/Transaction.php',
+        'App\\Models\\User' => __DIR__ . '/../..' . '/src/models/User.php',
+        'App\\Services\\FinancialUtils' => __DIR__ . '/../..' . '/src/services/FinancialUtils.php',
+        'App\\Services\\Validator' => __DIR__ . '/../..' . '/src/services/Validator.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
     );
 

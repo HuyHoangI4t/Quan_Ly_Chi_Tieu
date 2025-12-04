@@ -15,11 +15,8 @@ class Login extends Controllers
 
     public function index()
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        if (isset($_SESSION['user_id'])) {
-            if (($_SESSION['role'] ?? 'user') === 'admin') {
+        if ($this->request->session('user_id')) {
+            if (($this->request->session('role') ?? 'user') === 'admin') {
                 $this->redirect('/admin/dashboard');
             } else {
                 $this->redirect('/dashboard');
@@ -32,11 +29,10 @@ class Login extends Controllers
 
     public function api_register()
     {
-        header('Content-Type: application/json');
         $response = ['success' => false, 'message' => 'Yêu cầu không hợp lệ.', 'redirect_url' => ''];
 
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-            $data = json_decode(file_get_contents('php://input'), true);
+        if ($this->request->method() === 'POST') {
+            $data = $this->request->json();
 
             $fullName = trim($data['full_name'] ?? '');
             $email = trim($data['email'] ?? '');
@@ -73,17 +69,15 @@ class Login extends Controllers
             }
         }
 
-        echo json_encode($response);
-        exit();
+        $this->response->json($response);
     }
 
     public function api_login()
     {
-        header('Content-Type: application/json');
         $response = ['success' => false, 'message' => 'Yêu cầu không hợp lệ.', 'redirect_url' => ''];
 
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-            $data = json_decode(file_get_contents('php://input'), true);
+        if ($this->request->method() === 'POST') {
+            $data = $this->request->json();
 
             $email = trim($data['email'] ?? '');
             $password = $data['password'] ?? '';
@@ -94,10 +88,10 @@ class Login extends Controllers
                 $user = $this->userModel->authenticate($email, $password);
 
                 if ($user) {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['full_name'] = $user['full_name'];
-                    $_SESSION['role'] = $user['role'] ?? 'user';
+                    $this->request->setSession('user_id', $user['id']);
+                    $this->request->setSession('username', $user['username']);
+                    $this->request->setSession('full_name', $user['full_name']);
+                    $this->request->setSession('role', $user['role'] ?? 'user');
                     $response['success'] = true;
                     $response['message'] = 'Đăng nhập thành công!';
                     if (($user['role'] ?? 'user') === 'admin') {
@@ -111,16 +105,12 @@ class Login extends Controllers
             }
         }
 
-        echo json_encode($response);
-        exit();
+        $this->response->json($response);
     }
 
     public function logout()
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        session_destroy();
+        $this->request->destroySession();
         $this->redirect('/auth/login');
     }
 
@@ -136,10 +126,7 @@ class Login extends Controllers
         $state = bin2hex(random_bytes(16));
         
         // Store state in session for verification
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $_SESSION['google_oauth_state'] = $state;
+        $this->request->setSession('google_oauth_state', $state);
         
         $authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" . http_build_query([
             'client_id' => $clientId,
@@ -160,32 +147,29 @@ class Login extends Controllers
      */
     public function google_callback()
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $code = $_GET['code'] ?? null;
-        $state = $_GET['state'] ?? null;
-        $error = $_GET['error'] ?? null;
+        $code = $this->request->get('code');
+        $state = $this->request->get('state');
+        $error = $this->request->get('error');
 
         // Check for errors
         if ($error) {
-            $_SESSION['error'] = 'Đăng nhập Google bị hủy';
+            $this->request->setSession('error', 'Đăng nhập Google bị hủy');
             $this->redirect('/auth/login');
             return;
         }
 
         // Verify state
-        if (!$state || !isset($_SESSION['google_oauth_state']) || $state !== $_SESSION['google_oauth_state']) {
-            $_SESSION['error'] = 'Invalid state parameter';
+        $savedState = $this->request->session('google_oauth_state');
+        if (!$state || !$savedState || $state !== $savedState) {
+            $this->request->setSession('error', 'Invalid state parameter');
             $this->redirect('/auth/login');
             return;
         }
 
-        unset($_SESSION['google_oauth_state']);
+        $this->request->unsetSession('google_oauth_state');
 
         if (!$code) {
-            $_SESSION['error'] = 'Không nhận được mã xác thực';
+            $this->request->setSession('error', 'Không nhận được mã xác thực');
             $this->redirect('/auth/login');
             return;
         }
@@ -210,10 +194,10 @@ class Login extends Controllers
 
             if ($user) {
                 // User exists, log them in
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_email'] = $user['email'];
-                $_SESSION['user_name'] = $user['full_name'];
-                $_SESSION['role'] = $user['role'] ?? 'user';
+                $this->request->setSession('user_id', $user['id']);
+                $this->request->setSession('user_email', $user['email']);
+                $this->request->setSession('user_name', $user['full_name']);
+                $this->request->setSession('role', $user['role'] ?? 'user');
 
                 $this->redirect('/dashboard');
             } else {
@@ -226,10 +210,10 @@ class Login extends Controllers
                 $newUserId = $this->userModel->createUser($username, $email, $randomPassword, $fullName);
 
                 if ($newUserId) {
-                    $_SESSION['user_id'] = $newUserId;
-                    $_SESSION['user_email'] = $userInfo['email'];
-                    $_SESSION['user_name'] = $userInfo['name'] ?? $userInfo['email'];
-                    $_SESSION['role'] = 'user';
+                    $this->request->setSession('user_id', $newUserId);
+                    $this->request->setSession('user_email', $userInfo['email']);
+                    $this->request->setSession('user_name', $userInfo['name'] ?? $userInfo['email']);
+                    $this->request->setSession('role', 'user');
 
                     $this->redirect('/dashboard');
                 } else {
@@ -237,7 +221,7 @@ class Login extends Controllers
                 }
             }
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Lỗi: ' . $e->getMessage();
+            $this->request->setSession('error', 'Lỗi: ' . $e->getMessage());
             $this->redirect('/auth/login');
         }
     }

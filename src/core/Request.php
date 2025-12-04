@@ -36,6 +36,38 @@ class Request
         return $_GET[$key] ?? $default;
     }
 
+    public function session(string $key, $default = null)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        return $_SESSION[$key] ?? $default;
+    }
+
+    public function setSession(string $key, $value)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION[$key] = $value;
+    }
+
+    public function unsetSession(string $key)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        unset($_SESSION[$key]);
+    }
+
+    public function destroySession()
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        session_destroy();
+    }
+
     public function post(string $key, $default = null)
     {
         return $_POST[$key] ?? $default;
@@ -44,6 +76,15 @@ class Request
     public function input(string $key, $default = null)
     {
         return $_REQUEST[$key] ?? $default;
+    }
+
+    public function json(string $key = null, $default = null)
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        if ($key) {
+            return $data[$key] ?? $default;
+        }
+        return $data;
     }
 
     public function all(): array

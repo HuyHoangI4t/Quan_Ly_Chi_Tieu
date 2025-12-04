@@ -14,98 +14,6 @@ class Transaction
         $this->db = (new ConnectDB())->getConnection();
     }
 
-    /**
-     * Fetches all necessary data for the dashboard based on a date range.
-     * @param int $userId The ID of the user.
-     * @param string $range The date range ('month', 'week', 'year', or a specific day 'Y-m-d').
-     * @return array An associative array with keys 'totals', 'recentTransactions', 'lineChart', 'pieChart'.
-     */
-    public function getDashboardData($userId, $range = 'this_month')
-    {
-        // 1. Determine Current and Previous Date Ranges using FinancialUtils
-        list($startDate, $endDate, $prevStartDate, $prevEndDate) = FinancialUtils::getPeriodDates($range);
-
-        // 2. Get Totals for Both Periods
-        $currentTotals = $this->getTotalsForPeriod($userId, $startDate, $endDate);
-        $previousTotals = $this->getTotalsForPeriod($userId, $prevStartDate, $prevEndDate);
-
-        // 3. Calculate Trends using FinancialUtils
-        $incomeTrend = FinancialUtils::calculatePercentageChange($previousTotals['income'], $currentTotals['income']);
-        $expenseTrend = FinancialUtils::calculatePercentageChange($previousTotals['expense'], $currentTotals['expense']);
-        
-        // --- Get Total Balance (unaffected by date range) ---
-        // Balance = Total Income - Total Expense (absolute value)
-        $stmtTotalBalance = $this->db->prepare("
-            SELECT 
-                COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) - 
-                COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 0) AS balance 
-            FROM transactions 
-            WHERE user_id = ?
-        ");
-        $stmtTotalBalance->execute([$userId]);
-        $totalBalance = $stmtTotalBalance->fetch(PDO::FETCH_ASSOC);
-
-        // Calculate savings rate using FinancialUtils
-        $currentSavingsRate = FinancialUtils::calculateSavingsRate($currentTotals['income'], $currentTotals['expense']);
-        $previousSavingsRate = FinancialUtils::calculateSavingsRate($previousTotals['income'], $previousTotals['expense']);
-        $savingsRateTrend = $currentSavingsRate - $previousSavingsRate;
-
-        $totals = [
-            'income' => (float) $currentTotals['income'],
-            'expense' => (float) $currentTotals['expense'],
-            'balance' => (float) $totalBalance['balance'],
-            'savingsRate' => $currentSavingsRate,
-            'income_trend' => $incomeTrend,
-            'expense_trend' => $expenseTrend,
-            'savings_rate_trend' => $savingsRateTrend,
-        ];
-
-
-        // --- Get Recent Transactions ---
-        $stmtRecent = $this->db->prepare("
-            SELECT t.description, t.amount, t.date, c.name as category_name
-            FROM transactions t
-            JOIN categories c ON t.category_id = c.id
-            WHERE t.user_id = ?
-            ORDER BY t.date DESC
-            LIMIT 5
-        ");
-        $stmtRecent->execute([$userId]);
-        $recentTransactions = $stmtRecent->fetchAll(PDO::FETCH_ASSOC);
-
-
-        // --- Get Data for Pie Chart (Category Breakdown for current period) ---
-        $stmtPie = $this->db->prepare("
-            SELECT c.name, SUM(ABS(t.amount)) as total
-            FROM transactions t
-            JOIN categories c ON t.category_id = c.id
-            WHERE t.user_id = ? AND t.amount < 0 AND t.date BETWEEN ? AND ?
-            GROUP BY c.name
-            ORDER BY total DESC
-        ");
-        $stmtPie->execute([$userId, $startDate, $endDate]);
-        $pieChartData = $stmtPie->fetchAll(PDO::FETCH_ASSOC);
-
-        // Calculate Remaining Balance for Pie Chart
-        $currentIncome = (float) $currentTotals['income'];
-        $currentExpense = (float) $currentTotals['expense'];
-        $netBalance = $currentIncome - $currentExpense;
-
-        if ($currentIncome > 0 && $netBalance > 0) {
-            $pieChartData[] = ['name' => 'Số dư còn lại', 'total' => $netBalance];
-        }
-
-        // --- 4. Get Data for Line Chart ---
-        $lineChartData = $this->getLineChartData($userId);
-
-        return [
-            'totals' => $totals,
-            'recentTransactions' => $recentTransactions,
-            'pieChartData' => $pieChartData,
-            'lineChartData' => $lineChartData
-        ];
-    }
-
     public function getLineChartData($userId)
     {
         // Always show the last 3 months: current, last month, and the month before that.
@@ -175,7 +83,7 @@ class Transaction
         return $result;
     }
 
-    private function getTotalsForPeriod($userId, $startDate, $endDate)
+    public function getTotalsForPeriod($userId, $startDate, $endDate)
     {
         $stmt = $this->db->prepare("
             SELECT
@@ -187,58 +95,35 @@ class Transaction
         $stmt->execute([$userId, $startDate, $endDate]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    
-    private function calculatePercentageChange($previous, $current)
+
+    public function getTotalBalance($userId)
     {
-        // If both are 0, no meaningful change
-        if ($previous == 0 && $current == 0) {
-            return null; // Return null to indicate no data for comparison
-        }
-        
-        if ($previous == 0) {
-            return ($current > 0) ? 100 : -100; // If previous was 0, any change is 100%
-        }
-        
-        return round((($current - $previous) / $previous) * 100);
+        $stmt = $this->db->prepare("
+            SELECT 
+                COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) - 
+                COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 0) AS balance 
+            FROM transactions 
+            WHERE user_id = ?
+        ");
+        $stmt->execute([$userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['balance'] ?? 0;
     }
 
-    private function getPeriodDates($range) {
-        switch ($range) {
-            case 'this_week':
-                $startDate = date('Y-m-d', strtotime('monday this week'));
-                $endDate = date('Y-m-d', strtotime('sunday this week'));
-                $prevStartDate = date('Y-m-d', strtotime('monday last week'));
-                $prevEndDate = date('Y-m-d', strtotime('sunday last week'));
-                break;
-            case 'this_year':
-                $startDate = date('Y-01-01');
-                $endDate = date('Y-12-31');
-                $prevStartDate = date('Y-01-01', strtotime('-1 year'));
-                $prevEndDate = date('Y-12-31', strtotime('-1 year'));
-                break;
-            case 'this_month':
-                // Get last 3 months (current month - 2 months)
-                $startDate = date('Y-m-01', strtotime('-2 months'));
-                $endDate = date('Y-m-t'); // End of current month
-                $prevStartDate = date('Y-m-01', strtotime('first day of last month'));
-                $prevEndDate = date('Y-m-t', strtotime('last day of last month'));
-                break;
-            case 'last_month':
-                $startDate = date('Y-m-01', strtotime('first day of last month'));
-                $endDate = date('Y-m-t', strtotime('last day of last month'));
-                $prevStartDate = date('Y-m-01', strtotime('-2 months'));
-                $prevEndDate = date('Y-m-t', strtotime('-2 months'));
-                break;
-            default:
-                $startDate = date('Y-m-01');
-                $endDate = date('Y-m-t');
-                $prevStartDate = date('Y-m-01', strtotime('first day of last month'));
-                $prevEndDate = date('Y-m-t', strtotime('last day of last month'));
-                break;
-        }
-        return [$startDate, $endDate, $prevStartDate, $prevEndDate];
+    public function getRecentTransactions($userId, $limit = 5)
+    {
+        $stmt = $this->db->prepare("
+            SELECT t.description, t.amount, t.date, c.name as category_name
+            FROM transactions t
+            JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = ?
+            ORDER BY t.date DESC
+            LIMIT " . (int)$limit
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
+    
     public function createTransaction($userId, $categoryId, $amount, $type, $date, $description)
     {
         // Get category type from database to determine if income or expense
