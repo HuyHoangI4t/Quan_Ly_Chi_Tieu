@@ -62,8 +62,28 @@ class User
 
     public function updateUserRole($userId, $role)
     {
+        // Check if user is super admin (cannot be demoted)
+        $checkStmt = $this->db->prepare("SELECT is_super_admin FROM users WHERE id = ?");
+        $checkStmt->execute([$userId]);
+        $user = $checkStmt->fetch(\PDO::FETCH_ASSOC);
+        
+        if ($user && $user['is_super_admin'] == 1) {
+            return false; // Cannot change super admin role
+        }
+        
         $stmt = $this->db->prepare("UPDATE users SET role = ? WHERE id = ?");
         return $stmt->execute([$role, $userId]);
+    }
+
+    /**
+     * Check if user is super admin
+     */
+    public function isSuperAdmin($userId)
+    {
+        $stmt = $this->db->prepare("SELECT is_super_admin FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $user && $user['is_super_admin'] == 1;
     }
 
     public function getUserByUsername($username)

@@ -9,7 +9,7 @@ use App\Middleware\AuthCheck;
 
 class Budgets extends Controllers
 {
-    private $db;
+    protected $db;
 
     public function __construct()
     {

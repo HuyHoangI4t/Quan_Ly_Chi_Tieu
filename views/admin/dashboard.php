@@ -131,6 +131,9 @@
                         <a href="<?php echo BASE_URL; ?>/admin/users" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
                             <i class="fas fa-users-cog"></i> Quản lý Users
                         </a>
+                        <a href="<?php echo BASE_URL; ?>/admin/categories" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
+                            <i class="fas fa-tags"></i> Quản lý Danh mục Gốc
+                        </a>
                         <a href="<?php echo $userBase; ?>/dashboard" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
                             <i class="fas fa-chart-line"></i> Xem Dashboard User
                         </a>

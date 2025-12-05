@@ -80,9 +80,9 @@ class Users extends Controllers
         $userId = $data['user_id'] ?? 0;
         $role = $data['role'] ?? 'user';
 
-        // Không cho phép thay đổi role của user id = 1
-        if ($userId == 1) {
-            Response::errorResponse('Không thể thay đổi quyền của tài khoản admin chính');
+        // Không cho phép thay đổi role của super admin (using DB flag instead of hardcoded ID)
+        if ($this->userModel->isSuperAdmin($userId)) {
+            Response::errorResponse('Không thể thay đổi quyền của tài khoản Super Admin');
             return;
         }
 
@@ -102,7 +102,7 @@ class Users extends Controllers
         if ($result) {
             Response::successResponse('Cập nhật vai trò thành công');
         } else {
-            Response::errorResponse('Có lỗi xảy ra');
+            Response::errorResponse('Không thể cập nhật vai trò của Super Admin');
         }
     }
 }

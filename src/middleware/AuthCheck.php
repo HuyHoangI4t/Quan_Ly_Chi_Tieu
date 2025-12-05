@@ -1,20 +1,40 @@
 <?php
 namespace App\Middleware;
 
-use App\Core\Request;
+use App\Core\SessionManager;
+use App\Core\Container;
 
 /**
  * AuthCheck - Kiểm tra quyền truy cập
+ * Refactored to use SessionManager instead of direct $_SESSION access
  */
 class AuthCheck
 {
+    private static $session = null;
+
+    /**
+     * Get SessionManager instance
+     */
+    private static function getSession()
+    {
+        if (self::$session === null) {
+            $container = Container::getInstance();
+            if ($container->has(SessionManager::class)) {
+                self::$session = $container->make(SessionManager::class);
+            } else {
+                self::$session = new SessionManager();
+            }
+        }
+        return self::$session;
+    }
+
     /**
      * Kiểm tra người dùng đã đăng nhập chưa
      */
     public static function requireLogin()
     {
-        $request = new Request();
-        if (!$request->session('user_id')) {
+        $session = self::getSession();
+        if (!$session->isLoggedIn()) {
             http_response_code(401);
             header('Location: ' . BASE_URL . '/auth/login');
             exit('Unauthorized: Please login first');
@@ -26,17 +46,17 @@ class AuthCheck
      */
     public static function requireAdmin()
     {
-        $request = new Request();
+        $session = self::getSession();
 
         // Kiểm tra đã đăng nhập
-        if (!$request->session('user_id')) {
+        if (!$session->isLoggedIn()) {
             http_response_code(401);
             header('Location: ' . BASE_URL . '/auth/login');
             exit('Unauthorized: Please login first');
         }
 
         // Kiểm tra quyền admin
-        if ($request->session('role') !== 'admin') {
+        if (!$session->isAdmin()) {
             http_response_code(403);
             header('Location: ' . BASE_URL . '/dashboard');
             exit('Access Denied: Admin only');
@@ -48,19 +68,17 @@ class AuthCheck
      */
     public static function requireUser()
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        $session = self::getSession();
 
         // Kiểm tra đã đăng nhập
-        if (!isset($_SESSION['user_id'])) {
+        if (!$session->isLoggedIn()) {
             http_response_code(401);
             header('Location: ' . BASE_URL . '/auth/login');
             exit('Unauthorized: Please login first');
         }
 
         // Nếu là admin, chuyển về trang admin
-        if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+        if ($session->isAdmin()) {
             http_response_code(403);
             header('Location: ' . BASE_URL . '/admin/dashboard');
             exit('Access Denied: User only');
@@ -72,13 +90,11 @@ class AuthCheck
      */
     public static function requireGuest()
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        $session = self::getSession();
 
-        if (isset($_SESSION['user_id'])) {
+        if ($session->isLoggedIn()) {
             // Redirect dựa trên role
-            if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+            if ($session->isAdmin()) {
                 header('Location: ' . BASE_URL . '/admin/dashboard');
             } else {
                 header('Location: ' . BASE_URL . '/dashboard');

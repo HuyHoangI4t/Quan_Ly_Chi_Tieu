@@ -88,55 +88,92 @@ class Category
     }
 
     /**
-     * Create a new custom category
+     * Create a new category (custom or default)
+     * @param int|null $userId NULL for default categories (Admin), User ID for custom
      */
     public function create($userId, $data)
     {
-        $sql = "INSERT INTO categories (user_id, name, type, is_default) VALUES (?, ?, ?, 0)";
+        $isDefault = ($userId === null) ? 1 : 0;
+        $sql = "INSERT INTO categories (user_id, name, type, color, icon, is_default) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
+        $result = $stmt->execute([
             $userId,
             $data['name'],
-            $data['type']
+            $data['type'],
+            $data['color'] ?? '#3498db',
+            $data['icon'] ?? 'fa-circle',
+            $isDefault
         ]);
+        return $result ? $this->db->lastInsertId() : false;
     }
 
     /**
-     * Update a custom category
-     * Only user's own categories can be updated (not default ones)
+     * Update a category (custom or default)
+     * @param int $id Category ID
+     * @param int|null $userId NULL for admin updating default categories
      */
     public function update($id, $userId, $data)
     {
-        $sql = "UPDATE categories SET name = ?, type = ? WHERE id = ? AND user_id = ? AND is_default = 0";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
-            $data['name'],
-            $data['type'],
-            $id,
-            $userId
-        ]);
+        if ($userId === null) {
+            // Admin updating default category
+            $sql = "UPDATE categories SET name = ?, type = ?, color = ?, icon = ? WHERE id = ? AND user_id IS NULL";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                $data['name'],
+                $data['type'],
+                $data['color'] ?? '#3498db',
+                $data['icon'] ?? 'fa-circle',
+                $id
+            ]);
+        } else {
+            // User updating their own custom category
+            $sql = "UPDATE categories SET name = ?, type = ?, color = ?, icon = ? WHERE id = ? AND user_id = ? AND is_default = 0";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                $data['name'],
+                $data['type'],
+                $data['color'] ?? '#3498db',
+                $data['icon'] ?? 'fa-circle',
+                $id,
+                $userId
+            ]);
+        }
     }
 
     /**
-     * Delete a custom category
-     * Only user's own categories can be deleted (not default ones)
-     * Check if category is being used before deleting
+     * Delete a category
+     * @param int $id Category ID
+     * @param int|null $userId NULL for admin deleting default categories
+     * @return bool|string Returns true on success, error message on failure
+     * 
+     * NOTE: Foreign key constraint (ON DELETE RESTRICT) in database prevents
+     * deletion if category has transactions. No manual check needed.
      */
     public function delete($id, $userId)
     {
-        // Check if category is being used
-        $checkStmt = $this->db->prepare("SELECT COUNT(*) as count FROM transactions WHERE category_id = ?");
-        $checkStmt->execute([$id]);
-        $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($result['count'] > 0) {
-            return false; // Category is being used, cannot delete
+        try {
+            if ($userId === null) {
+                // Admin deleting default category
+                $sql = "DELETE FROM categories WHERE id = ? AND user_id IS NULL";
+                $stmt = $this->db->prepare($sql);
+                $result = $stmt->execute([$id]);
+            } else {
+                // User deleting their own custom category
+                $sql = "DELETE FROM categories WHERE id = ? AND user_id = ? AND is_default = 0";
+                $stmt = $this->db->prepare($sql);
+                $result = $stmt->execute([$id, $userId]);
+            }
+            
+            return $result;
+            
+        } catch (\PDOException $e) {
+            // FK constraint violation (category has transactions)
+            if ($e->getCode() == '23000') {
+                return 'Không thể xóa danh mục đang có giao dịch';
+            }
+            // Other database errors
+            return 'Lỗi database: ' . $e->getMessage();
         }
-
-        // Delete only if it's user's own category and not default
-        $sql = "DELETE FROM categories WHERE id = ? AND user_id = ? AND is_default = 0";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([$id, $userId]);
     }
 
     /**
