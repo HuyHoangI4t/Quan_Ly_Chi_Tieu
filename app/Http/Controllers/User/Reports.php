@@ -88,13 +88,22 @@ class Reports extends Controllers
         $type = $_GET['type'] ?? 'all';
 
         // Determine date range based on period (align with charts)
-        list($startDate, $endDate) = match($period) {
-            'this_month' => [date('Y-m-01'), date('Y-m-t')],
-            'last_3_months' => [date('Y-m-01', strtotime('-2 months')), date('Y-m-t')],
-            'last_6_months' => [date('Y-m-01', strtotime('-5 months')), date('Y-m-t')],
-            'this_year' => [date('Y-01-01'), date('Y-12-31')],
-            default => [date('Y-m-01', strtotime('-2 months')), date('Y-m-t')]
-        };
+        if ($period === 'this_month') {
+            $startDate = date('Y-m-01');
+            $endDate = date('Y-m-t');
+        } elseif ($period === 'last_3_months') {
+            $startDate = date('Y-m-01', strtotime('-2 months'));
+            $endDate = date('Y-m-t');
+        } elseif ($period === 'last_6_months') {
+            $startDate = date('Y-m-01', strtotime('-5 months'));
+            $endDate = date('Y-m-t');
+        } elseif ($period === 'this_year') {
+            $startDate = date('Y-01-01');
+            $endDate = date('Y-12-31');
+        } else {
+            $startDate = date('Y-m-01', strtotime('-2 months'));
+            $endDate = date('Y-m-t');
+        }
 
         // Fetch transactions in range with optional type filter
         $db = (new \App\Core\ConnectDB())->getConnection();
@@ -186,13 +195,17 @@ class Reports extends Controllers
         $expense = [];
 
         // Determine the number of months based on period
-        $monthCount = match($period) {
-            'this_month' => 1,
-            'last_3_months' => 3,
-            'last_6_months' => 6,
-            'this_year' => 12,
-            default => 3
-        };
+        if ($period === 'this_month') {
+            $monthCount = 1;
+        } elseif ($period === 'last_3_months') {
+            $monthCount = 3;
+        } elseif ($period === 'last_6_months') {
+            $monthCount = 6;
+        } elseif ($period === 'this_year') {
+            $monthCount = 12;
+        } else {
+            $monthCount = 3;
+        }
 
         // Get data for the specified period
         for ($i = $monthCount - 1; $i >= 0; $i--) {
@@ -220,13 +233,28 @@ class Reports extends Controllers
     private function getPieChartData($userId, $period = 'last_3_months', $type = 'all')
     {
         // Determine date range based on period
-        list($startDate, $endDate) = match($period) {
-            'this_month' => [date('Y-m-01'), date('Y-m-t')],
-            'last_3_months' => [date('Y-m-01', strtotime('-2 months')), date('Y-m-t')],
-            'last_6_months' => [date('Y-m-01', strtotime('-5 months')), date('Y-m-t')],
-            'this_year' => [date('Y-01-01'), date('Y-12-31')],
-            default => [date('Y-m-01', strtotime('-2 months')), date('Y-m-t')]
-        };
+        switch ($period) {
+            case 'this_month':
+                $startDate = date('Y-m-01');
+                $endDate = date('Y-m-t');
+                break;
+            case 'last_3_months':
+                $startDate = date('Y-m-01', strtotime('-2 months'));
+                $endDate = date('Y-m-t');
+                break;
+            case 'last_6_months':
+                $startDate = date('Y-m-01', strtotime('-5 months'));
+                $endDate = date('Y-m-t');
+                break;
+            case 'this_year':
+                $startDate = date('Y-01-01');
+                $endDate = date('Y-12-31');
+                break;
+            default:
+                $startDate = date('Y-m-01', strtotime('-2 months'));
+                $endDate = date('Y-m-t');
+                break;
+        }
 
         // Get category breakdown with optional type filter
         $results = $this->transactionModel->getCategoryBreakdown($userId, $startDate, $endDate, $type);

@@ -3,8 +3,7 @@ use App\Middleware\CsrfProtection;
 $this->partial('header'); 
 ?>
 
-<!-- Budgets Specific Styles -->
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/public/css/budgets.css">
+<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/budgets.css">
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
 <section>

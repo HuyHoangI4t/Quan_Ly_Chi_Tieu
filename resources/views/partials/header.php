@@ -16,8 +16,7 @@
         const BASE_URL = '<?php echo BASE_URL; ?>';
     </script>
 
-    <!-- Page-specific CSS -->
-    <?php
+<?php
     $rawUrl = trim($_GET['url'] ?? '', '/');
     if ($rawUrl === '') {
         $requestUri = $_SERVER['REQUEST_URI'] ?? '';
@@ -37,15 +36,26 @@
         $page = 'dashboard';
     }
 
-    // Prefer resources/css/{page}.css if present (we stream resources/* via App router)
-    $projectRoot = realpath(__DIR__ . '/../../..');
-    $resourceCssPath = $projectRoot . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . $page . '.css';
-    if (in_array($page, ['dashboard', 'transactions', 'budgets', 'goals', 'reports', 'profile']) && file_exists($resourceCssPath)) {
-        $ver = filemtime($resourceCssPath) ?: time();
-        $cssFile = BASE_URL . '/resources/css/' . $page . '.css?v=' . $ver;
-        echo '<link href="' . $cssFile . '" rel="stylesheet">' . "\n";
-        // Debug comment to help verify CSS path in browser view-source
-        echo '<!-- resourceCssPath: ' . $resourceCssPath . ' exists -->' . "\n";
+    $pagesToLoad = ['dashboard', 'transactions', 'budgets', 'goals', 'reports', 'profile', 'recurring'];
+    $cssFileToLoad = null;
+
+    if (in_array($page, $pagesToLoad)) {
+        $cssFileToLoad = $page;
+        // Trang recurring dùng chung style transactions
+        if ($page === 'recurring') {
+             $cssFileToLoad = 'transactions';
+        }
+    }
+    
+    // [FIX] Kiểm tra sự tồn tại trong thư mục public/css/ và load trực tiếp
+    if ($cssFileToLoad) {
+        $staticCssPath = PUBLIC_PATH . '/css/' . $cssFileToLoad . '.css';
+        if (file_exists($staticCssPath)) {
+            $ver = filemtime($staticCssPath) ?: time(); 
+            // Thay đổi đường dẫn: /resources/css/ -> /css/
+            $cssLink = BASE_URL . '/css/' . $cssFileToLoad . '.css?v=' . $ver;
+            echo '<link href="' . $cssLink . '" rel="stylesheet">' . "\n";
+        }
     }
     ?>
 </head>

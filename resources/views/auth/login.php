@@ -7,7 +7,7 @@
 	<title>SmartSpending - Quản Lý Chi Tiêu</title>
 	<link rel="icon" type="image/x-icon" href="<?= BASE_URL; ?>/favicon.ico">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-	<link rel="stylesheet" href="<?= BASE_URL; ?>/resources/css/login.css">
+	<link rel="stylesheet" href="<?= BASE_URL; ?>/css/login.css">
 </head>
 
 <body>
@@ -200,17 +200,21 @@
 					body: JSON.stringify(data)
 				});
 
-				const result = await response.json();
+				const text = await response.text();
+				let result = null;
+				try { result = text ? JSON.parse(text) : null; } catch (e) { result = null; }
 
-				if (result.success) {
+				const respData = result || { success: response.ok, message: text };
+
+				if (respData.success) {
 					// Show success message
-					showAlert('Đăng nhập thành công!', 'success');
+					showAlert(respData.message || 'Đăng nhập thành công!', 'success');
 					// Redirect after 1 second
 					setTimeout(() => {
-						window.location.href = result.redirect_url || '<?= BASE_URL; ?>/dashboard';
+						window.location.href = result?.redirect_url || '<?= BASE_URL; ?>/dashboard';
 					}, 1000);
 				} else {
-					showAlert(result.message || 'Đăng nhập thất bại', 'error');
+					showAlert(respData.message || 'Đăng nhập thất bại', 'error');
 				}
 			} catch (error) {
 				console.error('Error:', error);
@@ -246,14 +250,18 @@
 					body: JSON.stringify(data)
 				});
 
-				const result = await response.json();
+				const text = await response.text();
+				let result = null;
+				try { result = text ? JSON.parse(text) : null; } catch (e) { result = null; }
 
-				if (result.success) {
+				const respData = result || { success: response.ok, message: text };
+
+				if (respData.success) {
 					// Show success message
-					showAlert(result.message || 'Đăng ký thành công!', 'success');
+					showAlert(respData.message || 'Đăng ký thành công!', 'success');
                     
 					// Switch to login tab and fill in the credentials
-					if (result.switch_to_login) {
+					if (result && result.switch_to_login) {
 						setTimeout(() => {
 							// Switch to login panel
 							container.classList.remove('right-panel-active');
@@ -270,7 +278,7 @@
 						}, 1000);
 					}
 				} else {
-					showAlert(result.message || 'Đăng ký thất bại', 'error');
+					showAlert(respData.message || 'Đăng ký thất bại', 'error');
 				}
 			} catch (error) {
 				console.error('Error:', error);

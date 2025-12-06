@@ -3,7 +3,7 @@ namespace App\Models;
 
 use App\Core\ConnectDB;
 use App\Services\FinancialUtils;
-use \PDO;
+use PDO;
 
 class Transaction
 {

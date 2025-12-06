@@ -29,11 +29,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             const response = await fetch(`${BASE_URL}/transactions/api_get_transactions?${params}`);
-            const data = await response.json();
+            const text = await response.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
 
-            if (data.success) {
-                renderTransactions(data.data.transactions);
-                renderPagination(data.data.pagination);
+            const respData = data || { success: response.ok, message: text };
+
+            if (respData.success) {
+                renderTransactions(respData.data.transactions);
+                renderPagination(respData.data.pagination);
                 
                 // Update URL without reloading page
                 const newUrl = `${BASE_URL}/transactions/index/${currentFilters.range}/${currentFilters.category}/${currentFilters.page}`;
@@ -276,26 +280,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Get CSRF token
                         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                         
-                        fetch(`${BASE_URL}/transactions/api_delete/${transactionId}`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-Token': csrfToken
+                        (async () => {
+                            try {
+                                const response = await fetch(`${BASE_URL}/transactions/api_delete/${transactionId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-CSRF-Token': csrfToken
+                                    }
+                                });
+
+                                const text = await response.text();
+                                let json = null;
+                                try { json = text ? JSON.parse(text) : null; } catch (e) { json = null; }
+                                const respData = json || { success: response.ok, message: text };
+
+                                if (respData.success === true || respData.status === 'success' || response.ok) {
+                                    SmartSpending.showToast(respData.message || 'Xóa giao dịch thành công!', 'success');
+                                    loadTransactions(false);
+                                } else {
+                                    SmartSpending.showToast(respData.message || 'Không thể xóa giao dịch', 'error');
+                                }
+                            } catch (error) {
+                                console.error('Error deleting transaction:', error);
+                                SmartSpending.showToast('Lỗi khi xóa giao dịch', 'error');
                             }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                SmartSpending.showToast('Xóa giao dịch thành công!', 'success');
-                                // Reload current page
-                                loadTransactions(false);
-                            } else {
-                                SmartSpending.showToast(data.message || 'Không thể xóa giao dịch', 'error');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            SmartSpending.showToast('Lỗi khi xóa giao dịch', 'error');
-                        });
+                        })();
                     }
                 );
             });
@@ -355,41 +364,52 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get CSRF token
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             
-            fetch(BASE_URL + '/transactions/api_add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                console.log('Response status:', response.status); // Debug
-                return response.json();
-            })
-            .then(data => {
-                console.log('Response data:', data); // Debug
-                if (data.success) {
-                    // Close modal first
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('addTransactionModal'));
-                    if (modal) modal.hide();
-                    
-                    // Show toast
-                    setTimeout(() => {
-                        SmartSpending.showToast('Thêm giao dịch thành công!', 'success');
-                    }, 300);
-                    
-                    addTransactionForm.reset();
-                    // Reload transactions without page refresh
-                    setTimeout(() => loadTransactions(false), 500);
-                } else {
-                    SmartSpending.showToast(data.message || 'Không thể thêm giao dịch', 'error');
+            (async () => {
+                try {
+                    const response = await fetch(BASE_URL + '/transactions/api_add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    console.log('Response status:', response.status);
+
+                    const text = await response.text();
+                    let json = null;
+                    try {
+                        json = text ? JSON.parse(text) : null;
+                    } catch (e) {
+                        console.warn('Response was not JSON:', text);
+                    }
+
+                    const respData = json || { success: response.ok, message: text };
+
+                    console.log('Parsed response:', respData);
+
+                    const ok = respData.success === true || respData.status === 'success' || response.ok;
+
+                    if (ok) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addTransactionModal'));
+                        if (modal) modal.hide();
+
+                        setTimeout(() => {
+                            SmartSpending.showToast(respData.message || 'Thêm giao dịch thành công!', 'success');
+                        }, 300);
+
+                        addTransactionForm.reset();
+                        setTimeout(() => loadTransactions(false), 500);
+                    } else {
+                        const msg = respData.message || respData.error || 'Không thể thêm giao dịch';
+                        SmartSpending.showToast(msg, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error during add transaction:', error);
+                    SmartSpending.showToast('Lỗi khi thêm giao dịch', 'error');
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                SmartSpending.showToast('Lỗi khi thêm giao dịch', 'error');
-            });
+            })();
         });
     }
 
@@ -419,34 +439,41 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get CSRF token
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             
-            fetch(`${BASE_URL}/transactions/api_update/${transactionId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('editTransactionModal'));
-                    if (modal) modal.hide();
-                    
-                    setTimeout(() => {
-                        SmartSpending.showToast('Cập nhật giao dịch thành công!', 'success');
-                    }, 300);
-                    
-                    // Reload transactions without page refresh
-                    setTimeout(() => loadTransactions(false), 500);
-                } else {
-                    SmartSpending.showToast(data.message || 'Không thể cập nhật giao dịch', 'error');
+            (async () => {
+                try {
+                    const response = await fetch(`${BASE_URL}/transactions/api_update/${transactionId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    console.log('Update response status:', response.status);
+
+                    const text = await response.text();
+                    let json = null;
+                    try { json = text ? JSON.parse(text) : null; } catch (e) { json = null; }
+                    const respData = json || { success: response.ok, message: text };
+
+                    if (respData.success === true || respData.status === 'success' || response.ok) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editTransactionModal'));
+                        if (modal) modal.hide();
+
+                        setTimeout(() => {
+                            SmartSpending.showToast(respData.message || 'Cập nhật giao dịch thành công!', 'success');
+                        }, 300);
+
+                        setTimeout(() => loadTransactions(false), 500);
+                    } else {
+                        SmartSpending.showToast(respData.message || 'Không thể cập nhật giao dịch', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error updating transaction:', error);
+                    SmartSpending.showToast('Lỗi khi cập nhật giao dịch', 'error');
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                SmartSpending.showToast('Lỗi khi cập nhật giao dịch', 'error');
-            });
+            })();
         });
     }
 

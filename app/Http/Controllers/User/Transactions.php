@@ -68,11 +68,11 @@ class Transactions extends Controllers
             $userId = $this->getCurrentUserId();
             
             // Sanitize and prepare data from the form
-            $type = $this->request->post('type', 'expense');
-            $amount = $this->request->post('amount', 0);
-            $categoryId = $this->request->post('category_id', 0);
-            $date = $this->request->post('date', date('Y-m-d'));
-            $description = trim($this->request->post('description', ''));
+            $type = $this->request->post('type', null) ?? 'expense';
+            $amount = $this->request->post('amount', null);
+            $categoryId = $this->request->post('category_id', null);
+            $date = $this->request->post('date', null) ?? date('Y-m-d');
+            $description = trim((string)($this->request->post('description', null) ?? ''));
 
             // Basic validation
             if ($amount > 0 && !empty($categoryId)) {
@@ -106,6 +106,9 @@ class Transactions extends Controllers
             
             // Get JSON data
             $data = $this->request->json();
+            if (!is_array($data)) {
+                $data = [];
+            }
             
             // Validate data
             $validator = new Validator();
@@ -151,6 +154,9 @@ class Transactions extends Controllers
             
             $userId = $this->getCurrentUserId();
             $data = $this->request->json();
+            if (!is_array($data)) {
+                $data = [];
+            }
             
             // Validate data
             $validator = new Validator();

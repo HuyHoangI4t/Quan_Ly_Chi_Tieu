@@ -31,12 +31,24 @@ class Request
         return $path ?: '/';
     }
 
-    public function get(string $key, mixed $default = null): mixed
+    /**
+     * Get a GET parameter
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function get(string $key, $default = null)
     {
         return $_GET[$key] ?? $default;
     }
 
-    public function session(string $key, mixed $default = null): mixed
+    /**
+     * Get a value from session
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function session(string $key, $default = null)
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -44,7 +56,13 @@ class Request
         return $_SESSION[$key] ?? $default;
     }
 
-    public function setSession(string $key, mixed $value): void
+    /**
+     * Set a session value
+     * @param string $key
+     * @param mixed $value
+     * @return void
+     */
+    public function setSession(string $key, $value): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -52,7 +70,12 @@ class Request
         $_SESSION[$key] = $value;
     }
 
-    public function unsetSession(string $key)
+    /**
+     * Unset a session key
+     * @param string $key
+     * @return void
+     */
+    public function unsetSession(string $key): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -60,7 +83,11 @@ class Request
         unset($_SESSION[$key]);
     }
 
-    public function destroySession()
+    /**
+     * Destroy the session
+     * @return void
+     */
+    public function destroySession(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -68,17 +95,35 @@ class Request
         session_destroy();
     }
 
-    public function post(string $key, mixed $default = null): mixed
+    /**
+     * Get a POST parameter
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function post(string $key, $default = null)
     {
         return $_POST[$key] ?? $default;
     }
 
-    public function input(string $key, mixed $default = null): mixed
+    /**
+     * Get a request input (GET/POST)
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function input(string $key, $default = null)
     {
         return $_REQUEST[$key] ?? $default;
     }
 
-    public function json(?string $key = null, mixed $default = null): mixed
+    /**
+     * Parse JSON body
+     * @param string|null $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function json(?string $key = null, $default = null)
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         if ($key) {
@@ -97,12 +142,24 @@ class Request
         $this->routeParams = $params;
     }
 
-    public function getRouteParam(string $key, mixed $default = null): mixed
+    /**
+     * Get a route parameter
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getRouteParam(string $key, $default = null)
     {
         return $this->routeParams[$key] ?? $default;
     }
 
-    public function header(string $key, mixed $default = null): mixed
+    /**
+     * Get a header value
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function header(string $key, $default = null)
     {
         $key = 'HTTP_' . strtoupper(str_replace('-', '_', $key));
         return $_SERVER[$key] ?? $default;

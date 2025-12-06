@@ -22,7 +22,7 @@
 
 
     <!-- Input Masking -->
-    <script src="<?php echo BASE_URL; ?>/resources/js/input-masking.js"></script>
+    <script src="<?php echo BASE_URL; ?>/shared/input-masking.js"></script>
 
     <!-- App.js - Shared utilities (public/shared/app.js served by webserver) -->
     <script src="<?php echo BASE_URL; ?>/shared/app.js"></script>
@@ -44,8 +44,8 @@ if ($page === 'home' || $page === '') {
             if (file_exists($publicPagePath)) {
                 echo '<script src="' . BASE_URL . '/user/' . $page . '/' . $page . '.js"></script>' . "\n";
             } else {
-                // fallback to resources (useful during development)
-                echo '<script src="' . BASE_URL . '/resources/js/' . $page . '.js"></script>' . "\n";
+                // fallback to public/js (useful during development)
+                echo '<script src="' . BASE_URL . '/js/' . $page . '.js"></script>' . "\n";
             }
         }
 ?>
