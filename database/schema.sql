@@ -15,15 +15,11 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+07:00";
 SET FOREIGN_KEY_CHECKS = 0;
 
--- Drop all tables
-DROP TABLE IF EXISTS `jar_allocations_v2`;
-DROP TABLE IF EXISTS `jar_categories`;
-DROP TABLE IF EXISTS `jar_templates`;
+-- Drop all tables (jar-related tables removed by design)
 DROP TABLE IF EXISTS `goal_transactions`;
 DROP TABLE IF EXISTS `goals`;
 DROP TABLE IF EXISTS `recurring_transactions`;
 DROP TABLE IF EXISTS `budgets`;
-DROP TABLE IF EXISTS `jar_allocations`;
 DROP TABLE IF EXISTS `transactions`;
 DROP TABLE IF EXISTS `categories`;
 DROP TABLE IF EXISTS `users`;
@@ -56,72 +52,7 @@ CREATE TABLE `users` (
   KEY `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng người dùng';
 
--- ============================================
--- TABLE: categories
--- ============================================
-CREATE TABLE `categories` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) DEFAULT NULL COMMENT 'NULL = danh mục mặc định, NOT NULL = danh mục tùy chỉnh',
-  `parent_id` int(11) DEFAULT NULL COMMENT 'ID danh mục cha (NULL = danh mục gốc)',
-  `name` varchar(100) NOT NULL COMMENT 'Tên danh mục',
-  `type` enum('income','expense') NOT NULL COMMENT 'Loại: thu nhập hoặc chi tiêu',
-  `color` varchar(7) DEFAULT '#3498db' COMMENT 'Mã màu hex',
-  `icon` varchar(50) DEFAULT 'fa-circle' COMMENT 'Font Awesome icon class',
-  `is_default` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1 = danh mục hệ thống, 0 = tùy chỉnh',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_user_id` (`user_id`),
-  KEY `idx_parent_id` (`parent_id`),
-  KEY `idx_type` (`type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng danh mục';
-
--- ============================================
--- TABLE: transactions
--- ============================================
-CREATE TABLE `transactions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL COMMENT 'ID người dùng',
-  `category_id` int(11) NOT NULL COMMENT 'ID danh mục',
-  `amount` decimal(15,2) NOT NULL COMMENT 'Số tiền giao dịch',
-  `type` enum('income','expense') NOT NULL COMMENT 'Loại: thu nhập hoặc chi tiêu',
-  `description` text DEFAULT NULL COMMENT 'Mô tả giao dịch',
-  `date` date NOT NULL COMMENT 'Ngày giao dịch',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_user_id` (`user_id`),
-  KEY `idx_category_id` (`category_id`),
-  KEY `idx_date` (`date`),
-  KEY `idx_type` (`type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng giao dịch';
-
--- ============================================
--- TABLE: budgets
--- ============================================
-CREATE TABLE `budgets` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL COMMENT 'ID người dùng',
-  `category_id` int(11) NOT NULL COMMENT 'ID danh mục',
-  `amount` decimal(15,2) NOT NULL COMMENT 'Số tiền ngân sách',
-  `period` enum('daily','weekly','monthly','yearly') NOT NULL DEFAULT 'monthly' COMMENT 'Chu kỳ ngân sách',
-  `start_date` date NOT NULL COMMENT 'Ngày bắt đầu',
-  `end_date` date DEFAULT NULL COMMENT 'Ngày kết thúc (NULL = không giới hạn)',
-  `alert_threshold` int(11) DEFAULT 80 COMMENT 'Ngưỡng cảnh báo (%)',
-  `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Trạng thái: 1=active, 0=inactive',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_user_id` (`user_id`),
-  KEY `idx_category_id` (`category_id`),
-  KEY `idx_period` (`period`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng ngân sách';
-
--- ============================================
--- TABLE: goals
--- ============================================
-CREATE TABLE `goals` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL COMMENT 'ID người dùng',
+-- Note: Jar-related tables removed from schema (they were legacy and user requested removal).
   `name` varchar(100) NOT NULL COMMENT 'Tên mục tiêu',
   `description` text DEFAULT NULL COMMENT 'Mô tả mục tiêu',
   `target_amount` decimal(15,2) NOT NULL COMMENT 'Số tiền mục tiêu',
@@ -265,18 +196,7 @@ ALTER TABLE `recurring_transactions`
   ADD CONSTRAINT `fk_recurring_transactions_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_recurring_transactions_category_id` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `jar_allocations`
-  ADD CONSTRAINT `fk_jar_allocations_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE `jar_templates`
-  ADD CONSTRAINT `fk_jar_templates_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE `jar_categories`
-  ADD CONSTRAINT `fk_jar_categories_jar_id` FOREIGN KEY (`jar_id`) REFERENCES `jar_templates` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE `jar_allocations_v2`
-  ADD CONSTRAINT `fk_jar_allocations_v2_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_jar_allocations_v2_jar_template_id` FOREIGN KEY (`jar_template_id`) REFERENCES `jar_templates` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+-- Jar foreign keys removed
 
 -- ============================================
 -- VIEWS

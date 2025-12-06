@@ -275,6 +275,8 @@ $this->partial('header');
     // Pass PHP variables to JavaScript
     window.BASE_URL = "<?php echo BASE_URL; ?>";
 </script>
-<script src="<?php echo BASE_URL; ?>/user/transactions/transactions.js"></script>
+<!-- Page-specific JS loaded by footer from resources/js/transactions.js -->
+<script src="<?php echo BASE_URL; ?>/resources/css/input-masking.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/shared/app.js"></script>
 
 <?php $this->partial('footer'); ?>
