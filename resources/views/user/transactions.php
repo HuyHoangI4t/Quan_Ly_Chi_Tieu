@@ -7,7 +7,7 @@ $this->partial('header');
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css">
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
-<div class="container-fluid" style="background: white; min-height: 100vh; padding: 40px 20px;">
+<div class="container-fluid" style="min-height: 100vh; padding: 40px 20px;">
     <div class="container" style="max-width: 1200px;">
         <!-- Header -->
         <div class="transactions-header">
@@ -35,20 +35,17 @@ $this->partial('header');
                     <option value="all">Tất cả danh mục</option>
                     <?php if (!empty($categories)): ?>
                         <?php foreach ($categories as $cat): ?>
-                            <option value="<?php echo $cat['id']; ?>" <?php echo (isset($current_category) && $current_category == $cat['id']) ? 'selected' : ''; ?>>
-                                <?php echo $this->escape($cat['name']); ?>
-                            </option>
+                            <?php if (isset($cat['parent_id']) && intval($cat['parent_id']) > 0): ?>
+                                <option value="<?php echo $cat['id']; ?>" <?php echo (isset($current_category) && $current_category == $cat['id']) ? 'selected' : ''; ?>>
+                                    <?php echo $this->escape($cat['name']); ?>
+                                </option>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </select>
-                <select class="form-select custom-select-arrow transactions-filter-select transactions-filter-type">
-                    <option>Tất cả loại</option>
-                    <option>Thu nhập</option>
-                    <option>Chi tiêu</option>
-                </select>
-                <select class="form-select custom-select-arrow transactions-filter-select transactions-filter-sort">
-                    <option>Mới nhất</option>
-                    <option>Cũ nhất</option>
+                <select id="sortFilter" class="form-select custom-select-arrow transactions-filter-select transactions-filter-sort">
+                    <option value="newest">Mới nhất</option>
+                    <option value="oldest">Cũ nhất</option>
                 </select>
             </div>
         </div>

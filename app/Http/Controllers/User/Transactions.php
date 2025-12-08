@@ -239,6 +239,12 @@ class Transactions extends Controllers
             
             // Get all matching transactions
             $allTransactions = $this->transactionModel->getAllByUser($userId, $filters);
+
+            // Apply sort if requested (default newest)
+            $sort = $this->request->get('sort', 'newest');
+            if ($sort === 'oldest') {
+                $allTransactions = array_reverse($allTransactions);
+            }
             $totalTransactions = count($allTransactions);
             $totalPages = ceil($totalTransactions / $perPage);
             

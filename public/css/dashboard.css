@@ -214,6 +214,20 @@ body {
     padding: 20px 0;
 }
 
+/* No-data placeholder for charts */
+.chart-no-data {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    color: var(--light-text);
+    font-size: 14px;
+    font-weight: 600;
+    background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.01));
+    border-radius: 8px;
+    width: 100%;
+}
+
 /* --- Dropdown Styling --- */
 .dropdown-toggle {
     background-color: var(--card-bg);

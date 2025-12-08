@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentFilters = {
         range: document.getElementById('rangeFilter')?.value || new Date().toISOString().slice(0, 7),
         category: document.getElementById('categoryFilter')?.value || 'all',
+        sort: document.getElementById('sortFilter')?.value || 'newest',
         page: 1
     };
     
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const params = new URLSearchParams({
                 range: currentFilters.range,
                 category: currentFilters.category,
+                sort: currentFilters.sort,
                 page: currentFilters.page
             });
 
@@ -39,8 +41,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderTransactions(respData.data.transactions);
                 renderPagination(respData.data.pagination);
                 
-                // Update URL without reloading page
-                const newUrl = `${BASE_URL}/transactions/index/${currentFilters.range}/${currentFilters.category}/${currentFilters.page}`;
+                // Update URL without reloading page (append sort as query)
+                const newUrl = `${BASE_URL}/transactions/index/${currentFilters.range}/${currentFilters.category}/${currentFilters.page}?sort=${encodeURIComponent(currentFilters.sort)}`;
                 window.history.pushState({ filters: currentFilters }, '', newUrl);
             } else {
                 SmartSpending.showToast(data.message || 'Không thể tải giao dịch', 'error');
@@ -184,12 +186,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyFilters() {
         currentFilters.range = rangeFilter?.value || currentFilters.range;
         currentFilters.category = categoryFilter?.value || currentFilters.category;
+        currentFilters.sort = document.getElementById('sortFilter')?.value || currentFilters.sort;
         currentFilters.page = 1; // Reset to first page
         loadTransactions();
     }
 
     if (rangeFilter) rangeFilter.addEventListener('change', applyFilters);
     if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
+    const sortFilter = document.getElementById('sortFilter');
+    if (sortFilter) sortFilter.addEventListener('change', applyFilters);
 
     // Filter categories based on type for Add modal
     const addTypeSelect = document.getElementById('add_type');
