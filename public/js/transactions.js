@@ -1,6 +1,6 @@
 // === TRANSACTIONS PAGE JS ===
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Current filter state
     let currentFilters = {
         range: document.getElementById('rangeFilter')?.value || new Date().toISOString().slice(0, 7),
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sort: document.getElementById('sortFilter')?.value || 'newest',
         page: 1
     };
-    
+
     // Range and Category Filters - AJAX implementation
     const rangeFilter = document.getElementById('rangeFilter');
     const categoryFilter = document.getElementById('categoryFilter');
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (respData.success) {
                 renderTransactions(respData.data.transactions);
                 renderPagination(respData.data.pagination);
-                
+
                 // Update URL without reloading page (append sort as query)
                 const newUrl = `${BASE_URL}/transactions/index/${currentFilters.range}/${currentFilters.category}/${currentFilters.page}?sort=${encodeURIComponent(currentFilters.sort)}`;
                 window.history.pushState({ filters: currentFilters }, '', newUrl);
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         let paginationHTML = '<ul class="pagination justify-content-center mb-0">';
-        
+
         // Previous button
         paginationHTML += `
             <li class="page-item ${!pagination.has_prev ? 'disabled' : ''}">
@@ -165,10 +165,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Attach pagination event listeners
         paginationContainer.querySelectorAll('.page-link').forEach(link => {
-            link.addEventListener('click', function(e) {
+            link.addEventListener('click', function (e) {
                 e.preventDefault();
                 if (this.parentElement.classList.contains('disabled')) return;
-                
+
                 const page = parseInt(this.dataset.page);
                 if (page > 0 && page <= pagination.total_pages) {
                     currentFilters.page = page;
@@ -199,31 +199,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Filter categories based on type for Add modal
     const addTypeSelect = document.getElementById('add_type');
     const addCategorySelect = document.getElementById('add_category_id');
-    
+
     if (addTypeSelect && addCategorySelect) {
         console.log('Add modal filter initialized');
-        
-        addTypeSelect.addEventListener('change', function() {
+
+        addTypeSelect.addEventListener('change', function () {
             const selectedType = this.value;
             console.log('Type changed to:', selectedType);
             const options = addCategorySelect.querySelectorAll('option');
-            
+
             options.forEach(option => {
                 if (option.value === '') {
                     option.style.display = 'block';
                     return;
                 }
-                
+
                 const optionType = option.getAttribute('data-type');
                 console.log('Option:', option.text, 'Type:', optionType, 'Match:', optionType === selectedType);
-                
+
                 if (selectedType === '' || optionType === selectedType) {
                     option.style.display = 'block';
                 } else {
                     option.style.display = 'none';
                 }
             });
-            
+
             // Reset category selection if current selection doesn't match type
             if (addCategorySelect.value) {
                 const selectedOption = addCategorySelect.querySelector(`option[value="${addCategorySelect.value}"]`);
@@ -233,24 +233,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     } else {
-        console.error('Add modal elements not found:', {addTypeSelect, addCategorySelect});
+        console.error('Add modal elements not found:', { addTypeSelect, addCategorySelect });
     }
 
     // Filter categories based on type for Edit modal
     const editTypeSelect = document.getElementById('edit_type');
     const editCategorySelect = document.getElementById('edit_category_id');
-    
+
     if (editTypeSelect && editCategorySelect) {
-        editTypeSelect.addEventListener('change', function() {
+        editTypeSelect.addEventListener('change', function () {
             const selectedType = this.value;
             const options = editCategorySelect.querySelectorAll('option');
-            
+
             options.forEach(option => {
                 if (option.value === '') {
                     option.style.display = 'block';
                     return;
                 }
-                
+
                 const optionType = option.getAttribute('data-type');
                 if (selectedType === '' || optionType === selectedType) {
                     option.style.display = 'block';
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     option.style.display = 'none';
                 }
             });
-            
+
             // Reset category selection if current selection doesn't match type
             if (editCategorySelect.value) {
                 const selectedOption = editCategorySelect.querySelector(`option[value="${editCategorySelect.value}"]`);
@@ -274,17 +274,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function attachTransactionListeners() {
         // Handle delete transaction
         document.querySelectorAll('.btn-delete-transaction').forEach(btn => {
-            btn.addEventListener('click', function(e) {
+            btn.addEventListener('click', function (e) {
                 e.preventDefault();
                 const transactionId = this.dataset.id;
-                
+
                 SmartSpending.showConfirm(
                     'Xóa Giao Dịch?',
                     'Bạn có chắc chắn muốn xóa giao dịch này? Hành động này không thể hoàn tác.',
                     () => {
                         // Get CSRF token
                         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                        
+
                         (async () => {
                             try {
                                 const response = await fetch(`${BASE_URL}/transactions/api_delete/${transactionId}`, {
@@ -317,24 +317,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Handle edit transaction button click
         document.querySelectorAll('.btn-edit-transaction').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const editForm = document.getElementById('editTransactionForm');
                 if (!editForm) return;
 
                 const amountInput = document.getElementById('edit_amount');
                 const rawAmount = this.dataset.amount;
-                
+
                 document.getElementById('edit_transaction_id').value = this.dataset.id;
-                
+
                 // Set amount and trigger input event to format it
                 amountInput.value = rawAmount;
                 amountInput.dataset.numericValue = rawAmount;
                 amountInput.dispatchEvent(new Event('input'));
-                
+
                 document.getElementById('edit_type').value = this.dataset.type;
                 document.getElementById('edit_date').value = this.dataset.date;
                 document.getElementById('edit_description').value = this.dataset.description;
-                
+
                 // Set category and trigger type change to filter categories
                 document.getElementById('edit_type').dispatchEvent(new Event('change'));
                 document.getElementById('edit_category_id').value = this.dataset.category;
@@ -343,107 +343,135 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle add transaction form
+    // File: public/js/transactions.js
+
+    // Biến tạm để lưu dữ liệu đang nhập dở khi gặp cảnh báo
+    let pendingTransactionData = null;
+
+    // Xử lý sự kiện Submit Form
     const addTransactionForm = document.getElementById('addTransactionForm');
     if (addTransactionForm) {
-        addTransactionForm.addEventListener('submit', function(e) {
+        addTransactionForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             const formData = new FormData(this);
             const data = Object.fromEntries(formData.entries());
-            
-            // Get numeric value from masked input
+
+            // Xử lý số tiền (giữ nguyên logic cũ của bạn)
             const amountInput = this.querySelector('input[name="amount"]');
-            const numericAmount = amountInput.dataset.numericValue ? parseInt(amountInput.dataset.numericValue, 10) : parseFloat(data.amount.replace(/[^\d]/g, ''));
-            
-            // Validate amount
+            const numericAmount = amountInput.dataset.numericValue
+                ? parseInt(amountInput.dataset.numericValue, 10)
+                : parseFloat(data.amount.replace(/[^\d]/g, ''));
+
             if (!numericAmount || numericAmount <= 0) {
                 SmartSpending.showToast('Vui lòng nhập số tiền hợp lệ', 'error');
                 return;
             }
-            
-            // Set the numeric amount
             data.amount = numericAmount;
-            
-            console.log('Sending data:', data); // Debug
-            
-            // Get CSRF token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            (async () => {
-                try {
-                    const response = await fetch(BASE_URL + '/transactions/api_add', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': csrfToken
-                        },
-                        body: JSON.stringify(data)
-                    });
 
-                    console.log('Response status:', response.status);
+            // Gọi hàm gửi dữ liệu (lần 1 - chưa confirm)
+            submitTransaction(data, false);
+        });
+    }
 
-                    const text = await response.text();
-                    let json = null;
-                    try {
-                        json = text ? JSON.parse(text) : null;
-                    } catch (e) {
-                        console.warn('Response was not JSON:', text);
-                    }
+    // Hàm gửi request API
+    async function submitTransaction(data, isConfirmed = false) {
+        // Nếu là confirm, thêm cờ vào data
+        if (isConfirmed) {
+            data.confirmed = true;
+        }
 
-                    const respData = json || { success: response.ok, message: text };
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-                    console.log('Parsed response:', respData);
+        try {
+            const response = await fetch(BASE_URL + '/transactions/api_add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify(data)
+            });
 
-                    const ok = respData.success === true || respData.status === 'success' || response.ok;
+            const text = await response.text();
+            let respData = null;
+            try { respData = JSON.parse(text); } catch (e) { }
 
-                    if (ok) {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('addTransactionModal'));
-                        if (modal) modal.hide();
+            // --- XỬ LÝ LOGIC MỚI ---
 
-                        setTimeout(() => {
-                            SmartSpending.showToast(respData.message || 'Thêm giao dịch thành công!', 'success');
-                        }, 300);
+            if (respData && respData.success) {
+                // Trường hợp 1: Server trả về yêu cầu xác nhận (Warning)
+                if (respData.data && respData.data.requires_confirmation) {
+                    // Lưu lại data để dùng khi bấm nút "Tiếp tục"
+                    pendingTransactionData = data;
 
-                        addTransactionForm.reset();
-                        setTimeout(() => loadTransactions(false), 500);
-                    } else {
-                        const msg = respData.message || respData.error || 'Không thể thêm giao dịch';
-                        SmartSpending.showToast(msg, 'error');
-                    }
-                } catch (error) {
-                    console.error('Error during add transaction:', error);
-                    SmartSpending.showToast('Lỗi khi thêm giao dịch', 'error');
+                    // Hiển thị Modal Cảnh báo
+                    document.getElementById('budgetWarningMessage').innerText = respData.data.message;
+                    const warningModal = new bootstrap.Modal(document.getElementById('budgetWarningModal'));
+                    warningModal.show();
+
+                } else {
+                    // Trường hợp 2: Thành công hoàn toàn
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addTransactionModal'));
+                    if (modal) modal.hide();
+
+                    // Đóng luôn modal cảnh báo nếu đang mở
+                    const warningModalEl = document.getElementById('budgetWarningModal');
+                    const warningModal = bootstrap.Modal.getInstance(warningModalEl);
+                    if (warningModal) warningModal.hide();
+
+                    SmartSpending.showToast('Thêm giao dịch thành công!', 'success');
+                    addTransactionForm.reset();
+                    setTimeout(() => loadTransactions(false), 500);
                 }
-            })();
+            } else {
+                // Trường hợp 3: Lỗi (Ví dụ: Không đủ số dư tổng)
+                SmartSpending.showToast(respData?.message || 'Có lỗi xảy ra', 'error');
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            SmartSpending.showToast('Lỗi kết nối', 'error');
+        }
+    }
+
+    // Sự kiện nút "Tiếp tục thanh toán" trong Modal Cảnh báo
+    const confirmBtn = document.getElementById('confirmOverBudgetBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function () {
+            if (pendingTransactionData) {
+                // Gửi lại request với cờ confirmed = true
+                submitTransaction(pendingTransactionData, true);
+            }
         });
     }
 
     // Handle edit transaction form
     const editTransactionForm = document.getElementById('editTransactionForm');
     if (editTransactionForm) {
-        editTransactionForm.addEventListener('submit', function(e) {
+        editTransactionForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             const transactionId = document.getElementById('edit_transaction_id').value;
             const formData = new FormData(this);
             const data = Object.fromEntries(formData.entries());
-            
+
             // Get numeric value from masked input
             const amountInput = this.querySelector('input[name="amount"]');
             const numericAmount = amountInput.dataset.numericValue ? parseInt(amountInput.dataset.numericValue, 10) : parseFloat(data.amount.replace(/[^\d]/g, ''));
-            
+
             // Validate amount
             if (!numericAmount || numericAmount <= 0) {
                 SmartSpending.showToast('Vui lòng nhập số tiền hợp lệ', 'error');
                 return;
             }
-            
+
             // Set the numeric amount
             data.amount = numericAmount;
-            
+
             // Get CSRF token
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
+
             (async () => {
                 try {
                     const response = await fetch(`${BASE_URL}/transactions/api_update/${transactionId}`, {
@@ -488,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set today's date when opening add transaction modal
     const addModal = document.getElementById('addTransactionModal');
     if (addModal) {
-        addModal.addEventListener('show.bs.modal', function() {
+        addModal.addEventListener('show.bs.modal', function () {
             const today = new Date().toISOString().split('T')[0];
             const dateInput = document.querySelector('#addTransactionForm input[name="transaction_date"]');
             if (dateInput && !dateInput.value) {
@@ -498,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle browser back/forward buttons
-    window.addEventListener('popstate', function(event) {
+    window.addEventListener('popstate', function (event) {
         if (event.state && event.state.filters) {
             currentFilters = event.state.filters;
             loadTransactions(false);

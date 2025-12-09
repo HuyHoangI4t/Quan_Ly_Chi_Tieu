@@ -248,4 +248,51 @@ class Budget
         $stmt->execute([$startDate, $endDate, $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Get monthly trend of budget totals and spending for the last N months
+     * Returns array of ['labels' => [...], 'budget' => [...], 'spent' => [...]]
+     */
+    public function getMonthlyTrend($userId, $months = 6)
+    {
+        $results = ['labels' => [], 'budget' => [], 'spent' => []];
+        $now = new \DateTime();
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $d = (clone $now)->modify("-{$i} months");
+            $year = $d->format('Y');
+            $month = $d->format('m');
+            $start = "$year-$month-01";
+            $end = (new \DateTime($start))->format('Y-m-t');
+
+            // Sum budgets active in that month (amounts)
+            $sqlBud = "
+                SELECT COALESCE(SUM(b.amount),0) as total_budget
+                FROM budgets b
+                WHERE b.user_id = ? AND b.is_active = 1
+                  AND NOT (b.end_date < ? OR b.start_date > ?)
+            ";
+            $stmt = $this->db->prepare($sqlBud);
+            $stmt->execute([$userId, $start, $end]);
+            $rowB = $stmt->fetch(PDO::FETCH_ASSOC);
+            $totalBudget = isset($rowB['total_budget']) ? floatval($rowB['total_budget']) : 0.0;
+
+            // Sum spent in that month across expense transactions
+            $sqlSpent = "
+                SELECT COALESCE(SUM(t.amount),0) as total_spent
+                FROM transactions t
+                WHERE t.user_id = ? AND t.type = 'expense' AND t.date BETWEEN ? AND ?
+            ";
+            $stmt2 = $this->db->prepare($sqlSpent);
+            $stmt2->execute([$userId, $start, $end]);
+            $rowS = $stmt2->fetch(PDO::FETCH_ASSOC);
+            $totalSpent = isset($rowS['total_spent']) ? floatval($rowS['total_spent']) : 0.0;
+
+            $results['labels'][] = $d->format('M');
+            $results['budget'][] = $totalBudget;
+            $results['spent'][] = $totalSpent;
+        }
+
+        return $results;
+    }
 }

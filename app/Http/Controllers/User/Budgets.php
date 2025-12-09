@@ -51,6 +51,24 @@ class Budgets extends Controllers
             
             // Get budgets with spending data
             $budgets = $this->budgetModel->getBudgetsWithSpending($userId, $period);
+
+            // Normalize numeric fields to ensure client receives numbers (not localized strings)
+            if (is_array($budgets)){
+                foreach ($budgets as &$bb) {
+                    $bb['amount'] = isset($bb['amount']) ? (float)$bb['amount'] : 0.0;
+                    $bb['spent'] = isset($bb['spent']) ? (float)$bb['spent'] : 0.0;
+                    // percentage_used may come as string from SQL ROUND(), ensure float
+                    $bb['percentage_used'] = isset($bb['percentage_used']) ? (float)$bb['percentage_used'] : 0.0;
+                    $bb['remaining'] = isset($bb['remaining']) ? (float)$bb['remaining'] : ($bb['amount'] - $bb['spent']);
+                    $bb['is_active'] = isset($bb['is_active']) ? (int)$bb['is_active'] : 0;
+                    $bb['alert_threshold'] = isset($bb['alert_threshold']) ? (float)$bb['alert_threshold'] : 80.0;
+                    // Ensure category metadata keys exist (avoid undefined index in client)
+                    $bb['category_name'] = $bb['category_name'] ?? '';
+                    $bb['category_color'] = $bb['category_color'] ?? '';
+                    $bb['category_icon'] = $bb['category_icon'] ?? '';
+                }
+                unset($bb);
+            }
             
             // Calculate summary
             $totalBudget = 0;
@@ -117,6 +135,37 @@ class Budgets extends Controllers
             } catch (\Exception $ex) {
                 // ignore logging failures
             }
+            Response::errorResponse('Lỗi: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * API: Get monthly trend data for budgets and spending
+     * GET /budgets/api_get_trend?months=6
+     */
+    public function api_get_trend()
+    {
+        if ($this->request->method() !== 'GET') {
+            Response::errorResponse('Method Not Allowed', null, 405);
+            return;
+        }
+
+        try {
+            $userId = $this->getCurrentUserId();
+            $months = isset($_GET['months']) && is_numeric($_GET['months']) ? intval($_GET['months']) : 6;
+
+            $trend = $this->budgetModel->getMonthlyTrend($userId, $months);
+
+            Response::successResponse('Lấy dữ liệu xu hướng thành công', [
+                'trend' => $trend
+            ]);
+        } catch (\Exception $e) {
+            try {
+                $logDir = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
+                if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+                $msg = '[' . date('Y-m-d H:i:s') . '] api_get_trend error: ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
+                @file_put_contents($logDir . DIRECTORY_SEPARATOR . 'budgets_error.log', $msg, FILE_APPEND);
+            } catch (\Exception $ex) {}
             Response::errorResponse('Lỗi: ' . $e->getMessage(), null, 500);
         }
     }

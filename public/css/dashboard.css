@@ -16,10 +16,11 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
 }
 
-body {
+/* Apply page background only to the dashboard content area, not the global body
+   so the shared header keeps consistent appearance across pages */
+.main-content {
     background-color: var(--bg-color);
     color: var(--dark-text);
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* --- Layout Grid --- */

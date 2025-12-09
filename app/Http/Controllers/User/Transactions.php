@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\User;
 
 use App\Core\Controllers;
@@ -11,6 +12,7 @@ class Transactions extends Controllers
 {
     private $transactionModel;
     private $categoryModel;
+    private $budgetModel;
 
     public function __construct()
     {
@@ -19,6 +21,7 @@ class Transactions extends Controllers
         AuthCheck::requireUser();
         $this->transactionModel = $this->model('Transaction');
         $this->categoryModel = $this->model('Category');
+        $this->budgetModel = $this->model('Budget');
     }
 
     public function index($range = null, $categoryId = 'all', $page = 1)
@@ -34,15 +37,15 @@ class Transactions extends Controllers
             'range' => $range,
             'category_id' => ($categoryId === 'all') ? null : $categoryId,
         ];
-        
+
         // Pagination settings
         $perPage = 7;
         $offset = ($page - 1) * $perPage;
-        
+
         $allTransactions = $this->transactionModel->getAllByUser($userId, $filters);
         $totalTransactions = count($allTransactions);
         $totalPages = ceil($totalTransactions / $perPage);
-        
+
         // Get paginated transactions
         $transactions = array_slice($allTransactions, $offset, $perPage);
         $categories = $this->categoryModel->getAll();
@@ -66,7 +69,7 @@ class Transactions extends Controllers
     {
         if ($this->request->method() === 'POST') {
             $userId = $this->getCurrentUserId();
-            
+
             // Sanitize and prepare data from the form
             $type = $this->request->post('type', null) ?? 'expense';
             $amount = $this->request->post('amount', null);
@@ -91,6 +94,8 @@ class Transactions extends Controllers
         $this->redirect('/dashboard');
     }
 
+    // File: app/Http/Controllers/User/Transactions.php
+
     public function api_add()
     {
         if ($this->request->method() !== 'POST') {
@@ -101,27 +106,55 @@ class Transactions extends Controllers
         try {
             // Verify CSRF token
             CsrfProtection::verify();
-            
+
             $userId = $this->getCurrentUserId();
-            
-            // Get JSON data
             $data = $this->request->json();
-            if (!is_array($data)) {
-                $data = [];
-            }
-            
-            // Validate data
+
             $validator = new Validator();
             if (!$validator->validateTransaction($data)) {
-                // Return detailed validation errors
                 Response::errorResponse($validator->getFirstError(), $validator->getErrors());
                 return;
             }
 
-            // Get validated data
             $validData = $validator->getData();
+            $isConfirmed = isset($data['confirmed']) && $data['confirmed'] === true; // Cờ xác nhận từ Modal
 
-            // Create transaction
+            // === LOGIC KIỂM TRA MỚI ===
+            if (($validData['type'] ?? 'expense') === 'expense') {
+
+                // 1. HARD CHECK: Kiểm tra tổng số dư khả dụng
+                $currentBalance = $this->transactionModel->getTotalBalance($userId);
+                if ($currentBalance < $validData['amount']) {
+                    Response::errorResponse('Giao dịch thất bại: Số dư tài khoản hiện tại (' . number_format($currentBalance) . 'đ) không đủ để thanh toán khoản này.');
+                    return;
+                }
+
+                // 2. SOFT CHECK: Kiểm tra ngân sách (Nếu chưa có xác nhận từ Modal)
+                if (!$isConfirmed) {
+                    $budgetModel = $this->model('Budget');
+                    $budgets = $budgetModel->getBudgetsWithSpending($userId, 'monthly');
+
+                    foreach ($budgets as $budget) {
+                        if ($budget['category_id'] == $validData['category_id']) {
+                            $spentPositive = abs($budget['spent']);
+                            $newTotal = $spentPositive + $validData['amount'];
+
+                            // Nếu tổng chi sau khi thêm giao dịch này vượt quá giới hạn
+                            if ($newTotal > $budget['amount']) {
+                                // Trả về mã đặc biệt để Frontend hiện Modal
+                                Response::successResponse('Cảnh báo vượt ngân sách', [
+                                    'requires_confirmation' => true,
+                                    'message' => "Hạn mức '" . $budget['category_name'] . "' chỉ còn " . number_format($budget['remaining']) . "đ. Giao dịch này sẽ khiến bạn bị âm ngân sách mục này. \n\nBạn có muốn dùng số dư dư thừa từ các khoản khác để tiếp tục thanh toán?"
+                                ]);
+                                return; // Dừng lại, đợi user confirm
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 3. Nếu mọi thứ Ok (hoặc đã confirm), tiến hành lưu
             $result = $this->transactionModel->createTransaction(
                 $userId,
                 $validData['category_id'],
@@ -151,13 +184,13 @@ class Transactions extends Controllers
         try {
             // Verify CSRF token
             CsrfProtection::verify();
-            
+
             $userId = $this->getCurrentUserId();
             $data = $this->request->json();
             if (!is_array($data)) {
                 $data = [];
             }
-            
+
             // Validate data
             $validator = new Validator();
             if (!$validator->validateTransaction($data)) {
@@ -169,12 +202,12 @@ class Transactions extends Controllers
             $validData = $validator->getData();
 
             $result = $this->transactionModel->updateTransaction(
-                $id, 
-                $userId, 
-                $validData['category_id'], 
-                $validData['amount'], 
-                $validData['type'] ?? 'expense', 
-                $validData['date'], 
+                $id,
+                $userId,
+                $validData['category_id'],
+                $validData['amount'],
+                $validData['type'] ?? 'expense',
+                $validData['date'],
                 $validData['description']
             );
 
@@ -198,7 +231,7 @@ class Transactions extends Controllers
         try {
             // Verify CSRF token
             CsrfProtection::verify();
-            
+
             $userId = $this->getCurrentUserId();
             $result = $this->transactionModel->deleteTransaction($id, $userId);
 
@@ -225,18 +258,18 @@ class Transactions extends Controllers
 
         try {
             $userId = $this->getCurrentUserId();
-            
+
             // Get filters from query params
             $range = $this->request->get('range', date('Y-m'));
             $categoryId = $this->request->get('category', 'all');
             $page = (int)$this->request->get('page', 1);
             $perPage = (int)$this->request->get('per_page', 7);
-            
+
             $filters = [
                 'range' => $range,
                 'category_id' => ($categoryId === 'all') ? null : $categoryId,
             ];
-            
+
             // Get all matching transactions
             $allTransactions = $this->transactionModel->getAllByUser($userId, $filters);
 
@@ -247,13 +280,13 @@ class Transactions extends Controllers
             }
             $totalTransactions = count($allTransactions);
             $totalPages = ceil($totalTransactions / $perPage);
-            
+
             // Apply pagination
             $offset = ($page - 1) * $perPage;
             $transactions = array_slice($allTransactions, $offset, $perPage);
-            
+
             // Format transactions for response
-            $formattedTransactions = array_map(function($t) {
+            $formattedTransactions = array_map(function ($t) {
                 return [
                     'id' => $t['id'],
                     'amount' => $t['amount'],
@@ -266,7 +299,7 @@ class Transactions extends Controllers
                     'formatted_date' => date('d M Y', strtotime($t['date']))
                 ];
             }, $transactions);
-            
+
             Response::successResponse('Lấy danh sách giao dịch thành công', [
                 'transactions' => $formattedTransactions,
                 'pagination' => [

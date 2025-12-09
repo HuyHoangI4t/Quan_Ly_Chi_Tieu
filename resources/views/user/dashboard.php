@@ -8,7 +8,8 @@ $this->partial('header', ['title' => 'SmartSpending - Quản Lý Tài Chính']);
 <!-- Dashboard Specific Styles -->
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/dashboard.css">
 
-<div class="dashboard-container">
+<main class="main-content">
+    <div class="container">
     <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="card stat-card">
@@ -164,8 +165,8 @@ $this->partial('header', ['title' => 'SmartSpending - Quản Lý Tài Chính']);
             </table>
         </div>
     </div>
-</div>
-</section>
+    </div>
+</main>
 
 <!-- Data for JS -->
 <script>

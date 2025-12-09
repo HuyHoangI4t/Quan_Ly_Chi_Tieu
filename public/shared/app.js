@@ -178,6 +178,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Set CSS variable for header height so layout can compute main-content = 100vh - header
+    function setHeaderHeightVar(){
+        try{
+            var header = document.querySelector('header.navbar');
+            var h = header ? header.offsetHeight : 72;
+            document.documentElement.style.setProperty('--header-height', h + 'px');
+        }catch(e){ /* no-op */ }
+    }
+
+    // initial set and update on resize
+    setHeaderHeightVar();
+    window.addEventListener('resize', function(){ setHeaderHeightVar(); });
 });
 
 // Export for use in other files
