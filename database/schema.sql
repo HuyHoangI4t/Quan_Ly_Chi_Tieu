@@ -21,8 +21,6 @@ DROP TABLE IF EXISTS `budgets`;
 DROP TABLE IF EXISTS `transactions`;
 DROP TABLE IF EXISTS `categories`;
 DROP TABLE IF EXISTS `users`;
-DROP TABLE IF EXISTS `jar_allocations`;
-DROP TABLE IF EXISTS `jar_categories`;
 DROP TABLE IF EXISTS `jar_templates`;
 
 -- 2. TABLES

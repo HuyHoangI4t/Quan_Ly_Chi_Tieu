@@ -216,3 +216,7 @@ canvas {
         grid-template-columns: 1fr;
     }
 }
+    /* Tăng khoảng cách giữa thẻ tổng kết và biểu đồ */
+    .reports-section .row.g-4 {
+        margin-bottom: 32px;
+    }

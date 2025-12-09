@@ -89,7 +89,10 @@ $this->partial('header');
                         </table>
                             </div>
 
-                            <!-- Pagination controls inserted by JS -->
+                            <!-- Nút xem tất cả ngân sách -->
+                            <div class="d-flex justify-content-center my-3">
+                                <button id="budgetsViewAllBtn" class="btn btn-outline-primary" style="display:none; min-width:120px;">Xem tất cả</button>
+                            </div>
                             <div id="budgetsPagination" class="d-flex justify-content-center my-3"></div>
                     </div>
 
@@ -109,24 +112,20 @@ $this->partial('header');
     </div>
 
     <!-- Insights / charts -->
-    <div class="row g-4 mt-1">
-        <div class="col-md-6">
-            <div class="card chart-card border-0 shadow-sm h-100">
-                <div class="card-body p-4">
-                    <h6 class="fw-bold text-dark mb-4">Ngân sách vs Chi tiêu theo thời gian</h6>
-                    <div class="chart-container">
-                        <canvas id="budgetTrend"></canvas>
-                    </div>
+    <div class="charts-row mt-1" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="card chart-card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold text-dark mb-4">Ngân sách vs Chi tiêu theo thời gian</h6>
+                <div class="chart-container">
+                    <canvas id="budgetTrend"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card chart-card border-0 shadow-sm h-100">
-                <div class="card-body p-4">
-                    <h6 class="fw-bold text-dark mb-4">Phân bổ ngân sách theo danh mục</h6>
-                    <div class="chart-container">
-                        <canvas id="budgetPie"></canvas>
-                    </div>
+        <div class="card chart-card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold text-dark mb-4">Phân bổ ngân sách theo danh mục</h6>
+                <div class="chart-container">
+                    <canvas id="budgetPie"></canvas>
                 </div>
             </div>
         </div>

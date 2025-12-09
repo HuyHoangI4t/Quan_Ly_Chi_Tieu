@@ -7,7 +7,7 @@ $this->partial('header');
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css">
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
-<div class="container-fluid" style="min-height: 100vh; padding: 40px 20px;">
+<div class="container-fluid" style="min-height: 100vh; padding: 10px 20px;">
     <div class="container" style="max-width: 1200px;">
         <!-- Header -->
         <div class="transactions-header">

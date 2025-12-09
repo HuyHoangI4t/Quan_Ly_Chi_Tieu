@@ -164,6 +164,31 @@ class Transactions extends Controllers
                 $validData['description']
             );
 
+            // Nếu là giao dịch 'Thu nợ' hoặc 'Trả nợ', cập nhật ngân sách 'Cho vay'
+            $debtCategoryIds = [44, 42]; // id Thu nợ, Trả nợ
+            $loanCategoryId = 13; // id Cho vay
+            if (in_array($validData['category_id'], $debtCategoryIds)) {
+                // Tìm ngân sách 'Cho vay' của user trong kỳ hiện tại
+                $budgetModel = $this->model('Budget');
+                $budgets = $budgetModel->getBudgetsWithSpending($userId, 'monthly');
+                foreach ($budgets as $budget) {
+                    if ($budget['category_id'] == $loanCategoryId) {
+                        // Giảm số tiền đã chi (spent) của ngân sách 'Cho vay'
+                        // Thực tế, spent tính từ các transaction, nên cần tạo transaction âm hoặc cập nhật lại bảng nếu có logic riêng
+                        // Ở đây, tạo transaction âm cho mục 'Cho vay' để trừ đi số tiền vừa thu nợ
+                        $this->transactionModel->createTransaction(
+                            $userId,
+                            $loanCategoryId,
+                            -abs($validData['amount']),
+                            'expense',
+                            $validData['date'],
+                            'Thu nợ tự động khi ghi nhận giao dịch Thu nợ/Trả nợ'
+                        );
+                        break;
+                    }
+                }
+            }
+
             if ($result) {
                 Response::successResponse('Thêm giao dịch thành công');
             } else {

@@ -1,24 +1,25 @@
-# Composer
-/vendor/
+### Composer dependencies
+vendor/
 
-# Environment files
+### Environment configuration
 .env
 .env.local
 .env.*.local
 
-# IDE
+### IDE/editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+### OS generated files
 .DS_Store
 Thumbs.db
 
-# Logs
+### Log files
 *.log
 logs/
 
-/images/
+### Uploaded images
+images/

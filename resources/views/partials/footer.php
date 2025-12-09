@@ -7,7 +7,7 @@
 
 
 <footer class="site-footer simple-footer">
-    <div class="footer-inner">
+    <!-- <div class="footer-inner">
         <div class="footer-left">© <?php echo date('Y'); ?> SmartSpending</div>
 
         <div class="footer-center">
@@ -26,7 +26,7 @@
                 <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram" class="social-icon"><i class="bi bi-instagram"></i></a>
             </span>
         </div>
-    </div>
+    </div> -->
 </footer>
 
 
@@ -75,36 +75,49 @@ if (!empty($pageScripts)) {
 ?>
 
 <script>
-// Populate transaction category select with child categories only (no parents)
-(function(){
-    try{
-        var sel = document.getElementById('transactionCategory');
-        if (!sel) return;
-        var url = '<?php echo BASE_URL; ?>/budgets/api_get_categories';
-        fetch(url, {cache: 'no-store'})
-            .then(function(r){ if (!r.ok) throw new Error('Network'); return r.json(); })
-            .then(function(payload){
-                var cats = (payload && payload.data && payload.data.categories) ? payload.data.categories : (payload.categories || []);
-                // keep only child categories (parent_id > 0)
-                var children = cats.filter(function(c){ return Number(c.parent_id) > 0; });
-                // If none found, fall back to any categories that look like leaf nodes (no children)
-                if (children.length === 0 && cats.length > 0){
-                    // build child map
-                    var map = {};
-                    cats.forEach(function(x){ map[String(x.parent_id)] = (map[String(x.parent_id)]||0) + 1; });
-                    children = cats.filter(function(c){ return !(map[String(c.id)]>0); });
-                }
-                // Render options
-                sel.innerHTML = '<option value="">Chọn danh mục</option>';
-                children.forEach(function(c){
-                    var opt = document.createElement('option');
-                    opt.value = c.id;
-                    opt.textContent = c.name;
-                    sel.appendChild(opt);
-                });
-            }).catch(function(){ /* keep placeholder option if fetch fails */ });
-    }catch(e){/* no-op */}
-})();
+    // Populate transaction category select with child categories only (no parents)
+    (function() {
+        try {
+            var sel = document.getElementById('transactionCategory');
+            if (!sel) return;
+            var url = '<?php echo BASE_URL; ?>/budgets/api_get_categories';
+            fetch(url, {
+                    cache: 'no-store'
+                })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('Network');
+                    return r.json();
+                })
+                .then(function(payload) {
+                    var cats = (payload && payload.data && payload.data.categories) ? payload.data.categories : (payload.categories || []);
+                    // keep only child categories (parent_id > 0)
+                    var children = cats.filter(function(c) {
+                        return Number(c.parent_id) > 0;
+                    });
+                    // If none found, fall back to any categories that look like leaf nodes (no children)
+                    if (children.length === 0 && cats.length > 0) {
+                        // build child map
+                        var map = {};
+                        cats.forEach(function(x) {
+                            map[String(x.parent_id)] = (map[String(x.parent_id)] || 0) + 1;
+                        });
+                        children = cats.filter(function(c) {
+                            return !(map[String(c.id)] > 0);
+                        });
+                    }
+                    // Render options
+                    sel.innerHTML = '<option value="">Chọn danh mục</option>';
+                    children.forEach(function(c) {
+                        var opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.name;
+                        sel.appendChild(opt);
+                    });
+                }).catch(function() {
+                    /* keep placeholder option if fetch fails */ });
+        } catch (e) {
+            /* no-op */ }
+    })();
 </script>
 
 <!-- Add Transaction Modal -->
@@ -130,9 +143,9 @@ if (!empty($pageScripts)) {
                     </div>
                     <div class="mb-3">
                         <label for="transactionCategory" class="form-label">Danh Mục</label>
-                            <select class="form-select" id="transactionCategory" name="category_id" required>
-                                <option value="">Chọn danh mục</option>
-                            </select>
+                        <select class="form-select" id="transactionCategory" name="category_id" required>
+                            <option value="">Chọn danh mục</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label for="transactionDate" class="form-label">Ngày</label>

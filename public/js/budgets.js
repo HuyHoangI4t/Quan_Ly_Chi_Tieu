@@ -6,7 +6,7 @@ const BudgetsApp = (function(){
     let selectedCategoryId = null;
     let budgetsCache = [];
     // Pagination state
-    let pageSize = 5;
+    let pageSize = 3;
     let currentPage = 1;
     let totalPages = 1;
     // Auto-refresh handle

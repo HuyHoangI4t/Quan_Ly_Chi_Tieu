@@ -58,124 +58,157 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update Line Chart
         const lineChartCanvas = document.getElementById('lineChart');
         if (lineChartCanvas) {
-            if (lineChartInstance) {
-                lineChartInstance.destroy();
-            }
-
-            const lineCtx = lineChartCanvas.getContext('2d');
-            lineChartInstance = new Chart(lineCtx, {
-                type: 'bar',
-                data: {
-                    labels: data.lineChart.labels,
-                    datasets: [{
-                        label: 'Thu nhập',
-                        data: data.lineChart.income,
-                        backgroundColor: '#10B981',
-                        borderRadius: 8,
-                    }, {
-                        label: 'Chi tiêu',
-                        data: data.lineChart.expense,
-                        backgroundColor: '#EF4444',
-                        borderRadius: 8,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: gridColor },
-                            ticks: {
-                                color: textColor,
-                                callback: function(value) {
-                                    if (value >= 1000000) return (value / 1000000) + 'tr';
-                                    if (value >= 1000) return (value / 1000) + 'k';
-                                    return value;
+            // Kiểm tra dữ liệu đầu vào
+            const hasLineData = data.lineChart && Array.isArray(data.lineChart.income) && data.lineChart.income.length > 0 && Array.isArray(data.lineChart.expense) && data.lineChart.expense.length > 0;
+            if (!hasLineData) {
+                // Xóa biểu đồ cũ nếu có
+                if (lineChartInstance) {
+                    lineChartInstance.destroy();
+                }
+                // Hiển thị thông báo không có dữ liệu
+                lineChartCanvas.parentElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Chưa có dữ liệu để hiển thị</div>';
+            } else {
+                // Nếu có dữ liệu thì vẽ biểu đồ
+                if (lineChartInstance) {
+                    lineChartInstance.destroy();
+                }
+                // Đảm bảo canvas tồn tại (có thể đã bị thay thế bởi thông báo)
+                if (!document.getElementById('lineChart')) {
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.id = 'lineChart';
+                    newCanvas.style.height = '350px';
+                    newCanvas.style.position = 'relative';
+                    lineChartCanvas.parentElement.innerHTML = '';
+                    lineChartCanvas.parentElement.appendChild(newCanvas);
+                }
+                const lineCtx = document.getElementById('lineChart').getContext('2d');
+                lineChartInstance = new Chart(lineCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.lineChart.labels,
+                        datasets: [{
+                            label: 'Thu nhập',
+                            data: data.lineChart.income,
+                            backgroundColor: '#10B981',
+                            borderRadius: 8,
+                        }, {
+                            label: 'Chi tiêu',
+                            data: data.lineChart.expense,
+                            backgroundColor: '#EF4444',
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: gridColor },
+                                ticks: {
+                                    color: textColor,
+                                    callback: function(value) {
+                                        if (value >= 1000000) return (value / 1000000) + 'tr';
+                                        if (value >= 1000) return (value / 1000) + 'k';
+                                        return value;
+                                    }
                                 }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: textColor }
                             }
                         },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: textColor }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            labels: { color: textColor }
-                        },
-                        tooltip: {
-                            backgroundColor: '#1F2937',
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    label += new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' ₫';
-                                    return label;
+                        plugins: {
+                            legend: {
+                                labels: { color: textColor }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1F2937',
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        label += new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' ₫';
+                                        return label;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
         }
 
         // Update Pie Chart
         const pieChartCanvas = document.getElementById('pieChart');
         if (pieChartCanvas) {
-            if (pieChartInstance) {
-                pieChartInstance.destroy();
-            }
-
-            const pieCtx = pieChartCanvas.getContext('2d');
-            
-            const pieColors = [
-                '#3B82F6', '#F97316', '#10B981', '#EF4444', '#8B5CF6',
-                '#F59E0B', '#EC4899', '#14B8A6', '#6366F1', '#F43F5E'
-            ];
-
-            pieChartInstance = new Chart(pieCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: data.pieChart.labels,
-                    datasets: [{
-                        label: 'Phân bổ chi tiêu',
-                        data: data.pieChart.data,
-                        backgroundColor: pieColors,
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        hoverOffset: 15
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: textColor,
-                                padding: 15,
-                                usePointStyle: true
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#1F2937',
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (label) label += ': ';
-                                    label += new Intl.NumberFormat('vi-VN', {
-                                        style: 'currency',
-                                        currency: 'VND'
-                                    }).format(context.parsed);
-                                    return label;
+            const hasPieData = data.pieChart && Array.isArray(data.pieChart.data) && data.pieChart.data.length > 0;
+            if (!hasPieData) {
+                if (pieChartInstance) {
+                    pieChartInstance.destroy();
+                }
+                pieChartCanvas.parentElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Chưa có dữ liệu để hiển thị</div>';
+            } else {
+                if (pieChartInstance) {
+                    pieChartInstance.destroy();
+                }
+                if (!document.getElementById('pieChart')) {
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.id = 'pieChart';
+                    newCanvas.style.height = '350px';
+                    newCanvas.style.position = 'relative';
+                    pieChartCanvas.parentElement.innerHTML = '';
+                    pieChartCanvas.parentElement.appendChild(newCanvas);
+                }
+                const pieCtx = document.getElementById('pieChart').getContext('2d');
+                const pieColors = [
+                    '#3B82F6', '#F97316', '#10B981', '#EF4444', '#8B5CF6',
+                    '#F59E0B', '#EC4899', '#14B8A6', '#6366F1', '#F43F5E'
+                ];
+                pieChartInstance = new Chart(pieCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.pieChart.labels,
+                        datasets: [{
+                            label: 'Phân bổ chi tiêu',
+                            data: data.pieChart.data,
+                            backgroundColor: pieColors,
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 15
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: textColor,
+                                    padding: 15,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1F2937',
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) label += ': ';
+                                        label += new Intl.NumberFormat('vi-VN', {
+                                            style: 'currency',
+                                            currency: 'VND'
+                                        }).format(context.parsed);
+                                        return label;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
         }
 
         // Update summary stats
