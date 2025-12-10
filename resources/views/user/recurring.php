@@ -3,7 +3,7 @@ use App\Middleware\CsrfProtection;
 $this->partial('header'); 
 ?>
 
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css">
+<!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css"> -->
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
 <section>

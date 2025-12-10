@@ -4,7 +4,7 @@ use App\Services\FinancialUtils;
 $this->partial('header'); 
 ?>
 
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css">
+<!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css"> -->
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
 <div class="container-fluid" style="min-height: 100vh; padding: 10px 20px;">

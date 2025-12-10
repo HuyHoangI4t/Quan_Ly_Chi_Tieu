@@ -1,7 +1,7 @@
 <?php $this->partial('header'); ?>
 
 <!-- Goals Specific Styles -->
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/goals.css">
+<!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/goals.css"> -->
 
 <section class="goals-section">
     <!-- Page Header -->

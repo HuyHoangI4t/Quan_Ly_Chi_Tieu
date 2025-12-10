@@ -1,5 +1,3 @@
-// === Budgets page JS (Premium V3) ===
-
 const BudgetsApp = (function(){
     let categories = [];
     let currentPeriod = 'monthly';

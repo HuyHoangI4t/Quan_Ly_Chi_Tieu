@@ -46,10 +46,21 @@
 
 <!-- Page-specific JavaScript -->
 <?php
-$url = trim($_GET['url'] ?? '', '/');
-$page = explode('/', $url)[0];
+$rawUrl = trim($_GET['url'] ?? '', '/');
+if ($rawUrl === '') {
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    $basePath = BASE_URL;
+    if ($basePath !== '' && strpos($requestUri, $basePath) === 0) {
+        $path = substr($requestUri, strlen($basePath));
+    } else {
+        $path = $requestUri;
+    }
+    $path = strtok($path, '?');
+    $rawUrl = trim($path, '/');
+}
 
-// Treat home and dashboard as the same page (dashboard)
+$segments = $rawUrl !== '' ? explode('/', $rawUrl) : [];
+$page = $segments[0] ?? '';
 if ($page === 'home' || $page === '') {
     $page = 'dashboard';
 }

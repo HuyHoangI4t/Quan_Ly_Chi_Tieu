@@ -3,7 +3,7 @@ use App\Middleware\CsrfProtection;
 $this->partial('header');
 ?>
 
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/budgets.css">
+<!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/budgets.css"> -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
@@ -236,5 +236,4 @@ $this->partial('header');
 <!-- Load Chart.js for budgets charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>if(typeof Chart === 'undefined'){var s=document.createElement('script');s.src = BASE_URL + '/vendor/chart.min.js';document.head.appendChild(s);}</script>
-<script src="<?php echo BASE_URL; ?>/js/budgets.js"></script>
 <?php $this->partial('footer'); ?>

@@ -1,10 +1,7 @@
 <?php
 namespace App\Core;
 
-/**
- * Base Controller with Dependency Injection support
- * Refactored to remove hard coupling and support testability
- */
+
 class Controllers
 {
     protected $view;

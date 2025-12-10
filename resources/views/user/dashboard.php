@@ -6,7 +6,7 @@ $this->partial('header', ['title' => 'SmartSpending - Quản Lý Tài Chính']);
 ?>
 
 <!-- Dashboard Specific Styles -->
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/dashboard.css">
+<!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/dashboard.css"> -->
 
 <main class="main-content">
     <div class="container">

@@ -76,16 +76,9 @@ class Transaction
             'income' => $incomeData,
             'expense' => $expenseData,
         ];
-        
         // Debug: Log final result
         error_log("Line Chart Result: " . json_encode($result));
-
-        // If all values are zero (no real data), return empty arrays so frontend doesn't show sample/static data
-        $totalSum = array_sum($incomeData) + array_sum($expenseData);
-        if ($totalSum <= 0) {
-            return ['labels' => [], 'income' => [], 'expense' => []];
-        }
-
+        // Luôn trả về dữ liệu, kể cả khi tổng = 0
         return $result;
     }
 
