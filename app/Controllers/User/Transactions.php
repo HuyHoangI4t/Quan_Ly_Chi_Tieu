@@ -7,6 +7,8 @@ use App\Core\Response;
 use App\Services\Validator;
 use App\Middleware\CsrfProtection;
 use App\Middleware\AuthCheck;
+use App\Services\FinancialUtils;
+use App\Core\ConnectDB;
 
 class Transactions extends Controllers
 {
@@ -160,6 +162,54 @@ class Transactions extends Controllers
                         }
                     }
                 }
+
+                // 3. HARD JAR CHECK: Ensure the expense does not exceed the user's jar allocation for that period
+                // This is a strict rule (no confirmation) — calculates user's income for the month and applies jar percentage
+                $category = $this->categoryModel->getById($validData['category_id'], $userId);
+                $groupType = $category['group_type'] ?? 'nec';
+
+                // Map group_type to jar index used by Budget::getUserJars()
+                $groupMap = [
+                    'nec' => 0,
+                    'ffa' => 1,
+                    'ltss' => 2,
+                    'edu' => 3,
+                    'play' => 4,
+                    'give' => 5
+                ];
+
+                $jarIndex = $groupMap[$groupType] ?? 0;
+
+                // Determine month period from the transaction date
+                $txMonth = substr($validData['date'], 0, 7); // YYYY-MM
+                list($startDate, $endDate) = array_slice(FinancialUtils::getPeriodDates($txMonth), 0, 2);
+
+                // Total income in the month
+                $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
+                $incomeForMonth = isset($totals['income']) ? floatval($totals['income']) : 0.0;
+
+                $budgetModel = $this->model('Budget');
+                $jars = $budgetModel->getUserJars($userId);
+                $jarPercent = isset($jars[$jarIndex]) ? floatval($jars[$jarIndex]) : 0.0;
+
+                $jarAllowance = ($incomeForMonth * $jarPercent) / 100.0;
+
+                // Calculate spent in this jar (group_type) within the same period
+                // Use a DB connection directly to query spent per group_type
+                $db = (new \App\Core\ConnectDB())->getConnection();
+                $stmt = $db->prepare(
+                    "SELECT COALESCE(SUM(ABS(t.amount)),0) as spent FROM transactions t JOIN categories c ON t.category_id = c.id WHERE t.user_id = ? AND t.type = 'expense' AND c.group_type = ? AND t.date BETWEEN ? AND ?"
+                );
+                $stmt->execute([$userId, $groupType, $startDate, $endDate]);
+                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                $spentInJar = isset($row['spent']) ? floatval($row['spent']) : 0.0;
+
+                $remainingInJar = $jarAllowance - $spentInJar;
+
+                if ($validData['amount'] > $remainingInJar) {
+                    Response::errorResponse('Giao dịch thất bại: Số tiền vượt quá hạn mức của lọ "' . strtoupper($groupType) . '" cho kỳ này. Còn lại: ' . number_format(max(0, $remainingInJar)) . 'đ');
+                    return;
+                }
             }
 
             // 3. LƯU GIAO DỊCH (Nếu các kiểm tra trên đều qua hoặc đã được confirm hoặc user tắt thông báo)
@@ -194,7 +244,40 @@ class Transactions extends Controllers
             }
 
             if ($result) {
-                Response::successResponse('Thêm giao dịch thành công');
+                // Tính toán cập nhật số dư các hũ cho kỳ của giao dịch vừa thêm
+                try {
+                    $txMonth = substr($validData['date'], 0, 7);
+                    list($startDate, $endDate) = array_slice(FinancialUtils::getPeriodDates($txMonth), 0, 2);
+
+                    $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
+                    $incomeForMonth = isset($totals['income']) ? floatval($totals['income']) : 0.0;
+
+                    $budgetModel = $this->model('Budget');
+                    $jars = $budgetModel->getUserJars($userId);
+                    $jarKeys = ['nec','ffa','ltss','edu','play','give'];
+
+                    $db = (new ConnectDB())->getConnection();
+                    $jarUpdates = [];
+                    foreach ($jarKeys as $idx => $key) {
+                        $percent = isset($jars[$idx]) ? floatval($jars[$idx]) : 0.0;
+                        $allowance = ($incomeForMonth * $percent) / 100.0;
+                        $stmt = $db->prepare("SELECT COALESCE(SUM(ABS(t.amount)),0) as spent FROM transactions t JOIN categories c ON t.category_id = c.id WHERE t.user_id = ? AND t.type = 'expense' AND c.group_type = ? AND t.date BETWEEN ? AND ?");
+                        $stmt->execute([$userId, $key, $startDate, $endDate]);
+                        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                        $spent = isset($row['spent']) ? floatval($row['spent']) : 0.0;
+                        $remaining = $allowance - $spent;
+                        $jarUpdates[$key] = [
+                            'percent' => $percent,
+                            'allowance' => $allowance,
+                            'spent' => $spent,
+                            'remaining' => $remaining
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    $jarUpdates = null;
+                }
+
+                Response::successResponse('Thêm giao dịch thành công', ['jar_updates' => $jarUpdates]);
             } else {
                 Response::errorResponse('Không thể thêm giao dịch');
             }
@@ -241,7 +324,40 @@ class Transactions extends Controllers
             );
 
             if ($result) {
-                Response::successResponse('Cập nhật thành công', ['id' => $id]);
+                // Tính jar updates cho kỳ của giao dịch (dùng ngày mới từ validData)
+                try {
+                    $txMonth = substr($validData['date'], 0, 7);
+                    list($startDate, $endDate) = array_slice(FinancialUtils::getPeriodDates($txMonth), 0, 2);
+
+                    $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
+                    $incomeForMonth = isset($totals['income']) ? floatval($totals['income']) : 0.0;
+
+                    $budgetModel = $this->model('Budget');
+                    $jars = $budgetModel->getUserJars($userId);
+                    $jarKeys = ['nec','ffa','ltss','edu','play','give'];
+
+                    $db = (new ConnectDB())->getConnection();
+                    $jarUpdates = [];
+                    foreach ($jarKeys as $idx => $key) {
+                        $percent = isset($jars[$idx]) ? floatval($jars[$idx]) : 0.0;
+                        $allowance = ($incomeForMonth * $percent) / 100.0;
+                        $stmt = $db->prepare("SELECT COALESCE(SUM(ABS(t.amount)),0) as spent FROM transactions t JOIN categories c ON t.category_id = c.id WHERE t.user_id = ? AND t.type = 'expense' AND c.group_type = ? AND t.date BETWEEN ? AND ?");
+                        $stmt->execute([$userId, $key, $startDate, $endDate]);
+                        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                        $spent = isset($row['spent']) ? floatval($row['spent']) : 0.0;
+                        $remaining = $allowance - $spent;
+                        $jarUpdates[$key] = [
+                            'percent' => $percent,
+                            'allowance' => $allowance,
+                            'spent' => $spent,
+                            'remaining' => $remaining
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    $jarUpdates = null;
+                }
+
+                Response::successResponse('Cập nhật thành công', ['id' => $id, 'jar_updates' => $jarUpdates]);
             } else {
                 Response::errorResponse('Không thể cập nhật');
             }
