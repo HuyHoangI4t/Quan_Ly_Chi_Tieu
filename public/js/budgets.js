@@ -84,10 +84,60 @@ const BudgetsApp = (function(){
             else calculateAndRenderSummary(budgetsCache);
             renderPie(budgetsCache);
             renderTrend(budgetsCache);
+            // Ensure jars summary is rendered/updated
+            loadJarsSummary();
             // update smart allocation display
             fetchAndRenderSmartAllocation(data.data.summary);
             renderPagination();
         });
+    }
+
+    // Render the 6 jars summary at top of the page
+    async function loadJarsSummary(){
+        const container = document.getElementById('jarsContainer');
+        if (!container) return;
+        // show loading state
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2">Đang tải dữ liệu 6 hũ...</p>
+            </div>`;
+
+        try {
+            const resp = await fetch(`${window.BASE_URL}/budgets/api_get_smart_budget`, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('API error');
+            const json = await resp.json();
+            if (!json || !json.success || !json.data) throw new Error('No data');
+            const data = json.data;
+            const income = Number(data.income) || 0;
+            const s = data.settings || {};
+            const groups = data.groups || {};
+
+            const keys = ['nec','ffa','ltss','edu','play','give'];
+            const labels = {nec:'NEC',ffa:'FFA',ltss:'LTSS',edu:'EDU',play:'PLAY',give:'GIVE'};
+            const colors = {nec:'#dc3545',ffa:'#ffc107',ltss:'#0d6efd',edu:'#0dcaf0',play:'#d63384',give:'#198754'};
+
+            const items = keys.map(k => {
+                const pct = Number(s[k + '_percent']) || 0;
+                const allocated = Math.round(income * pct / 100);
+                const spent = Number(groups[k]?.spent || 0);
+                const remaining = Math.max(0, allocated - spent);
+                return `
+                    <div class="col-md-2 col-6">
+                        <div class="card text-center p-3 h-100">
+                            <div class="fw-bold text-muted small">${labels[k]}</div>
+                            <div class="fs-4 fw-bold" style="color:${colors[k]}">${pct}%</div>
+                            <div class="small mt-1">${formatCurrency(allocated)}</div>
+                            <div class="small text-muted">Còn lại: ${formatCurrency(remaining)}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            container.innerHTML = `<div class="row g-3">${items}</div>`;
+        } catch (e) {
+            console.warn('Không thể tải dữ liệu 6 hũ', e);
+            container.innerHTML = `<div class="col-12 text-center py-4"><div class="text-muted">Không thể tải dữ liệu hũ</div></div>`;
+        }
     }
 
     async function fetchAndRenderSmartAllocation(summary){
@@ -100,38 +150,54 @@ const BudgetsApp = (function(){
             const payload = json && json.data ? json.data : null;
             // Determine base income to compute amounts: prefer total_income, fallback to summary.total_budget or budgets sum
             let baseIncome = 0;
-            if (payload && payload.total_income && Number(payload.total_income) > 0) {
-                baseIncome = Number(payload.total_income);
+            if (payload && (payload.total_income || payload.income) && Number(payload.total_income || payload.income) > 0) {
+                baseIncome = Number(payload.total_income || payload.income);
             } else if (summary && summary.total_budget && Number(summary.total_budget) > 0) {
                 baseIncome = Number(summary.total_budget);
             } else {
                 baseIncome = budgetsCache.reduce((s, b) => s + (Number(b.amount) || 0), 0);
             }
+            const settings = (payload && payload.settings) ? payload.settings : null;
 
-            const settings = (payload && payload.settings) ? payload.settings : { needs_percent:50, wants_percent:30, savings_percent:20 };
+            // Compute 3-way groups from 6-jar settings if available
+            let needs_pct = 50, wants_pct = 30, savings_pct = 20;
+            if (settings) {
+                if (settings.nec_percent !== undefined || settings.ffa_percent !== undefined) {
+                    needs_pct = (Number(settings.nec_percent) || 0) + (Number(settings.ffa_percent) || 0);
+                    wants_pct = (Number(settings.ltss_percent) || 0) + (Number(settings.edu_percent) || 0);
+                    savings_pct = (Number(settings.play_percent) || 0) + (Number(settings.give_percent) || 0);
+                } else if (settings.needs_percent !== undefined) {
+                    needs_pct = Number(settings.needs_percent) || needs_pct;
+                    wants_pct = Number(settings.wants_percent) || wants_pct;
+                    savings_pct = Number(settings.savings_percent) || savings_pct;
+                }
+            }
 
-            // Get actual spent per group from payload.groups if available
-            const actualGroups = (payload && payload.groups) ? payload.groups : { needs:0, wants:0, savings:0 };
+            // Get actual spent per group from payload.groups if available, aggregate similarly
+            const groups = (payload && payload.groups) ? payload.groups : {};
+            const actualNeeds = (Number(groups.nec?.spent || 0) + Number(groups.ffa?.spent || 0));
+            const actualWants = (Number(groups.ltss?.spent || 0) + Number(groups.edu?.spent || 0));
+            const actualSavings = (Number(groups.play?.spent || 0) + Number(groups.give?.spent || 0));
 
-            const needsRecommended = Math.round(baseIncome * (Number(settings.needs_percent) || 50) / 100);
-            const wantsRecommended = Math.round(baseIncome * (Number(settings.wants_percent) || 30) / 100);
-            const savingsRecommended = Math.round(baseIncome * (Number(settings.savings_percent) || 20) / 100);
+            const needsRecommended = Math.round(baseIncome * (needs_pct) / 100);
+            const wantsRecommended = Math.round(baseIncome * (wants_pct) / 100);
+            const savingsRecommended = Math.round(baseIncome * (savings_pct) / 100);
 
             function box(label, pct, recommended, actual){
                 const remaining = Math.max(0, recommended - (Number(actual)||0));
                 return `
-                    <div class="d-flex flex-column text-center" style="min-width:120px;">
-                        <small class="text-muted">${label}</small>
-                        <strong>${pct}%</strong>
-                        <div class="small text-muted">${formatCurrency(recommended)}</div>
-                        <div class="small text-muted">Còn lại: ${formatCurrency(remaining)}</div>
+                    <div class="d-flex flex-column text-center" style="min-width:140px;">
+                        <small class="text-muted mb-1">${label}</small>
+                        <div class="fs-4 fw-bold">${pct}%</div>
+                        <div class="fw-bold mt-1">${formatCurrency(recommended)}</div>
+                        <div class="small text-muted mt-1">Còn lại: ${formatCurrency(remaining)}</div>
                     </div>
                 `;
             }
 
-            target.innerHTML = box('Cần thiết', settings.needs_percent, needsRecommended, actualGroups.needs)
-                + box('Tùy chọn', settings.wants_percent, wantsRecommended, actualGroups.wants)
-                + box('Tiết kiệm', settings.savings_percent, savingsRecommended, actualGroups.savings);
+            target.innerHTML = box('Cần thiết', needs_pct, needsRecommended, actualNeeds)
+                + box('Tùy chọn', wants_pct, wantsRecommended, actualWants)
+                + box('Tiết kiệm', savings_pct, savingsRecommended, actualSavings);
         } catch (e) {
             console.warn('Không thể lấy dữ liệu ngân sách thông minh', e);
             // fallback: show default 50/30/20 with zeros
@@ -577,5 +643,9 @@ document.addEventListener('click', function(e){
 
 // When smart budget ratios are updated, refresh budgets display
 window.addEventListener('smartBudget:updated', function(){
-    loadBudgets();
+    if (window.budgets && typeof window.budgets.refresh === 'function') {
+        window.budgets.refresh();
+    } else if (typeof loadBudgets === 'function') {
+        loadBudgets();
+    }
 });

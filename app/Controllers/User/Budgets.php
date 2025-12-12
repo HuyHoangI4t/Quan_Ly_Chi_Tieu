@@ -429,39 +429,39 @@ class Budgets extends Controllers
             $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
             $totalIncome = (float)($totals['income'] ?? 0);
 
-            // 3. Lấy Cài đặt tỷ lệ của user
+           // 3. Lấy Cài đặt tỷ lệ
             $settings = $this->budgetModel->getUserSmartSettings($userId);
-
-            // 4. Lấy Chi tiêu thực tế theo nhóm
+            
+            // 4. Lấy Chi tiêu thực tế (Model Transaction không cần sửa, nó tự group theo enum mới)
             $actualSpending = $this->transactionModel->getSpendingByGroup($userId, $startDate, $endDate);
 
             // 5. Tính toán dữ liệu so sánh
-            $smartData = [
-                'income' => $totalIncome,
-                'settings' => $settings, // {needs: 50, wants: 30...}
-                'groups' => [
-                    'needs' => [
-                        'label' => 'Thiết yếu (Needs)',
-                        'percent' => $settings['needs_percent'],
-                        'allocated' => ($totalIncome * $settings['needs_percent']) / 100,
-                        'spent' => $actualSpending['needs']
-                    ],
-                    'wants' => [
-                        'label' => 'Hưởng thụ (Wants)',
-                        'percent' => $settings['wants_percent'],
-                        'allocated' => ($totalIncome * $settings['wants_percent']) / 100,
-                        'spent' => $actualSpending['wants']
-                    ],
-                    'savings' => [
-                        'label' => 'Tiết kiệm (Savings)',
-                        'percent' => $settings['savings_percent'],
-                        'allocated' => ($totalIncome * $settings['savings_percent']) / 100,
-                        'spent' => $actualSpending['savings']
-                    ]
-                ]
+            $jars = [
+                'nec'  => ['label' => 'Thiết yếu (NEC)', 'color' => '#dc3545'], // Red
+                'ffa'  => ['label' => 'Tự do TC (FFA)', 'color' => '#ffc107'],  // Yellow
+                'ltss' => ['label' => 'Tiết kiệm dài hạn (LTSS)', 'color' => '#0d6efd'], // Blue
+                'edu'  => ['label' => 'Giáo dục (EDU)', 'color' => '#0dcaf0'],  // Cyan
+                'play' => ['label' => 'Hưởng thụ (PLAY)', 'color' => '#d63384'], // Pink
+                'give' => ['label' => 'Cho đi (GIVE)', 'color' => '#198754']   // Green
             ];
 
-            Response::successResponse('Success', $smartData);
+            $groupsData = [];
+            foreach ($jars as $key => $info) {
+                $percent = intval($settings[$key . '_percent'] ?? 0);
+                $groupsData[$key] = [
+                    'label'     => $info['label'],
+                    'color'     => $info['color'],
+                    'percent'   => $percent,
+                    'allocated' => ($totalIncome * $percent) / 100,
+                    'spent'     => floatval($actualSpending[$key] ?? 0)
+                ];
+            }
+
+            Response::successResponse('Success', [
+                'income' => $totalIncome,
+                'settings' => $settings,
+                'groups' => $groupsData
+            ]);
 
         } catch (\Exception $e) {
             Response::errorResponse('Lỗi: ' . $e->getMessage());
@@ -479,29 +479,87 @@ class Budgets extends Controllers
             return;
         }
 
-        try {
+       try {
             $data = $this->request->json();
-            $needs = intval($data['needs'] ?? 0);
-            $wants = intval($data['wants'] ?? 0);
-            $savings = intval($data['savings'] ?? 0);
+            $nec  = intval($data['nec'] ?? 0);
+            $ffa  = intval($data['ffa'] ?? 0);
+            $ltss = intval($data['ltss'] ?? 0);
+            $edu  = intval($data['edu'] ?? 0);
+            $play = intval($data['play'] ?? 0);
+            $give = intval($data['give'] ?? 0);
 
-            // Validate tổng = 100%
-            if (($needs + $wants + $savings) !== 100) {
+            if (($nec + $ffa + $ltss + $edu + $play + $give) !== 100) {
                 Response::errorResponse('Tổng tỷ lệ phải bằng 100%');
                 return;
             }
 
             $userId = $this->getCurrentUserId();
-            $result = $this->budgetModel->updateUserSmartSettings($userId, $needs, $wants, $savings);
+            $result = $this->budgetModel->updateUserSmartSettings($userId, $nec, $ffa, $ltss, $edu, $play, $give);
 
-            if ($result) {
+            if ($result) Response::successResponse('Cập nhật thành công');
+            else Response::errorResponse('Cập nhật thất bại');
+
+        } catch (\Exception $e) {
+            Response::errorResponse('Lỗi: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * API: Lấy 6 lọ (jars) của user
+     * GET /budgets/api_get_jars
+     */
+    public function api_get_jars()
+    {
+        if ($this->request->method() !== 'GET') {
+            Response::errorResponse('Method Not Allowed', null, 405);
+            return;
+        }
+
+        try {
+            $userId = $this->getCurrentUserId();
+            $jars = $this->budgetModel->getUserJars($userId);
+            Response::successResponse('Success', ['jars' => $jars]);
+        } catch (\Exception $e) {
+            Response::errorResponse('Lỗi: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * API: Cập nhật 6 lọ (jars)
+     * POST /budgets/api_update_jars
+     */
+    public function api_update_jars()
+    {
+        if ($this->request->method() !== 'POST') {
+            Response::errorResponse('Method Not Allowed', null, 405);
+            return;
+        }
+
+        CsrfProtection::verify();
+
+        try {
+            $data = $this->request->json();
+            $jars = isset($data['jars']) && is_array($data['jars']) ? $data['jars'] : null;
+            if (!$jars || count($jars) !== 6) {
+                Response::errorResponse('Dữ liệu không hợp lệ: cần mảng 6 phần tử');
+                return;
+            }
+            $jars = array_map('intval', $jars);
+            $sum = array_sum($jars);
+            if ($sum !== 100) {
+                Response::errorResponse('Tổng phần trăm phải bằng 100%');
+                return;
+            }
+
+            $userId = $this->getCurrentUserId();
+            $ok = $this->budgetModel->updateUserJars($userId, $jars);
+            if ($ok) {
                 Response::successResponse('Cập nhật thành công');
             } else {
                 Response::errorResponse('Cập nhật thất bại');
             }
-
         } catch (\Exception $e) {
-            Response::errorResponse('Lỗi: ' . $e->getMessage());
+            Response::errorResponse('Lỗi: ' . $e->getMessage(), null, 500);
         }
     }
 }

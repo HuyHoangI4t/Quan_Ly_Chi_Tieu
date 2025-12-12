@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use App\Core\ConnectDB;
@@ -89,7 +90,7 @@ class Budget
         ");
         $stmt->execute([$data['user_id'], $data['category_id'], $data['period']]);
         $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($existing) {
             throw new \Exception('Ngân sách cho danh mục này đã tồn tại trong kỳ này');
         }
@@ -159,7 +160,7 @@ class Budget
     {
         $fields = [];
         $values = [];
-        
+
         if (isset($data['amount'])) {
             $fields[] = 'amount = ?';
             $values[] = $data['amount'];
@@ -172,10 +173,10 @@ class Budget
             $fields[] = 'is_active = ?';
             $values[] = $data['is_active'];
         }
-        
+
         $fields[] = 'updated_at = NOW()';
         $values[] = $id;
-        
+
         $sql = "UPDATE budgets SET " . implode(', ', $fields) . " WHERE id = ?";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($values);
@@ -332,8 +333,9 @@ class Budget
 
         return $results;
     }
-/**
-     * Lấy cài đặt tỷ lệ ngân sách của user
+
+    /**
+     * Lấy cài đặt tỷ lệ 6 hũ
      */
     public function getUserSmartSettings($userId)
     {
@@ -341,36 +343,169 @@ class Budget
         $stmt->execute([$userId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Nếu chưa có, tạo mặc định 50/30/20
         if (!$result) {
             $this->initUserSmartSettings($userId);
-            return ['needs_percent' => 50, 'wants_percent' => 30, 'savings_percent' => 20];
+            // Trả về mặc định chuẩn 6 hũ
+            return [
+                'nec_percent' => 55,
+                'ffa_percent' => 10,
+                'ltss_percent' => 10,
+                'edu_percent' => 10,
+                'play_percent' => 10,
+                'give_percent' => 5
+            ];
         }
         return $result;
     }
 
     /**
-     * Khởi tạo cài đặt mặc định
+     * Khởi tạo mặc định
      */
     public function initUserSmartSettings($userId)
     {
-        $stmt = $this->db->prepare("INSERT IGNORE INTO user_budget_settings (user_id, needs_percent, wants_percent, savings_percent) VALUES (?, 50, 30, 20)");
+        $sql = "INSERT IGNORE INTO user_budget_settings 
+                (user_id, nec_percent, ffa_percent, ltss_percent, edu_percent, play_percent, give_percent) 
+                VALUES (?, 55, 10, 10, 10, 10, 5)";
+        $stmt = $this->db->prepare($sql);
         return $stmt->execute([$userId]);
     }
 
     /**
-     * Cập nhật tỷ lệ
+     * Cập nhật tỷ lệ 6 hũ
      */
-    public function updateUserSmartSettings($userId, $needs, $wants, $savings)
+    public function updateUserSmartSettings($userId, $nec, $ffa, $ltss, $edu, $play, $give)
     {
-        // Đảm bảo tổng = 100 (đã validate ở controller, nhưng check lại cho chắc)
-        if ($needs + $wants + $savings != 100) return false;
+        if (($nec + $ffa + $ltss + $edu + $play + $give) != 100) return false;
 
-        // Kiểm tra xem đã có record chưa, nếu chưa thì tạo
+        $this->getUserSmartSettings($userId); // Đảm bảo record tồn tại
+
+        $sql = "UPDATE user_budget_settings SET 
+                nec_percent = ?, ffa_percent = ?, ltss_percent = ?, 
+                edu_percent = ?, play_percent = ?, give_percent = ? 
+                WHERE user_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$nec, $ffa, $ltss, $edu, $play, $give, $userId]);
+    }
+
+    /**
+     * Lấy mảng 6 hũ (jar) cho user. Trả về mảng 6 số nguyên theo thứ tự [nec, ffa, ltss, edu, play, give]
+     */
+    public function getUserJars($userId)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM user_budget_settings WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            $this->initUserSmartSettings($userId);
+            return [55,10,10,10,10,5];
+        }
+
+        // Prefer explicit nec_* columns if present
+        if (array_key_exists('nec_percent', $row)) {
+            return [
+                intval($row['nec_percent'] ?? 0),
+                intval($row['ffa_percent'] ?? 0),
+                intval($row['ltss_percent'] ?? 0),
+                intval($row['edu_percent'] ?? 0),
+                intval($row['play_percent'] ?? 0),
+                intval($row['give_percent'] ?? 0)
+            ];
+        }
+
+        // Fallback to jar1..jar6 if present
+        if (array_key_exists('jar1_percent', $row)) {
+            return [
+                intval($row['jar1_percent'] ?? 0),
+                intval($row['jar2_percent'] ?? 0),
+                intval($row['jar3_percent'] ?? 0),
+                intval($row['jar4_percent'] ?? 0),
+                intval($row['jar5_percent'] ?? 0),
+                intval($row['jar6_percent'] ?? 0)
+            ];
+        }
+
+        // As a last resort, try to map existing 3-way settings into 6 jars
+        $settings = $this->getUserSmartSettings($userId);
+        $needs = $settings['needs_percent'] ?? 50;
+        $wants = $settings['wants_percent'] ?? 30;
+        $savings = $settings['savings_percent'] ?? 20;
+        $map = [
+            (int)round($needs * 0.6),
+            (int)round($needs * 0.4),
+            (int)round($wants * 0.5),
+            (int)round($wants * 0.5),
+            (int)round($savings * 0.6),
+            (int)round($savings * 0.4)
+        ];
+        $tot = array_sum($map) ?: 1;
+        for ($i = 0; $i < 6; $i++) $map[$i] = (int)round($map[$i] / $tot * 100);
+        $rem = 100 - array_sum($map);
+        for ($i = 0; $i < $rem; $i++) $map[$i % 6]++;
+        return $map;
+    }
+
+    /**
+     * Cập nhật 6 hũ cho user. $jars là mảng 6 số nguyên theo thứ tự [nec, ffa, ltss, edu, play, give]
+     */
+    public function updateUserJars($userId, array $jars)
+    {
+        if (count($jars) !== 6) return false;
+        $jars = array_map('intval', $jars);
+        if (array_sum($jars) !== 100) return false;
+
+        // Ensure record exists
         $this->getUserSmartSettings($userId);
 
-        $sql = "UPDATE user_budget_settings SET needs_percent = ?, wants_percent = ?, savings_percent = ? WHERE user_id = ?";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([$needs, $wants, $savings, $userId]);
+        // Read one row to detect which columns exist
+        $stmt = $this->db->prepare("SELECT * FROM user_budget_settings WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $sets = [];
+        $params = [];
+
+        if ($row && array_key_exists('nec_percent', $row)) {
+            $sets[] = 'nec_percent = ?'; $params[] = $jars[0];
+            $sets[] = 'ffa_percent = ?'; $params[] = $jars[1];
+            $sets[] = 'ltss_percent = ?'; $params[] = $jars[2];
+            $sets[] = 'edu_percent = ?'; $params[] = $jars[3];
+            $sets[] = 'play_percent = ?'; $params[] = $jars[4];
+            $sets[] = 'give_percent = ?'; $params[] = $jars[5];
+        }
+
+        if ($row && array_key_exists('jar1_percent', $row)) {
+            $sets[] = 'jar1_percent = ?'; $params[] = $jars[0];
+            $sets[] = 'jar2_percent = ?'; $params[] = $jars[1];
+            $sets[] = 'jar3_percent = ?'; $params[] = $jars[2];
+            $sets[] = 'jar4_percent = ?'; $params[] = $jars[3];
+            $sets[] = 'jar5_percent = ?'; $params[] = $jars[4];
+            $sets[] = 'jar6_percent = ?'; $params[] = $jars[5];
+        }
+
+        // If no known columns, attempt to write nec_* columns (best effort)
+        if (empty($sets)) {
+            $sets = [
+                'nec_percent = ?', 'ffa_percent = ?', 'ltss_percent = ?',
+                'edu_percent = ?', 'play_percent = ?', 'give_percent = ?'
+            ];
+            $params = $jars;
+        }
+
+        $sql = 'UPDATE user_budget_settings SET ' . implode(', ', $sets) . ' WHERE user_id = ?';
+        $params[] = $userId;
+        $stmt2 = $this->db->prepare($sql);
+        try {
+            return $stmt2->execute($params);
+        } catch (\PDOException $e) {
+            // If update fails (missing columns), try fallback: update only jar1..jar6 using separate statement
+            try {
+                $sql2 = 'UPDATE user_budget_settings SET jar1_percent = ?, jar2_percent = ?, jar3_percent = ?, jar4_percent = ?, jar5_percent = ?, jar6_percent = ? WHERE user_id = ?';
+                $stmt3 = $this->db->prepare($sql2);
+                return $stmt3->execute([$jars[0],$jars[1],$jars[2],$jars[3],$jars[4],$jars[5], $userId]);
+            } catch (\Exception $ex) {
+                return false;
+            }
+        }
     }
 }
