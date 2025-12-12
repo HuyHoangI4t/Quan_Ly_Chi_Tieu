@@ -1,4 +1,5 @@
-const BudgetsApp = (function(){
+window.jarBalances = {};
+const BudgetsApp = (function () {
     let categories = [];
     let currentPeriod = 'monthly';
     let budgetsCache = [];
@@ -8,33 +9,70 @@ const BudgetsApp = (function(){
     let totalPages = 1;
     let pieChart = null;
 
-    function init(){
+    function init() {
         document.addEventListener('DOMContentLoaded', onReady);
     }
 
-    function onReady(){
+    function onReady() {
         bindUI();
         loadCategories().then(() => loadBudgets());
     }
 
-    function bindUI(){
-        document.getElementById('periodSelect')?.addEventListener('change', (e)=>{
+    // Listen for external updates (e.g., when transactions change)
+    window.addEventListener('smartbudget:updated', function (e) {
+        try {
+            const detail = e && e.detail ? e.detail : null;
+            // If payload contains jar_updates, render quickly from it, otherwise refresh from server
+            if (detail && detail.jar_updates) {
+                const container = document.getElementById('jarsContainer');
+                if (!container) return;
+                const keys = ['nec', 'ffa', 'ltss', 'edu', 'play', 'give'];
+                const labels = { nec: 'NEC', ffa: 'FFA', ltss: 'LTSS', edu: 'EDU', play: 'PLAY', give: 'GIVE' };
+                const colors = { nec: '#dc3545', ffa: '#ffc107', ltss: '#0d6efd', edu: '#0dcaf0', play: '#d63384', give: '#198754' };
+                const items = keys.map(k => {
+                    const j = detail.jar_updates[k] || null;
+                    const pct = j ? Number(j.percent) : 0;
+                    const allocated = j ? Math.round(Number(j.allowance) || 0) : 0;
+                    const spent = j ? Math.round(Number(j.spent) || 0) : 0;
+                    const remaining = j ? Math.max(0, Math.round(Number(j.remaining) || 0)) : 0;
+                    return `
+                        <div class="col-md-2 col-6">
+                            <div class="card text-center p-3 h-100">
+                                <div class="fw-bold text-muted small">${labels[k]}</div>
+                                <div class="fs-4 fw-bold" style="color:${colors[k]}">${pct}%</div>
+                                <div class="small mt-1">${formatCurrency(allocated)}</div>
+                                <div class="small text-muted">Còn lại: ${formatCurrency(remaining)}</div>
+                            </div>
+                        </div>`;
+                }).join('');
+                container.innerHTML = `<div class="row g-3">${items}</div>`;
+            } else {
+                loadJarsSummary();
+            }
+        } catch (err) {
+            console.warn('Error handling smartbudget:updated', err);
+            loadJarsSummary();
+        }
+    });
+
+    function bindUI() {
+        document.getElementById('periodSelect')?.addEventListener('change', (e) => {
             currentPeriod = e.target.value;
             loadBudgets();
         });
 
-        document.getElementById('openCreateBudget')?.addEventListener('click', ()=>openCreateModal());
-        
-        document.getElementById('openCategoryChooser')?.addEventListener('click', ()=>{
+        document.getElementById('openCreateBudget')?.addEventListener('click', () => openCreateModal());
+
+        document.getElementById('openCategoryChooser')?.addEventListener('click', () => {
             renderCategoryChooser();
             new bootstrap.Modal(document.getElementById('categoryChooserModal')).show();
         });
-        document.getElementById('budget_category_picker')?.addEventListener('click', ()=>{
+        document.getElementById('budget_category_picker')?.addEventListener('click', () => {
             renderCategoryChooser();
             new bootstrap.Modal(document.getElementById('categoryChooserModal')).show();
         });
 
-        document.getElementById('budgetsList')?.addEventListener('click', (e)=>{
+        document.getElementById('budgetsList')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
             if (btn.dataset.action === "edit") openEditModal(btn.dataset.id);
@@ -42,26 +80,26 @@ const BudgetsApp = (function(){
         });
 
         const form = document.getElementById('budgetForm');
-        if (form){
-            form.addEventListener('submit', (e)=>{
+        if (form) {
+            form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 submitBudgetForm();
             });
         }
     }
 
-    async function fetchJson(url){
+    async function fetchJson(url) {
         try {
-            const r = await fetch(url, {cache:'no-store'});
+            const r = await fetch(url, { cache: 'no-store' });
             if (!r.ok) throw new Error('API Error');
             return await r.json();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             return { success: false, message: e.message };
         }
     }
 
-    function loadCategories(){
+    function loadCategories() {
         return fetchJson(`${window.BASE_URL}/budgets/api_get_categories`)
             .then(data => {
                 if (data.success) {
@@ -70,8 +108,8 @@ const BudgetsApp = (function(){
             });
     }
 
-    function loadBudgets(){
-        fetchJson(`${window.BASE_URL}/budgets/api_get_all?period=${currentPeriod}`).then(data=>{
+    function loadBudgets() {
+        fetchJson(`${window.BASE_URL}/budgets/api_get_all?period=${currentPeriod}`).then(data => {
             if (!data || !data.success) return;
             budgetsCache = data.data.budgets || [];
 
@@ -90,7 +128,7 @@ const BudgetsApp = (function(){
     }
 
     // Render the 6 jars summary at top of the page
-    async function loadJarsSummary(){
+    async function loadJarsSummary() {
         const container = document.getElementById('jarsContainer');
         if (!container) return;
         // show loading state
@@ -110,15 +148,22 @@ const BudgetsApp = (function(){
             const s = data.settings || {};
             const groups = data.groups || {};
 
-            const keys = ['nec','ffa','ltss','edu','play','give'];
-            const labels = {nec:'NEC',ffa:'FFA',ltss:'LTSS',edu:'EDU',play:'PLAY',give:'GIVE'};
-            const colors = {nec:'#dc3545',ffa:'#ffc107',ltss:'#0d6efd',edu:'#0dcaf0',play:'#d63384',give:'#198754'};
+            const keys = ['nec', 'ffa', 'ltss', 'edu', 'play', 'give'];
+            const labels = { nec: 'NEC', ffa: 'FFA', ltss: 'LTSS', edu: 'EDU', play: 'PLAY', give: 'GIVE' };
+            const colors = { nec: '#dc3545', ffa: '#ffc107', ltss: '#0d6efd', edu: '#0dcaf0', play: '#d63384', give: '#198754' };
 
             const items = keys.map(k => {
                 const pct = Number(s[k + '_percent']) || 0;
                 const allocated = Math.round(income * pct / 100);
+
+                // Bạn cần API trả về thêm: "total_budgeted" (tổng ngân sách đã tạo)
+                // Nếu chưa có, tạm thời tính theo số thực tế còn lại
                 const spent = Number(groups[k]?.spent || 0);
                 const remaining = Math.max(0, allocated - spent);
+
+                // --- LƯU VÀO BIẾN TOÀN CỤC ĐỂ HÀM SUBMIT DÙNG ---
+                window.jarBalances[k] = remaining;
+                // ------------------------------------------------
                 return `
                     <div class="col-md-2 col-6">
                         <div class="card text-center p-3 h-100">
@@ -137,7 +182,7 @@ const BudgetsApp = (function(){
         }
     }
 
-    async function fetchAndRenderSmartAllocation(summary){
+    async function fetchAndRenderSmartAllocation(summary) {
         const target = document.getElementById('smartAllocationDetails');
         if (!target) return;
         try {
@@ -157,9 +202,9 @@ const BudgetsApp = (function(){
             const settings = (payload && payload.settings) ? payload.settings : null;
             // Render as six jars (nec, ffa, ltss, edu, play, give).
             const groups = (payload && payload.groups) ? payload.groups : {};
-            const keys = ['nec','ffa','ltss','edu','play','give'];
-            const labels = {nec:'NEC',ffa:'FFA',ltss:'LTSS',edu:'EDU',play:'PLAY',give:'GIVE'};
-            const colors = {nec:'#dc3545',ffa:'#ffc107',ltss:'#0d6efd',edu:'#0dcaf0',play:'#d63384',give:'#198754'};
+            const keys = ['nec', 'ffa', 'ltss', 'edu', 'play', 'give'];
+            const labels = { nec: 'NEC', ffa: 'FFA', ltss: 'LTSS', edu: 'EDU', play: 'PLAY', give: 'GIVE' };
+            const colors = { nec: '#dc3545', ffa: '#ffc107', ltss: '#0d6efd', edu: '#0dcaf0', play: '#d63384', give: '#198754' };
 
             // Build percent map for each jar. If payload contains specific jar percents, use them.
             const perc = {};
@@ -233,18 +278,18 @@ const BudgetsApp = (function(){
         if (elRemaining) elRemaining.innerText = formatCurrency(totalRemaining);
     }
 
-    function renderBudgets(list){
+    function renderBudgets(list) {
         const container = document.getElementById('budgetsList');
         const empty = document.getElementById('emptyState');
         const table = document.getElementById('budgetsTable');
-        
+
         if (!list.length) {
             container.innerHTML = '';
             table.style.display = 'none';
             empty.style.display = 'block';
             return;
         }
-        
+
         table.style.display = 'table';
         empty.style.display = 'none';
 
@@ -258,11 +303,11 @@ const BudgetsApp = (function(){
             const amount = parseFloat(b.amount) || 0;
             const spent = Math.abs(parseFloat(b.spent) || 0);
             const remaining = amount - spent;
-            
+
             let pct = 0;
             if (amount > 0) pct = (spent / amount) * 100;
             const visualPct = Math.min(Math.max(pct, 0), 100);
-            
+
             let barColor = 'bg-gradient-success';
             let statusText = `${pct.toFixed(1)}%`;
             let statusClass = 'text-primary';
@@ -321,7 +366,7 @@ const BudgetsApp = (function(){
         }).join('');
     }
 
-    function renderPagination(){
+    function renderPagination() {
         const container = document.getElementById('budgetsPagination');
         if (!container) return;
         if (budgetsCache.length <= pageSize) { container.innerHTML = ''; return; }
@@ -335,11 +380,11 @@ const BudgetsApp = (function(){
 
         // show up to 5 page buttons
         const maxButtons = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(maxButtons/2));
+        let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
         let endPage = Math.min(totalPages, startPage + maxButtons - 1);
         if (endPage - startPage < maxButtons - 1) startPage = Math.max(1, endPage - maxButtons + 1);
 
-        for (let p = startPage; p <= endPage; p++){
+        for (let p = startPage; p <= endPage; p++) {
             const active = p === currentPage ? 'active' : '';
             html += `<li class="page-item ${active}"><button class="page-link" data-page="${p}">${p}</button></li>`;
         }
@@ -350,10 +395,10 @@ const BudgetsApp = (function(){
         container.innerHTML = html;
 
         container.querySelectorAll('button.page-link').forEach(btn => {
-            btn.addEventListener('click', (e)=>{
+            btn.addEventListener('click', (e) => {
                 const action = btn.getAttribute('data-action');
-                if (action === 'prev') { if (currentPage>1) currentPage--; }
-                else if (action === 'next') { if (currentPage<totalPages) currentPage++; }
+                if (action === 'prev') { if (currentPage > 1) currentPage--; }
+                else if (action === 'next') { if (currentPage < totalPages) currentPage++; }
                 else {
                     const p = parseInt(btn.getAttribute('data-page'));
                     if (!isNaN(p)) currentPage = p;
@@ -371,12 +416,12 @@ const BudgetsApp = (function(){
     window.budgets.refresh = loadBudgets;
 
     // Listen for a cross-window event 'transaction:created' to refresh budgets when transactions are added elsewhere
-    window.addEventListener('transaction:created', ()=>{
+    window.addEventListener('transaction:created', () => {
         loadBudgets();
     });
 
     // (Giữ nguyên các hàm renderPie, modal handler như cũ vì logic không đổi)
-    function renderPie(budgets){
+    function renderPie(budgets) {
         const ctx = document.getElementById('budgetPie');
         if (!ctx || typeof Chart === 'undefined') return;
         if (pieChart) pieChart.destroy();
@@ -400,20 +445,20 @@ const BudgetsApp = (function(){
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: {size: 11} } }
+                    legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: { size: 11 } } }
                 },
                 cutout: '50%'
             }
         });
     }
 
-    function renderGroupLabel(groupKey){
+    function renderGroupLabel(groupKey) {
         if (!groupKey) return '';
         const map = { 'needs': 'Cần thiết', 'wants': 'Tùy chọn', 'savings': 'Tiết kiệm' };
         return map[groupKey] || groupKey;
     }
 
-    async function renderTrend(budgets){
+    async function renderTrend(budgets) {
         const ctx = document.getElementById('budgetTrend');
         if (!ctx || typeof Chart === 'undefined') return;
         if (window.trendChart) window.trendChart.destroy();
@@ -445,10 +490,10 @@ const BudgetsApp = (function(){
                                 y: {
                                     beginAtZero: true,
                                     ticks: {
-                                        callback: function(value) {
+                                        callback: function (value) {
                                             try { return formatCompact(value); } catch (e) { return value; }
                                         }
-                                        
+
                                     }
                                 }
                             },
@@ -456,7 +501,7 @@ const BudgetsApp = (function(){
                                 legend: { position: 'bottom' },
                                 tooltip: {
                                     callbacks: {
-                                        label: function(context) {
+                                        label: function (context) {
                                             let label = context.dataset.label || '';
                                             if (label) label += ': ';
                                             try { label += formatCompact(context.parsed.y); }
@@ -471,7 +516,7 @@ const BudgetsApp = (function(){
                     return;
                 }
             }
-        } catch(e){
+        } catch (e) {
             // fallback to demo rendering below
             console.warn('Trend API not available, falling back to demo trend');
         }
@@ -506,32 +551,32 @@ const BudgetsApp = (function(){
                 scales: {
                     y: {
                         beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    try { return formatCompact(value); } catch (e) { return value; }
-                                }
+                        ticks: {
+                            callback: function (value) {
+                                try { return formatCompact(value); } catch (e) { return value; }
                             }
+                        }
                     }
                 },
                 plugins: {
                     legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) label += ': ';
-                                        try { label += formatCompact(context.parsed.y); }
-                                        catch (e) { label += context.parsed.y; }
-                                        return label;
-                                    }
-                                }
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                try { label += formatCompact(context.parsed.y); }
+                                catch (e) { label += context.parsed.y; }
+                                return label;
                             }
+                        }
+                    }
                 }
             }
         });
     }
 
-    function openCreateModal(){
+    function openCreateModal() {
         document.getElementById('budgetForm').reset();
         document.getElementById('budget_id').value = '';
         document.getElementById('budgetModalTitle').innerText = 'Tạo ngân sách mới';
@@ -539,37 +584,49 @@ const BudgetsApp = (function(){
         new bootstrap.Modal(document.getElementById('createBudgetModal')).show();
     }
 
-    function openEditModal(id){
+    function openEditModal(id) {
         const b = budgetsCache.find(x => String(x.id) === String(id));
         if (!b) return;
-        
+
         document.getElementById('budget_id').value = b.id;
         document.getElementById('budget_category').value = b.category_id;
         document.getElementById('budget_category_picker').value = b.category_name;
-        
+
         const amt = parseFloat(b.amount);
         document.getElementById('budget_amount').value = amt;
         document.getElementById('budget_amount_display').value = new Intl.NumberFormat('vi-VN').format(amt);
-        
+
         document.getElementById('budget_period').value = b.period || 'monthly';
         document.getElementById('budget_threshold').value = b.alert_threshold || 80;
         document.getElementById('budgetModalTitle').innerText = 'Cập nhật ngân sách';
-        
+
         new bootstrap.Modal(document.getElementById('createBudgetModal')).show();
     }
 
-    function submitBudgetForm(){
+    function submitBudgetForm() {
+
+        // 1. Lấy giá trị từ form (Vanilla JS - Không dùng $)
         const id = document.getElementById('budget_id').value;
         const rawAmount = document.getElementById('budget_amount').value;
-        
+        const amount = parseFloat(rawAmount);
+        const categoryId = document.getElementById('budget_category').value;
+
+        const selectedCat = categories.find(c => c.id == categoryId);
+
+        if (!selectedCat) {
+            alert('Vui lòng chọn danh mục!');
+            return;
+        }
+
+        const jarKey = selectedCat.group_type;
+
         const payload = {
-            category_id: document.getElementById('budget_category').value,
-            amount: parseFloat(rawAmount),
+            category_id: categoryId,
+            amount: amount,
             period: document.getElementById('budget_period').value,
             alert_threshold: document.getElementById('budget_threshold').value
         };
-
-        if(!payload.category_id || !payload.amount) {
+        if (!payload.category_id || !payload.amount) {
             alert('Vui lòng nhập đầy đủ thông tin');
             return;
         }
@@ -579,33 +636,33 @@ const BudgetsApp = (function(){
 
         fetch(url, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrf},
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
             body: JSON.stringify(payload)
         })
-        .then(async r => {
-            const text = await r.text();
-            let res;
-            try {
-                res = text ? JSON.parse(text) : { success: false, message: 'Empty response' };
-            } catch(err) {
-                console.error('Invalid JSON response from server:', text);
-                alert('Lỗi: phản hồi không hợp lệ từ server');
-                return;
-            }
+            .then(async r => {
+                const text = await r.text();
+                let res;
+                try {
+                    res = text ? JSON.parse(text) : { success: false, message: 'Empty response' };
+                } catch (err) {
+                    console.error('Invalid JSON response from server:', text);
+                    alert('Lỗi: phản hồi không hợp lệ từ server');
+                    return;
+                }
 
-            if(res.success){
-                bootstrap.Modal.getInstance(document.getElementById('createBudgetModal')).hide();
-                loadBudgets();
-            } else {
-                alert(res.message || 'Lỗi khi tạo ngân sách');
-            }
-        }).catch(err => {
-            console.error('submitBudgetForm error', err);
-            alert('Lỗi kết nối tới server');
-        });
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('createBudgetModal')).hide();
+                    loadBudgets();
+                } else {
+                    alert(res.message || 'Lỗi khi tạo ngân sách');
+                }
+            }).catch(err => {
+                console.error('submitBudgetForm error', err);
+                alert('Lỗi kết nối tới server');
+            });
     }
 
-    function confirmDelete(id){
+    function confirmDelete(id) {
         SmartSpending.showConfirm(
             'Xóa Ngân Sách?',
             'Bạn có chắc chắn muốn xóa ngân sách này? Hành động này không thể hoàn tác.',
@@ -646,7 +703,7 @@ const BudgetsApp = (function(){
         );
     }
 
-    function renderCategoryChooser(){
+    function renderCategoryChooser() {
         const list = document.getElementById('categoryList');
         list.innerHTML = '';
         const expenseCats = categories.filter(c => c.type === 'expense');
@@ -666,11 +723,11 @@ const BudgetsApp = (function(){
         });
     }
 
-    function formatCurrency(v){ 
-        return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + ' ₫'; 
+    function formatCurrency(v) {
+        return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + ' ₫';
     }
-    
-    function formatCompact(v){
+
+    function formatCompact(v) {
         const n = Number(v) || 0;
         const abs = Math.abs(n);
         try {
@@ -686,9 +743,9 @@ const BudgetsApp = (function(){
             return String(n);
         }
     }
-    
-    function escapeHtml(s){ 
-        return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); 
+
+    function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[c]));
     }
 
     return { init };
@@ -697,7 +754,7 @@ const BudgetsApp = (function(){
 BudgetsApp.init();
 
 // Open small Smart Budget modal when user clicks "Chỉnh tỷ lệ"
-document.addEventListener('click', function(e){
+document.addEventListener('click', function (e) {
     const btn = e.target.closest && e.target.closest('#editSmartRatiosBtn');
     if (!btn) return;
     const modalEl = document.getElementById('smartBudgetModal');
@@ -705,7 +762,7 @@ document.addEventListener('click', function(e){
 });
 
 // When smart budget ratios are updated, refresh budgets display
-window.addEventListener('smartBudget:updated', function(){
+window.addEventListener('smartBudget:updated', function () {
     if (window.budgets && typeof window.budgets.refresh === 'function') {
         window.budgets.refresh();
     } else if (typeof loadBudgets === 'function') {
@@ -714,7 +771,7 @@ window.addEventListener('smartBudget:updated', function(){
 });
 
 // Ensure body can scroll again after modals are closed (fix leftover modal-open/backdrop)
-document.addEventListener('hidden.bs.modal', function() {
+document.addEventListener('hidden.bs.modal', function () {
     // small timeout to allow Bootstrap to finalize internal state
     setTimeout(() => {
         const anyOpen = document.querySelectorAll('.modal.show').length > 0;
@@ -739,8 +796,8 @@ function _cleanupModalOpen() {
     }
 }
 
-document.addEventListener('hide.bs.modal', function(){ setTimeout(_cleanupModalOpen, 10); });
-document.addEventListener('click', function(e){
+document.addEventListener('hide.bs.modal', function () { setTimeout(_cleanupModalOpen, 10); });
+document.addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('[data-bs-dismiss="modal"]')) {
         setTimeout(_cleanupModalOpen, 10);
     }

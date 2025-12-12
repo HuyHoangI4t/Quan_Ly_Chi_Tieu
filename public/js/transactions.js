@@ -376,6 +376,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                 if (respData.success === true || respData.status === 'success' || response.ok) {
                                     SmartSpending.showToast(respData.message || 'Xóa giao dịch thành công!', 'success');
+                                    if (respData.data && respData.data.jar_updates) {
+                                        window.dispatchEvent(new CustomEvent('smartbudget:updated', { detail: { jar_updates: respData.data.jar_updates } }));
+                                    }
                                                     loadTransactions(false);
                                                     triggerTransactionChange();
                                 } else {
@@ -570,6 +573,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     SmartSpending.showToast('Thêm giao dịch thành công!', 'success');
                     addTransactionForm.reset();
+                    if (respData.data && respData.data.jar_updates) {
+                        window.dispatchEvent(new CustomEvent('smartbudget:updated', { detail: { jar_updates: respData.data.jar_updates } }));
+                    }
                     setTimeout(() => loadTransactions(false), 500);
                     triggerTransactionChange();
                 }
@@ -663,6 +669,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         setTimeout(() => {
                             SmartSpending.showToast(respData.message || 'Cập nhật giao dịch thành công!', 'success');
                         }, 300);
+
+                        if (respData.data && respData.data.jar_updates) {
+                            window.dispatchEvent(new CustomEvent('smartbudget:updated', { detail: { jar_updates: respData.data.jar_updates } }));
+                        }
 
                         setTimeout(() => loadTransactions(false), 500);
                         triggerTransactionChange();

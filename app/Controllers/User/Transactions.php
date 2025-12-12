@@ -378,10 +378,50 @@ class Transactions extends Controllers
             CsrfProtection::verify();
 
             $userId = $this->getCurrentUserId();
+
+            // Lấy ngày của giao dịch trước khi xóa để tính lại số dư hũ
+            $db = (new ConnectDB())->getConnection();
+            $stmtGet = $db->prepare("SELECT date FROM transactions WHERE id = ? AND user_id = ? LIMIT 1");
+            $stmtGet->execute([$id, $userId]);
+            $txRow = $stmtGet->fetch(\PDO::FETCH_ASSOC);
+            $txDate = $txRow['date'] ?? date('Y-m-d');
+
             $result = $this->transactionModel->deleteTransaction($id, $userId);
 
             if ($result) {
-                Response::successResponse('Xóa giao dịch thành công', ['id' => $id]);
+                // Tính jar updates cho kỳ của giao dịch đã xóa
+                try {
+                    $txMonth = substr($txDate, 0, 7);
+                    list($startDate, $endDate) = array_slice(FinancialUtils::getPeriodDates($txMonth), 0, 2);
+
+                    $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
+                    $incomeForMonth = isset($totals['income']) ? floatval($totals['income']) : 0.0;
+
+                    $budgetModel = $this->model('Budget');
+                    $jars = $budgetModel->getUserJars($userId);
+                    $jarKeys = ['nec','ffa','ltss','edu','play','give'];
+
+                    $jarUpdates = [];
+                    foreach ($jarKeys as $idx => $key) {
+                        $percent = isset($jars[$idx]) ? floatval($jars[$idx]) : 0.0;
+                        $allowance = ($incomeForMonth * $percent) / 100.0;
+                        $stmt = $db->prepare("SELECT COALESCE(SUM(ABS(t.amount)),0) as spent FROM transactions t JOIN categories c ON t.category_id = c.id WHERE t.user_id = ? AND t.type = 'expense' AND c.group_type = ? AND t.date BETWEEN ? AND ?");
+                        $stmt->execute([$userId, $key, $startDate, $endDate]);
+                        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                        $spent = isset($row['spent']) ? floatval($row['spent']) : 0.0;
+                        $remaining = $allowance - $spent;
+                        $jarUpdates[$key] = [
+                            'percent' => $percent,
+                            'allowance' => $allowance,
+                            'spent' => $spent,
+                            'remaining' => $remaining
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    $jarUpdates = null;
+                }
+
+                Response::successResponse('Xóa giao dịch thành công', ['id' => $id, 'jar_updates' => $jarUpdates]);
             } else {
                 Response::errorResponse('Không thể xóa giao dịch');
             }
