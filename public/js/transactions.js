@@ -57,6 +57,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Notify other parts of the app (and other tabs) that transactions changed
+    function triggerTransactionChange() {
+        try {
+            // dispatch an in-page event
+            window.dispatchEvent(new CustomEvent('transaction:created'));
+            // ping localStorage to notify other tabs (storage event)
+            const key = 'smartspending:transactions_updated';
+            localStorage.setItem(key, Date.now().toString());
+            // cleanup immediately
+            localStorage.removeItem(key);
+        } catch (e) {
+            // ignore errors (e.g., private mode blocking localStorage)
+        }
+    }
+
     /**
      * Render transactions in table
      */
@@ -136,25 +151,69 @@ document.addEventListener('DOMContentLoaded', function () {
         // Previous button
         paginationHTML += `
             <li class="page-item ${!pagination.has_prev ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${pagination.current_page - 1}">
+                <a class="page-link" href="javascript:void(0)" data-page="${pagination.current_page - 1}" role="button" tabindex="0">
                     <i class="fas fa-chevron-left"></i>
                 </a>
             </li>
         `;
 
-        // Page numbers
-        for (let i = 1; i <= pagination.total_pages; i++) {
+        // Page numbers - show up to maxButtons buttons (centered on current page)
+        const maxButtons = 6;
+        const total = pagination.total_pages;
+        let startPage = 1;
+        let endPage = total;
+
+        if (total > maxButtons) {
+            const half = Math.floor(maxButtons / 2);
+            startPage = pagination.current_page - half;
+            endPage = pagination.current_page + (maxButtons - half - 1);
+
+            if (startPage < 1) {
+                startPage = 1;
+                endPage = maxButtons;
+            }
+            if (endPage > total) {
+                endPage = total;
+                startPage = total - maxButtons + 1;
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
             paginationHTML += `
                 <li class="page-item ${i === pagination.current_page ? 'active' : ''}">
-                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    <a class="page-link" href="javascript:void(0)" data-page="${i}" role="button" tabindex="0">${i}</a>
                 </li>
             `;
+        }
+
+        // If there are hidden pages before startPage, show first page and ellipsis
+        if (startPage > 1) {
+            paginationHTML = paginationHTML.replace('<ul', `<ul`);
+            // prepend first page + ellipsis
+                const prefix = `
+                <li class="page-item ${1 === pagination.current_page ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" data-page="1" role="button" tabindex="0">1</a></li>
+                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            `;
+            // insert after previous button (which is at beginning)
+            const insertionPoint = paginationHTML.indexOf('<li class="page-item');
+            paginationHTML = paginationHTML.slice(0, paginationHTML.indexOf('</li>') + 5) + prefix + paginationHTML.slice(paginationHTML.indexOf('</li>') + 5);
+        }
+
+        // If hidden pages after endPage, append ellipsis and last page
+        if (endPage < total) {
+            const suffix = `
+                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                <li class="page-item ${total === pagination.current_page ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" data-page="${total}" role="button" tabindex="0">${total}</a></li>
+            `;
+            // insert before the next button (which will be appended later)
+            // we'll append suffix now and then next button will follow
+            paginationHTML += suffix;
         }
 
         // Next button
         paginationHTML += `
             <li class="page-item ${!pagination.has_next ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${pagination.current_page + 1}">
+                <a class="page-link" href="javascript:void(0)" data-page="${pagination.current_page + 1}" role="button" tabindex="0">
                     <i class="fas fa-chevron-right"></i>
                 </a>
             </li>
@@ -166,17 +225,27 @@ document.addEventListener('DOMContentLoaded', function () {
         // Attach pagination event listeners
         paginationContainer.querySelectorAll('.page-link').forEach(link => {
             link.addEventListener('click', function (e) {
+                // Prevent default navigation and stop propagation immediately
                 e.preventDefault();
+                e.stopPropagation();
                 if (this.parentElement.classList.contains('disabled')) return;
+
+                // Remove focus from the clicked link to avoid browser auto-scrolling it into view
+                try { this.blur(); } catch (err) {}
 
                 const page = parseInt(this.dataset.page);
                 if (page > 0 && page <= pagination.total_pages) {
+                    // Preserve current scroll position explicitly (defensive)
+                    const scrollX = window.scrollX || window.pageXOffset;
+                    const scrollY = window.scrollY || window.pageYOffset;
+
                     currentFilters.page = page;
                     loadTransactions();
-                    // Scroll to top of table
-                    document.querySelector('.transactions-table-card')?.scrollIntoView({ behavior: 'smooth' });
+
+                    // restore scroll position after a short delay to avoid layout jank
+                    setTimeout(() => window.scrollTo(scrollX, scrollY), 40);
                 }
-            });
+            }, { passive: false });
         });
     }
 
@@ -307,7 +376,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                 if (respData.success === true || respData.status === 'success' || response.ok) {
                                     SmartSpending.showToast(respData.message || 'Xóa giao dịch thành công!', 'success');
-                                    loadTransactions(false);
+                                                    loadTransactions(false);
+                                                    triggerTransactionChange();
                                 } else {
                                     SmartSpending.showToast(respData.message || 'Không thể xóa giao dịch', 'error');
                                 }
@@ -501,6 +571,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     SmartSpending.showToast('Thêm giao dịch thành công!', 'success');
                     addTransactionForm.reset();
                     setTimeout(() => loadTransactions(false), 500);
+                    triggerTransactionChange();
                 }
             } else {
                 // Trường hợp 3: Lỗi (Ví dụ: Không đủ số dư tổng hoặc validation)
@@ -594,6 +665,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }, 300);
 
                         setTimeout(() => loadTransactions(false), 500);
+                        triggerTransactionChange();
                     } else {
                         SmartSpending.showToast(respData.message || 'Không thể cập nhật giao dịch', 'error');
                     }

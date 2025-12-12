@@ -38,8 +38,8 @@ class Transactions extends Controllers
             'category_id' => ($categoryId === 'all') ? null : $categoryId,
         ];
 
-        // Pagination settings
-        $perPage = 7;
+        // Pagination settings (max rows per page)
+        $perPage = 6;
         $offset = ($page - 1) * $perPage;
 
         $allTransactions = $this->transactionModel->getAllByUser($userId, $filters);
@@ -292,7 +292,7 @@ class Transactions extends Controllers
             $range = $this->request->get('range', date('Y-m'));
             $categoryId = $this->request->get('category', 'all');
             $page = (int)$this->request->get('page', 1);
-            $perPage = (int)$this->request->get('per_page', 7);
+            $perPage = (int)$this->request->get('per_page', 6);
 
             $filters = [
                 'range' => $range,

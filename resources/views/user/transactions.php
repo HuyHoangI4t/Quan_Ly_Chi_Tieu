@@ -121,35 +121,34 @@ $this->partial('header');
             </table>
         </div>
         
-        <!-- Pagination -->
-        <?php if ($total_pages > 1): ?>
+        <!-- Pagination wrapper (always rendered; JS will populate when using AJAX) -->
         <div class="transactions-pagination-wrapper">
-            <div class="transactions-pagination-info">
-                Hiển thị <?php echo count($transactions); ?> / <?php echo $total_transactions; ?> giao dịch
-            </div>
             <div class="transactions-pagination">
-                <?php if ($current_page > 1): ?>
-                    <a href="<?php echo BASE_URL; ?>/transactions/index/<?php echo $current_range; ?>/<?php echo $current_category; ?>/<?php echo $current_page - 1; ?>" class="transactions-pagination-btn">Trước</a>
-                <?php else: ?>
-                    <button disabled class="transactions-pagination-btn">Trước</button>
-                <?php endif; ?>
-                
-                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                    <?php if ($i == $current_page): ?>
-                        <button class="transactions-pagination-number active"><?php echo $i; ?></button>
+                <?php if ($total_pages > 1): ?>
+                    <?php if ($current_page > 1): ?>
+                        <a href="<?php echo BASE_URL; ?>/transactions/index/<?php echo $current_range; ?>/<?php echo $current_category; ?>/<?php echo $current_page - 1; ?>" class="transactions-pagination-btn">Trước</a>
                     <?php else: ?>
-                        <a href="<?php echo BASE_URL; ?>/transactions/index/<?php echo $current_range; ?>/<?php echo $current_category; ?>/<?php echo $i; ?>" class="transactions-pagination-number"><?php echo $i; ?></a>
+                        <button disabled class="transactions-pagination-btn">Trước</button>
                     <?php endif; ?>
-                <?php endfor; ?>
-                
-                <?php if ($current_page < $total_pages): ?>
-                    <a href="<?php echo BASE_URL; ?>/transactions/index/<?php echo $current_range; ?>/<?php echo $current_category; ?>/<?php echo $current_page + 1; ?>" class="transactions-pagination-btn">Sau</a>
+
+                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                        <?php if ($i == $current_page): ?>
+                            <button class="transactions-pagination-number active"><?php echo $i; ?></button>
+                        <?php else: ?>
+                            <a href="<?php echo BASE_URL; ?>/transactions/index/<?php echo $current_range; ?>/<?php echo $current_category; ?>/<?php echo $i; ?>" class="transactions-pagination-number"><?php echo $i; ?></a>
+                        <?php endif; ?>
+                    <?php endfor; ?>
+
+                    <?php if ($current_page < $total_pages): ?>
+                        <a href="<?php echo BASE_URL; ?>/transactions/index/<?php echo $current_range; ?>/<?php echo $current_category; ?>/<?php echo $current_page + 1; ?>" class="transactions-pagination-btn">Sau</a>
+                    <?php else: ?>
+                        <button disabled class="transactions-pagination-btn">Sau</button>
+                    <?php endif; ?>
                 <?php else: ?>
-                    <button disabled class="transactions-pagination-btn">Sau</button>
+                    <!-- Empty: JS will render pagination controls if needed -->
                 <?php endif; ?>
             </div>
         </div>
-        <?php endif; ?>
     </div>
     </div>
 </div>

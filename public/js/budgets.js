@@ -1,14 +1,11 @@
 const BudgetsApp = (function(){
     let categories = [];
     let currentPeriod = 'monthly';
-    let selectedCategoryId = null;
     let budgetsCache = [];
     // Pagination state
     let pageSize = 3;
     let currentPage = 1;
     let totalPages = 1;
-    // Auto-refresh handle
-    let autoRefreshHandle = null;
     let pieChart = null;
 
     function init(){
@@ -158,46 +155,52 @@ const BudgetsApp = (function(){
                 baseIncome = budgetsCache.reduce((s, b) => s + (Number(b.amount) || 0), 0);
             }
             const settings = (payload && payload.settings) ? payload.settings : null;
+            // Render as six jars (nec, ffa, ltss, edu, play, give).
+            const groups = (payload && payload.groups) ? payload.groups : {};
+            const keys = ['nec','ffa','ltss','edu','play','give'];
+            const labels = {nec:'NEC',ffa:'FFA',ltss:'LTSS',edu:'EDU',play:'PLAY',give:'GIVE'};
+            const colors = {nec:'#dc3545',ffa:'#ffc107',ltss:'#0d6efd',edu:'#0dcaf0',play:'#d63384',give:'#198754'};
 
-            // Compute 3-way groups from 6-jar settings if available
-            let needs_pct = 50, wants_pct = 30, savings_pct = 20;
+            // Build percent map for each jar. If payload contains specific jar percents, use them.
+            const perc = {};
             if (settings) {
+                // If six-jar settings exist, read them directly
                 if (settings.nec_percent !== undefined || settings.ffa_percent !== undefined) {
-                    needs_pct = (Number(settings.nec_percent) || 0) + (Number(settings.ffa_percent) || 0);
-                    wants_pct = (Number(settings.ltss_percent) || 0) + (Number(settings.edu_percent) || 0);
-                    savings_pct = (Number(settings.play_percent) || 0) + (Number(settings.give_percent) || 0);
+                    keys.forEach(k => perc[k] = Number(settings[k + '_percent']) || 0);
                 } else if (settings.needs_percent !== undefined) {
-                    needs_pct = Number(settings.needs_percent) || needs_pct;
-                    wants_pct = Number(settings.wants_percent) || wants_pct;
-                    savings_pct = Number(settings.savings_percent) || savings_pct;
+                    // If only 3-way settings exist, split evenly between paired jars
+                    const needs = Number(settings.needs_percent) || 50;
+                    const wants = Number(settings.wants_percent) || 30;
+                    const savings = Number(settings.savings_percent) || 20;
+                    perc.nec = Math.floor(needs / 2);
+                    perc.ffa = needs - perc.nec;
+                    perc.ltss = Math.floor(wants / 2);
+                    perc.edu = wants - perc.ltss;
+                    perc.play = Math.floor(savings / 2);
+                    perc.give = savings - perc.play;
+                } else {
+                    keys.forEach(k => perc[k] = 0);
                 }
+            } else {
+                keys.forEach(k => perc[k] = 0);
             }
 
-            // Get actual spent per group from payload.groups if available, aggregate similarly
-            const groups = (payload && payload.groups) ? payload.groups : {};
-            const actualNeeds = (Number(groups.nec?.spent || 0) + Number(groups.ffa?.spent || 0));
-            const actualWants = (Number(groups.ltss?.spent || 0) + Number(groups.edu?.spent || 0));
-            const actualSavings = (Number(groups.play?.spent || 0) + Number(groups.give?.spent || 0));
-
-            const needsRecommended = Math.round(baseIncome * (needs_pct) / 100);
-            const wantsRecommended = Math.round(baseIncome * (wants_pct) / 100);
-            const savingsRecommended = Math.round(baseIncome * (savings_pct) / 100);
-
-            function box(label, pct, recommended, actual){
-                const remaining = Math.max(0, recommended - (Number(actual)||0));
+            const items = keys.map(k => {
+                const pct = perc[k] || 0;
+                const recommended = Math.round(baseIncome * pct / 100);
+                const actual = Number(groups[k]?.spent || 0);
+                const remaining = Math.max(0, recommended - actual);
                 return `
-                    <div class="d-flex flex-column text-center" style="min-width:140px;">
-                        <small class="text-muted mb-1">${label}</small>
-                        <div class="fs-4 fw-bold">${pct}%</div>
+                    <div class="d-flex flex-column text-center" style="min-width:120px;">
+                        <small class="text-muted mb-1">${labels[k]}</small>
+                        <div class="fs-5 fw-bold" style="color:${colors[k]}">${pct}%</div>
                         <div class="fw-bold mt-1">${formatCurrency(recommended)}</div>
                         <div class="small text-muted mt-1">Còn lại: ${formatCurrency(remaining)}</div>
                     </div>
                 `;
-            }
+            }).join('');
 
-            target.innerHTML = box('Cần thiết', needs_pct, needsRecommended, actualNeeds)
-                + box('Tùy chọn', wants_pct, wantsRecommended, actualWants)
-                + box('Tiết kiệm', savings_pct, savingsRecommended, actualSavings);
+            target.innerHTML = `<div class="d-flex gap-3 flex-wrap">${items}</div>`;
         } catch (e) {
             console.warn('Không thể lấy dữ liệu ngân sách thông minh', e);
             // fallback: show default 50/30/20 with zeros
@@ -361,23 +364,11 @@ const BudgetsApp = (function(){
         });
     }
 
-    // Auto-refresh: poll budgets endpoint every interval seconds (default 60s)
-    function startBudgetAutoRefresh(intervalSeconds = 60){
-        stopBudgetAutoRefresh();
-        autoRefreshHandle = setInterval(()=>{
-            loadBudgets();
-        }, intervalSeconds * 1000);
-    }
+    // (Auto-refresh removed: not used elsewhere)
 
-    function stopBudgetAutoRefresh(){
-        if (autoRefreshHandle) { clearInterval(autoRefreshHandle); autoRefreshHandle = null; }
-    }
-
-    // Expose refresh and auto-refresh control
+    // Expose refresh
     window.budgets = window.budgets || {};
     window.budgets.refresh = loadBudgets;
-    window.budgets.startAutoRefresh = startBudgetAutoRefresh;
-    window.budgets.stopAutoRefresh = stopBudgetAutoRefresh;
 
     // Listen for a cross-window event 'transaction:created' to refresh budgets when transactions are added elsewhere
     window.addEventListener('transaction:created', ()=>{
@@ -401,7 +392,7 @@ const BudgetsApp = (function(){
                 datasets: [{
                     data: data,
                     backgroundColor: colors,
-                    borderWidth: 0,
+                    borderWidth: 2,
                     hoverOffset: 4
                 }]
             },
@@ -409,9 +400,9 @@ const BudgetsApp = (function(){
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: {size: 11} } }
+                    legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: {size: 11} } }
                 },
-                cutout: '70%'
+                cutout: '50%'
             }
         });
     }
@@ -447,7 +438,35 @@ const BudgetsApp = (function(){
                                 { label: 'Chi tiêu', data: spentData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.06)', tension: 0.3, fill: true }
                             ]
                         },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            try { return formatCompact(value); } catch (e) { return value; }
+                                        }
+                                        
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: { position: 'bottom' },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) label += ': ';
+                                            try { label += formatCompact(context.parsed.y); }
+                                            catch (e) { label += context.parsed.y; }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     });
                     return;
                 }
@@ -481,7 +500,34 @@ const BudgetsApp = (function(){
                     { label: 'Chi tiêu', data: spentData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.06)', tension: 0.3, fill: true }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    try { return formatCompact(value); } catch (e) { return value; }
+                                }
+                            }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        try { label += formatCompact(context.parsed.y); }
+                                        catch (e) { label += context.parsed.y; }
+                                        return label;
+                                    }
+                                }
+                            }
+                }
+            }
         });
     }
 
@@ -622,6 +668,23 @@ const BudgetsApp = (function(){
 
     function formatCurrency(v){ 
         return new Intl.NumberFormat('vi-VN').format(Math.round(v)) + ' ₫'; 
+    }
+    
+    function formatCompact(v){
+        const n = Number(v) || 0;
+        const abs = Math.abs(n);
+        try {
+            if (abs >= 1000000) {
+                const v1 = n / 1000000;
+                return (v1 % 1 === 0 ? v1.toFixed(0) : v1.toFixed(1)) + 'tr';
+            } else if (abs >= 1000) {
+                const v1 = n / 1000;
+                return (v1 % 1 === 0 ? v1.toFixed(0) : v1.toFixed(1)) + 'k';
+            }
+            return new Intl.NumberFormat('vi-VN').format(n) + ' ₫';
+        } catch (e) {
+            return String(n);
+        }
     }
     
     function escapeHtml(s){ 

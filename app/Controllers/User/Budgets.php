@@ -432,8 +432,57 @@ class Budgets extends Controllers
            // 3. Lấy Cài đặt tỷ lệ
             $settings = $this->budgetModel->getUserSmartSettings($userId);
             
-            // 4. Lấy Chi tiêu thực tế (Model Transaction không cần sửa, nó tự group theo enum mới)
+            // 4. Lấy Chi tiêu thực tế (Model Transaction trả về theo nhóm lớn: needs/wants/savings)
             $actualSpending = $this->transactionModel->getSpendingByGroup($userId, $startDate, $endDate);
+
+            // If transaction model returned 3-way groups (needs/wants/savings), map/allocate them into 6 jars
+            // so that the front-end can display spent amounts per jar. If model already returns per-jar keys,
+            // keep them as-is.
+            $normalizedSpending = [];
+            $jarKeys = ['nec','ffa','ltss','edu','play','give'];
+
+            $hasJarKeys = true;
+            foreach ($jarKeys as $k) { if (!array_key_exists($k, $actualSpending)) { $hasJarKeys = false; break; } }
+
+            if ($hasJarKeys) {
+                $normalizedSpending = $actualSpending;
+            } else {
+                // Expecting needs/wants/savings
+                $needsTotal = floatval($actualSpending['needs'] ?? 0);
+                $wantsTotal = floatval($actualSpending['wants'] ?? 0);
+                $savingsTotal = floatval($actualSpending['savings'] ?? 0);
+
+                // Read configured percents (fallback to defaults)
+                $necPct = intval($settings['nec_percent'] ?? 55);
+                $ffaPct = intval($settings['ffa_percent'] ?? 10);
+                $ltssPct = intval($settings['ltss_percent'] ?? 10);
+                $eduPct = intval($settings['edu_percent'] ?? 10);
+                $playPct = intval($settings['play_percent'] ?? 10);
+                $givePct = intval($settings['give_percent'] ?? 5);
+
+                // Helper to split a group total into two jars based on their percentage ratio
+                $split = function($total, $aPct, $bPct) {
+                    $aShare = ($aPct + $bPct) > 0 ? ($aPct / ($aPct + $bPct)) : 0.5;
+                    $bShare = 1 - $aShare;
+                    return [ $total * $aShare, $total * $bShare ];
+                };
+
+                list($necSpent, $ffaSpent) = $split($needsTotal, $necPct, $ffaPct);
+                list($ltssSpent, $eduSpent) = $split($wantsTotal, $ltssPct, $eduPct);
+                list($playSpent, $giveSpent) = $split($savingsTotal, $playPct, $givePct);
+
+                $normalizedSpending = [
+                    'nec' => $necSpent,
+                    'ffa' => $ffaSpent,
+                    'ltss' => $ltssSpent,
+                    'edu' => $eduSpent,
+                    'play' => $playSpent,
+                    'give' => $giveSpent
+                ];
+            }
+
+            // Use normalized spending for subsequent output
+            $actualSpending = $normalizedSpending;
 
             // 5. Tính toán dữ liệu so sánh
             $jars = [

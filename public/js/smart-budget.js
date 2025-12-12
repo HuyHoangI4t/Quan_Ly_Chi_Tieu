@@ -73,15 +73,27 @@
         }
     }
 
-    // Event Listeners
+    // Event Listeners: snap values to 5% increments then update UI
     keys.forEach(k => {
-        inputs[k]?.addEventListener('input', updateUI);
+        if (inputs[k]) {
+            inputs[k].addEventListener('input', (e) => {
+                const raw = parseInt(e.target.value || 0, 10) || 0;
+                const snapped = Math.max(0, Math.min(100, Math.round(raw / 5) * 5));
+                if (snapped !== raw) e.target.value = snapped;
+                updateUI();
+            });
+        }
     });
 
     // Save Button
     saveBtn?.addEventListener('click', async () => {
         const { vals, total } = getValues();
         if (total !== 100) return;
+
+        // disable button to prevent duplicate submits
+        saveBtn.disabled = true;
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang lưu';
 
         try {
             const resp = await fetch(BASE_URL + '/budgets/api_update_ratios', {
@@ -92,15 +104,43 @@
                 },
                 body: JSON.stringify(vals)
             });
-            const res = await resp.json();
-            if(res.success) {
+
+            let res = null;
+            try { res = await resp.json(); } catch(err) { res = { success: false, message: 'Phản hồi không hợp lệ từ server' }; }
+            console.debug('api_update_ratios response:', res);
+
+            if (res && res.success) {
                 SmartSpending.showToast('Lưu thành công', 'success');
-                bootstrap.Modal.getInstance(document.getElementById('smartBudgetModal')).hide();
-                window.dispatchEvent(new CustomEvent('smartBudget:updated')); // Refresh parent view
+                // Ensure modal is properly closed and backdrop removed
+                try {
+                    const modalEl = document.getElementById('smartBudgetModal');
+                    if (modalEl) {
+                        const inst = bootstrap.Modal.getOrCreateInstance(modalEl);
+                        inst.hide();
+                    }
+                    // Force cleanup of backdrop and body class in case Bootstrap instance was not found
+                    document.body.classList.remove('modal-open');
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                } catch (err) {
+                    console.warn('Error hiding modal cleanly', err);
+                }
+                // trigger refresh immediately and also dispatch event
+                if (window.budgets && typeof window.budgets.refresh === 'function') {
+                    window.budgets.refresh();
+                }
+                window.dispatchEvent(new CustomEvent('smartBudget:updated'));
             } else {
-                SmartSpending.showToast(res.message, 'error');
+                SmartSpending.showToast(res?.message || 'Lỗi khi lưu cấu hình', 'error');
+                console.warn('saveRatios failed', res);
             }
-        } catch(e) { console.error(e); }
+        } catch(e) {
+            console.error('saveRatios error', e);
+            SmartSpending.showToast('Lỗi kết nối tới server', 'error');
+        } finally {
+            // restore button state
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
     });
 
     // Initial Load
@@ -108,10 +148,15 @@
         try {
             const resp = await fetch(BASE_URL + '/budgets/api_get_smart_budget');
             const json = await resp.json();
-            if(json.success) {
+            console.debug('api_get_smart_budget response:', json);
+                if(json.success) {
                 const s = json.data.settings;
                 keys.forEach(k => {
-                    if(inputs[k]) inputs[k].value = s[k + '_percent'];
+                    if(inputs[k]) {
+                        const raw = Number(s[k + '_percent'] || 0);
+                        const snapped = Math.max(0, Math.min(100, Math.round(raw / 5) * 5));
+                        inputs[k].value = snapped;
+                    }
                 });
                 if(incomeInput) incomeInput.value = json.data.income || 0;
                 updateUI();
@@ -123,5 +168,34 @@
     
     // Also run once to render chart on dashboard (if logic separated)
     loadData();
+
+    // Cleanup on modal hidden: remove backdrops, restore body class and reset UI
+    (function(){
+        const modalEl = document.getElementById('smartBudgetModal');
+        if (!modalEl) return;
+        modalEl.addEventListener('hidden.bs.modal', function(){
+            try {
+                // Restore save button to default state
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    // If spinner present, restore visible text
+                    const spinner = saveBtn.querySelector('.spinner-border');
+                    if (spinner) saveBtn.innerHTML = 'Lưu Cấu Hình';
+                }
+
+                // Destroy chart instance if exists to avoid stale overlays
+                if (chart) {
+                    try { chart.destroy(); } catch(e) {}
+                    chart = null;
+                }
+
+                // Remove any lingering modal backdrop(s) and modal-open body class
+                document.body.classList.remove('modal-open');
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            } catch (err) {
+                console.warn('Error during smartBudgetModal hidden cleanup', err);
+            }
+        });
+    })();
 
 })();

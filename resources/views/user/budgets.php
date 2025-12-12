@@ -129,10 +129,19 @@ $this->partial('header');
                             <label class="fw-bold text-<?= $j['color'] ?> small"><?= $j['label'] ?></label>
                             <span id="<?= $j['id'] ?>Amount" class="fw-bold text-dark small">0 ₫</span>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="range" class="form-range jar-input" id="<?= $j['id'] ?>Input" min="0" max="100" value="<?= $j['def'] ?>" data-key="<?= $j['id'] ?>">
-                            <span class="badge bg-<?= $j['color'] ?>" style="width: 45px;"><span id="<?= $j['id'] ?>Percent">0</span>%</span>
-                        </div>
+                            <div class="d-flex align-items-center gap-2">
+                                    <input type="range" class="form-range jar-input" id="<?= $j['id'] ?>Input" min="0" max="100" step="5" value="<?= $j['def'] ?>" data-key="<?= $j['id'] ?>">
+                                    <?php
+                                        $badgeClass = '';
+                                        $badgeStyle = '';
+                                        if ($j['color'] === 'pink') {
+                                            $badgeStyle = 'background-color: #d63384; color: #fff;';
+                                        } else {
+                                            $badgeClass = 'bg-' . $j['color'];
+                                        }
+                                    ?>
+                                    <span class="badge <?= $badgeClass ?>" style="width: 45px; <?= $badgeStyle ?>"><span id="<?= $j['id'] ?>Percent">0</span>%</span>
+                                </div>
                     </div>
                 <?php endforeach; ?>
 

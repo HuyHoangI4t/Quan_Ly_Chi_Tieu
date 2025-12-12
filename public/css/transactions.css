@@ -376,3 +376,64 @@
     background: #fff0f1 !important;
     color: var(--danger) !important;
 }
+
+/* Pagination styling (make links green) */
+.transactions-pagination {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center; /* center the pagination controls */
+}
+.transactions-pagination .page-link,
+.transactions-pagination-number,
+.transactions-pagination-btn {
+    color: var(--primary);
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+.transactions-pagination-number.active,
+.transactions-pagination .page-item.active > .page-link {
+    color: #fff !important;
+    background: var(--success);
+    border-radius: 20px;
+    padding: 6px 12px;
+    box-shadow: none;
+}
+.transactions-pagination .page-item.disabled > .page-link,
+.transactions-pagination-btn[disabled] {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: default;
+}
+
+/* Ensure simple anchor-style pagination numbers look clickable */
+.transactions-pagination-number,
+.transactions-pagination .page-link {
+    padding: 6px 10px;
+    border-radius: 8px;
+}
+
+/* Remove focus outlines for pagination controls to avoid the small square */
+.transactions-pagination .page-link:focus,
+.transactions-pagination-number:focus,
+.transactions-pagination-btn:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Ensure any Prev/Next rendered as .btn are styled consistently inside pagination */
+.transactions-pagination .btn {
+    background: transparent !important;
+    border: none !important;
+    color: var(--primary) !important;
+    padding: 6px 8px !important;
+    box-shadow: none !important;
+}
+.transactions-pagination .page-link i {
+    font-size: 14px;
+    line-height: 1;
+}
