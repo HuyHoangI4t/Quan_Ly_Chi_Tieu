@@ -69,15 +69,6 @@
                             </td>
                             <td style="color: #64748b;"><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></td>
                             <td style="text-align: right;">
-                                
-                                <?php if ($user['id'] == 2): ?>
-                                    <button class="btn btn-sm btn-primary border me-2" 
-                                            onclick="loginAsUser(2)" 
-                                            title="Vào xem với tư cách User này">
-                                        <i class="fas fa-sign-in-alt me-1"></i> Truy cập
-                                    </button>
-                                <?php endif; ?>
-
                                 <?php if ($user['id'] != $_SESSION['user_id']): ?>
                                     <button class="btn btn-sm btn-light border" onclick="toggleRole(<?php echo $user['id']; ?>, '<?php echo $user['role']; ?>')">
                                         <i class="fas fa-user-shield text-primary"></i>

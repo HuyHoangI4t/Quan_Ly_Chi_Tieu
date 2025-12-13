@@ -217,7 +217,14 @@ class Budgets extends Controllers
             $cat = $stmt->fetch();
 
             if ($cat) {
-                $jarCode = $cat['group_type']; // Ví dụ: 'nec', 'play'
+                $jarCode = trim($cat['group_type'] ?? ''); // Ví dụ: 'nec', 'play'
+
+                // Ensure jarCode is one of expected keys; fallback to 'nec' if missing/invalid
+                $validJars = ['nec','ffa','ltss','edu','play','give'];
+                $originalJar = $jarCode;
+                if ($jarCode === '' || !in_array($jarCode, $validJars, true)) {
+                    $jarCode = 'nec';
+                }
 
                 // Bước 2: Tính TỔNG QUỸ của hũ này trong tháng
                 // Lấy tổng thu nhập
@@ -253,6 +260,7 @@ class Budgets extends Controllers
                     $logDir = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
                     if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
                     $dbg = '[' . date('Y-m-d H:i:s') . '] budgets: jarCode=' . $jarCode
+                        . ($originalJar !== $jarCode ? ' (fallback from ' . $originalJar . ')' : '')
                         . ' totalIncome=' . number_format($totalIncome)
                         . ' jarPercent=' . $jarPercent
                         . ' jarCapacity=' . number_format($jarCapacity)
