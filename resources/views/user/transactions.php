@@ -4,7 +4,7 @@ use App\Services\FinancialUtils;
 $this->partial('header'); 
 ?>
 
-<!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css"> -->
+<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/transactions.css">
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
 <div class="container-fluid" style="min-height: 100vh; padding: 10px 20px;">
@@ -273,5 +273,7 @@ $this->partial('header');
     // Pass PHP variables to JavaScript
     window.BASE_URL = "<?php echo BASE_URL; ?>";
 </script>
+
+<script src="<?php echo BASE_URL; ?>/js/transactions.js"></script>
 
 <?php $this->partial('footer'); ?>

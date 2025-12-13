@@ -1,5 +1,7 @@
 <?php $this->partial('header'); ?>
 
+<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/reports.css">
+
 <section class="reports-section">
     <!-- Header with Filters -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -146,3 +148,5 @@
 </section>
 
 <?php $this->partial('footer'); ?>
+
+<script src="<?php echo BASE_URL; ?>/js/reports.js"></script>

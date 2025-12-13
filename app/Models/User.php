@@ -53,6 +53,62 @@ class User
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Get paginated users with optional search
+     * @param int $limit
+     * @param int $offset
+     * @param string|null $search
+     * @return array
+     */
+    public function getUsersPaginated($limit, $offset, $search = null)
+    {
+        $sql = "SELECT id, username, email, full_name, role, is_active, created_at FROM users";
+        $params = [];
+
+        if (!empty($search)) {
+            $sql .= " WHERE username LIKE :s OR email LIKE :s OR full_name LIKE :s";
+            $params[':s'] = '%' . $search . '%';
+        }
+
+        $sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+        $stmt = $this->db->prepare($sql);
+
+        // bind values (limit/offset as integers)
+        $stmt->bindValue(':limit', (int)$limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, \PDO::PARAM_INT);
+
+        if (!empty($search)) {
+            $stmt->bindValue(':s', $params[':s'], \PDO::PARAM_STR);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Count users (with optional search)
+     * @param string|null $search
+     * @return int
+     */
+    public function countUsers($search = null)
+    {
+        $sql = "SELECT COUNT(*) as cnt FROM users";
+        $params = [];
+
+        if (!empty($search)) {
+            $sql .= " WHERE username LIKE :s OR email LIKE :s OR full_name LIKE :s";
+            $params[':s'] = '%' . $search . '%';
+        }
+
+        $stmt = $this->db->prepare($sql);
+        if (!empty($search)) {
+            $stmt->bindValue(':s', $params[':s'], \PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int)($row['cnt'] ?? 0);
+    }
+
     public function updateUserStatus($userId, $isActive)
     {
         $stmt = $this->db->prepare("UPDATE users SET is_active = ? WHERE id = ?");

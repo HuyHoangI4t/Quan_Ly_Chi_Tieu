@@ -190,6 +190,12 @@ class Categories extends Controllers
 
             // Result can be true (success), false (general failure), or string (error message)
             if ($result === true) {
+                // Log admin delete category
+                try {
+                    $logModel = $this->model('Log');
+                    $logModel->logAction($this->getCurrentUserId(), 'delete_category', $id);
+                } catch (\Exception $e) {}
+
                 Response::successResponse('Xóa danh mục thành công');
             } elseif (is_string($result)) {
                 Response::errorResponse($result, null, 400);

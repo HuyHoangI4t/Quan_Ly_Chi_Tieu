@@ -299,3 +299,5 @@
     </div>
 </div>
 <?php $this->partial('footer'); ?>
+
+<script src="<?php echo BASE_URL; ?>/js/goals.js"></script>

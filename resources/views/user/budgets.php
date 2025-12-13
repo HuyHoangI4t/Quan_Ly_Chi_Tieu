@@ -5,6 +5,7 @@ use App\Middleware\CsrfProtection;
 $this->partial('header');
 ?>
 
+<link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/budgets.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <?php echo CsrfProtection::getTokenMeta(); ?>
 
@@ -25,7 +26,7 @@ $this->partial('header');
                     <i class="fas fa-sliders-h me-2"></i>Cấu hình Hũ
                 </button>
                 <button id="openCreateBudget" class="btn btn-primary custom-btn-add shadow-sm">
-                    <i class="fas fa-plus me-2"></i>Thêm Khoản Chi
+                    <i class="fas fa-plus me-2"></i>Thêm Ngân Sách
                 </button>
             </div>
         </div>
@@ -42,7 +43,7 @@ $this->partial('header');
         <div class="col-lg-12">
             <div class="card list-card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold text-dark mb-0">Chi tiết các khoản chi</h5>
+                    <h5 class="fw-bold text-dark mb-0">Chi tiết các ngân sách</h5>
                     <div class="badge bg-light text-muted border fw-normal px-3 py-2 rounded-pill">
                         <i class="fas fa-filter me-1"></i> Tháng này
                     </div>
@@ -167,6 +168,7 @@ $this->partial('header');
         input.value = new Intl.NumberFormat('vi-VN').format(value);
     }
 </script>
+<script src="<?php echo BASE_URL; ?>/js/budgets.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="<?php echo BASE_URL; ?>/js/smart-budget.js"></script>
 

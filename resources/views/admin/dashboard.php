@@ -1,45 +1,7 @@
-<!DOCTYPE html>
-<html lang="vi">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $title ?? 'Admin Dashboard'; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link href="<?php echo BASE_URL; ?>/shared/style.css" rel="stylesheet">
-    <style>
-        .admin-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            border-left: 4px solid;
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-card.users {
-            border-color: #3498db;
-        }
-
-        .stat-card.transactions {
-            border-color: #2ecc71;
-        }
-
-        .stat-card.categories {
-            border-color: #e74c3c;
-        }
-
+<?php $this->partial('admin_header', ['title' => $title ?? 'Admin Dashboard']); ?>
+<style>
         .stat-card.active {
-            border-color: #f39c12;
+            border-color: var(--warning);
         }
 
         .quick-action {
@@ -48,7 +10,7 @@
 
         .quick-action:hover {
             background-color: #f8f9fa;
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
     </style>
 </head>
@@ -60,14 +22,6 @@
                 <div>
                     <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
                     <p class="mb-0">Xin chào, <?php echo $_SESSION['full_name'] ?? 'Admin'; ?></p>
-                </div>
-                <div>
-                    <a href="<?php echo BASE_URL; ?>/dashboard" class="btn btn-light me-2">
-                        <i class="fas fa-user"></i> User View
-                    </a>
-                    <a href="<?php echo BASE_URL; ?>/auth/login/logout" class="btn btn-outline-light">
-                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
-                    </a>
                 </div>
             </div>
         </div>
@@ -142,21 +96,13 @@
             <!-- Quick Actions -->
             <div class="col-md-4 mb-4">
                 <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-bolt"></i> Thao tác nhanh</h5>
-                    </div>
+                    
                     <div class="card-body p-0">
                         <a href="<?php echo BASE_URL; ?>/admin/users" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
                             <i class="fas fa-users-cog"></i> Quản lý Users
                         </a>
                         <a href="<?php echo BASE_URL; ?>/admin/categories" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
                             <i class="fas fa-tags"></i> Quản lý Danh mục Gốc
-                        </a>
-                        <a href="<?php echo $userBase; ?>/dashboard" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
-                            <i class="fas fa-chart-line"></i> Xem Dashboard User
-                        </a>
-                        <a href="<?php echo $userBase; ?>/transactions" class="d-block p-3 text-decoration-none text-dark quick-action">
-                            <i class="fas fa-list"></i> Xem Giao dịch
                         </a>
                     </div>
                 </div>
@@ -244,10 +190,62 @@
                 </div>
             </div>
         <?php endif; ?>
+
+            <!-- Charts -->
+            <div class="row mt-4">
+                <div class="col-md-8 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Thu/Chi theo tháng (12 tháng)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="monthlyChart" height="120"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Phân bố theo danh mục (30 ngày)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="categoryChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script>
+                (function(){
+                    const chartData = <?php echo json_encode($chart ?? ['labels'=>[],'income'=>[],'expense'=>[]]); ?>;
+                    const catData = <?php echo json_encode($category_breakdown ?? ['labels'=>[], 'data'=>[]]); ?>;
+
+                    const ctx = document.getElementById('monthlyChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: chartData.labels,
+                            datasets: [
+                                { label: 'Thu nhập', data: chartData.income, borderColor: 'var(--success)', backgroundColor: 'rgba(39,174,96,0.08)', tension:0.2 },
+                                { label: 'Chi tiêu', data: chartData.expense, borderColor: 'var(--danger)', backgroundColor: 'rgba(231,76,60,0.08)', tension:0.2 }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+
+                    const cctx = document.getElementById('categoryChart').getContext('2d');
+                    new Chart(cctx, {
+                        type: 'pie',
+                        data: {
+                            labels: catData.labels,
+                            datasets: [{ data: catData.data, backgroundColor: ['#10b981','#6366f1','#f59e0b','#ef4444','#3b82f6','#f97316'] }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                })();
+            </script>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE_URL; ?>/shared/app.js"></script>
-</body>
-
-</html>
+<?php $this->partial('admin_footer'); ?>

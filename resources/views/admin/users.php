@@ -1,35 +1,14 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $title ?? 'Quản lý người dùng - Admin'; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?php echo BASE_URL; ?>/shared/style.css" rel="stylesheet">
-    <style>
-        .admin-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem 0;
-            margin-bottom: 2rem;
-        }
-        .badge-admin { background-color: #dc3545; }
-        .badge-user { background-color: #6c757d; }
-        .badge-active { background-color: #28a745; }
-        .badge-inactive { background-color: #6c757d; }
-    </style>
-</head>
-<body>
-    <div class="admin-header">
-        <div class="container">
-            <h1><i class="fas fa-users-cog"></i> Quản lý người dùng</h1>
-            <p class="mb-0">Quản lý tài khoản và phân quyền người dùng</p>
-        </div>
-    </div>
+<?php $this->partial('admin_header', ['title' => 'Quản lý người dùng']); ?>
 
-    <div class="container">
-        <div class="card">
+<div class="table-card">
+        <div class="admin-card">
             <div class="card-body">
+                <div class="d-flex mb-3">
+                    <form class="d-flex w-100" method="get" action="<?php echo BASE_URL; ?>/admin/users">
+                        <input type="search" name="q" class="form-control me-2" placeholder="Tìm theo username, email hoặc họ tên" value="<?php echo htmlspecialchars($q ?? ''); ?>">
+                        <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+                    </form>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -90,16 +69,38 @@
             </div>
         </div>
 
+        <?php if (!empty($total_pages) && $total_pages > 1): ?>
+            <nav aria-label="Page navigation" class="mt-3">
+                <ul class="pagination">
+                    <?php $base = BASE_URL . '/admin/users'; $current = $current_page ?? 1; $tp = $total_pages ?? 1; $qparam = isset($q) && $q !== '' ? '&q=' . urlencode($q) : ''; ?>
+                    <li class="page-item <?php echo ($current <= 1) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="<?php echo $base . '?page=' . max(1, $current - 1) . $qparam; ?>" aria-label="Previous">Previous</a>
+                    </li>
+
+                    <?php for ($i = 1; $i <= $tp; $i++): ?>
+                        <li class="page-item <?php echo ($i == $current) ? 'active' : ''; ?>">
+                            <a class="page-link" href="<?php echo $base . '?page=' . $i . $qparam; ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor; ?>
+
+                    <li class="page-item <?php echo ($current >= $tp) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="<?php echo $base . '?page=' . min($tp, $current + 1) . $qparam; ?>" aria-label="Next">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        <?php endif; ?>
+
         <div class="mt-3">
-            <a href="<?php echo BASE_URL; ?>/dashboard" class="btn btn-secondary">
+            <a href="<?php echo BASE_URL; ?>/admin/dashboard" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Quay lại Dashboard
             </a>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE_URL; ?>/shared/app.js"></script>
-    <script>
+<?php $this->partial('admin_footer'); ?>
+
+<!-- inline scripts (kept for compatibility) -->
+<script>
         async function toggleRole(userId, currentRole) {
             const newRole = currentRole === 'admin' ? 'user' : 'admin';
             const confirmMsg = currentRole === 'admin' 
@@ -151,5 +152,3 @@
             }
         }
     </script>
-</body>
-</html>

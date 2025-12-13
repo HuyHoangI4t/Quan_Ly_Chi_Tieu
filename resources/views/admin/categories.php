@@ -1,14 +1,10 @@
+<?php $this->partial('admin_header', ['title' => $title ?? 'Quản lý Danh mục']); ?>
 <?php
-
 use App\Middleware\CsrfProtection;
-
-$this->partial('header');
+echo CsrfProtection::getTokenMeta();
 ?>
 
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>/admin/dashboard.css">
-<?php echo CsrfProtection::getTokenMeta(); ?>
-
-<section>
+<div class="table-card">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3><i class="fas fa-tags me-2"></i>Quản lý Danh mục Gốc</h3>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
@@ -90,7 +86,7 @@ $this->partial('header');
             </div>
         </div>
     </div>
-</section>
+</div>
 
 <!-- Category Modal -->
 <div class="modal fade" id="categoryModal" tabindex="-1">
@@ -283,4 +279,4 @@ $this->partial('header');
     }
 </script>
 
-<?php $this->partial('footer'); ?>
+<?php $this->partial('admin_footer'); ?>

@@ -37,12 +37,94 @@ class Dashboard extends Controllers
             'system_activity' => $this->getSystemActivity()
         ];
 
+        // Chart data: monthly totals for last 12 months (income/expense) across all users
+        $chart = $this->getMonthlySpendingLast12Months();
+
+        // Category breakdown for last 30 days
+        $categoryBreakdown = $this->getCategoryBreakdownLast30Days();
+
         $data = [
             'title' => 'Admin Dashboard - Quản lý hệ thống',
             'stats' => $stats
+            , 'chart' => $chart
+            , 'category_breakdown' => $categoryBreakdown
         ];
 
         $this->view('admin/dashboard', $data);
+    }
+
+    private function getMonthlySpendingLast12Months()
+    {
+        $db = (new \App\Core\ConnectDB())->getConnection();
+        $start = date('Y-m-01', strtotime('-11 months'));
+        $end = date('Y-m-t');
+
+        $stmt = $db->prepare("SELECT DATE_FORMAT(date, '%Y-%m') as period,
+            SUM(CASE WHEN type = 'income' THEN ABS(amount) ELSE 0 END) as income,
+            SUM(CASE WHEN type = 'expense' THEN ABS(amount) ELSE 0 END) as expense
+            FROM transactions
+            WHERE date BETWEEN ? AND ?
+            GROUP BY period
+            ORDER BY period ASC");
+
+        $stmt->execute([$start, $end]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Build full months array
+        $periods = [];
+        $labels = [];
+        $income = [];
+        $expense = [];
+
+        $current = new \DateTime($start);
+        $endDate = new \DateTime($end);
+        while ($current <= $endDate) {
+            $key = $current->format('Y-m');
+            $labels[] = $current->format('M Y');
+            $periods[$key] = ['income' => 0, 'expense' => 0];
+            $current->modify('+1 month');
+        }
+
+        foreach ($rows as $r) {
+            if (isset($periods[$r['period']])) {
+                $periods[$r['period']]['income'] = (float)$r['income'];
+                $periods[$r['period']]['expense'] = (float)$r['expense'];
+            }
+        }
+
+        foreach ($periods as $p) {
+            $income[] = $p['income'];
+            $expense[] = $p['expense'];
+        }
+
+        return ['labels' => $labels, 'income' => $income, 'expense' => $expense];
+    }
+
+    private function getCategoryBreakdownLast30Days()
+    {
+        $db = (new \App\Core\ConnectDB())->getConnection();
+        $start = date('Y-m-d', strtotime('-29 days'));
+        $end = date('Y-m-d');
+
+        $stmt = $db->prepare("SELECT c.name, SUM(ABS(t.amount)) as total
+            FROM transactions t
+            JOIN categories c ON t.category_id = c.id
+            WHERE t.date BETWEEN ? AND ? AND t.type = 'expense'
+            GROUP BY c.id, c.name
+            ORDER BY total DESC
+            LIMIT 10");
+
+        $stmt->execute([$start, $end]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $labels = [];
+        $data = [];
+        foreach ($rows as $r) {
+            $labels[] = $r['name'];
+            $data[] = (float)$r['total'];
+        }
+
+        return ['labels' => $labels, 'data' => $data];
     }
 
     private function getTotalUsers()

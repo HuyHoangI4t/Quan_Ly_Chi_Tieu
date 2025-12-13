@@ -152,25 +152,47 @@ const BudgetsApp = (function () {
             const labels = { nec: 'NEC', ffa: 'FFA', ltss: 'LTSS', edu: 'EDU', play: 'PLAY', give: 'GIVE' };
             const colors = { nec: '#dc3545', ffa: '#ffc107', ltss: '#0d6efd', edu: '#0dcaf0', play: '#d63384', give: '#198754' };
 
+            /* --- File: public/js/budgets.js --- */
+
+            // Tìm đoạn này trong hàm loadJarsSummary
             const items = keys.map(k => {
                 const pct = Number(s[k + '_percent']) || 0;
                 const allocated = Math.round(income * pct / 100);
 
-                // Bạn cần API trả về thêm: "total_budgeted" (tổng ngân sách đã tạo)
-                // Nếu chưa có, tạm thời tính theo số thực tế còn lại
-                const spent = Number(groups[k]?.spent || 0);
-                const remaining = Math.max(0, allocated - spent);
+                // --- ĐOẠN CŨ CỦA BẠN (SAI LOGIC HIỂN THỊ) ---
+                // const spent = Number(groups[k]?.spent || 0);
+                // const remaining = Math.max(0, allocated - spent); 
+                // ----------------------------------------------
 
-                // --- LƯU VÀO BIẾN TOÀN CỤC ĐỂ HÀM SUBMIT DÙNG ---
-                window.jarBalances[k] = remaining;
-                // ------------------------------------------------
+                // --- ĐOẠN MỚI: SỬA THÀNH CÔNG THỨC NÀY ---
+                // Lấy số tiền đã lên kế hoạch (yêu cầu API PHP phải trả về trường 'planned' như mình đã sửa ở câu trả lời trước)
+                const planned = Number(groups[k]?.planned || 0);
+
+                // Tính số tiền còn được phép tạo ngân sách
+                const availableToPlan = Math.max(0, allocated - planned);
+
+                // Lưu vào biến toàn cục để hàm submit form kiểm tra
+                window.jarBalances[k] = availableToPlan;
+
+                // Lấy số thực tế đã tiêu (để hiển thị phụ)
+                const spent = Number(groups[k]?.spent || 0);
+                const cashRemaining = Math.max(0, allocated - spent);
+
                 return `
                     <div class="col-md-2 col-6">
                         <div class="card text-center p-3 h-100">
                             <div class="fw-bold text-muted small">${labels[k]}</div>
                             <div class="fs-4 fw-bold" style="color:${colors[k]}">${pct}%</div>
-                            <div class="small mt-1">${formatCurrency(allocated)}</div>
-                            <div class="small text-muted">Còn lại: ${formatCurrency(remaining)}</div>
+                            
+                            <div class="small mt-1 text-dark fw-bold" title="Tổng quỹ">${formatCurrency(allocated)}</div>
+                            
+                            <div class="small text-primary mt-1 border-top pt-1" style="font-size: 0.8rem;">
+                                Còn lập plan: <b>${formatCompact(availableToPlan)}</b>
+                            </div>
+
+                            <div class="small text-muted mt-1" style="font-size: 0.7rem;">
+                                Thực tế còn: ${formatCompact(cashRemaining)}
+                            </div>
                         </div>
                     </div>`;
             }).join('');

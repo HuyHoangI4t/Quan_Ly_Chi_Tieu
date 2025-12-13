@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\User;
 
 use App\Core\Controllers;
@@ -23,7 +24,7 @@ class Budgets extends Controllers
         $this->categoryModel = new \App\Models\Category();
         $this->transactionModel = new \App\Models\Transaction();
     }
-    
+
 
     /**
      * Display budgets index page (Money Lover style)
@@ -50,12 +51,12 @@ class Budgets extends Controllers
         try {
             $userId = $this->getCurrentUserId();
             $period = $_GET['period'] ?? 'monthly'; // monthly, weekly, yearly
-            
+
             // Get budgets with spending data
             $budgets = $this->budgetModel->getBudgetsWithSpending($userId, $period);
 
             // Normalize numeric fields to ensure client receives numbers (not localized strings)
-            if (is_array($budgets)){
+            if (is_array($budgets)) {
                 foreach ($budgets as &$bb) {
                     $bb['amount'] = isset($bb['amount']) ? (float)$bb['amount'] : 0.0;
                     $bb['spent'] = isset($bb['spent']) ? (float)$bb['spent'] : 0.0;
@@ -72,12 +73,12 @@ class Budgets extends Controllers
                 }
                 unset($bb);
             }
-            
+
             // Calculate summary
             $totalBudget = 0;
             $totalSpent = 0;
             $activeCount = 0;
-            
+
             foreach ($budgets as $budget) {
                 $totalBudget += $budget['amount'];
                 $totalSpent += $budget['spent'];
@@ -85,7 +86,7 @@ class Budgets extends Controllers
                     $activeCount++;
                 }
             }
-            
+
             Response::successResponse('Lấy danh sách ngân sách thành công', [
                 'budgets' => $budgets,
                 'summary' => [
@@ -124,7 +125,7 @@ class Budgets extends Controllers
         try {
             $userId = $this->getCurrentUserId();
             $categories = $this->categoryModel->getExpenseCategories($userId);
-            
+
             Response::successResponse('Lấy danh sách danh mục thành công', [
                 'categories' => $categories
             ]);
@@ -168,7 +169,8 @@ class Budgets extends Controllers
                 if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
                 $msg = '[' . date('Y-m-d H:i:s') . '] api_get_trend error: ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
                 @file_put_contents($logDir . DIRECTORY_SEPARATOR . 'budgets_error.log', $msg, FILE_APPEND);
-            } catch (\Exception $ex) {}
+            } catch (\Exception $ex) {
+            }
             Response::errorResponse('Lỗi: ' . $e->getMessage(), null, 500);
         }
     }
@@ -189,18 +191,17 @@ class Budgets extends Controllers
         try {
             $userId = $this->getCurrentUserId();
             $input = $this->request->json();
-            
-            // Validate input (manual)
-            $errors = [];
 
+            // --- VALIDATION CƠ BẢN ---
+            $errors = [];
             if (!isset($input['category_id']) || !is_numeric($input['category_id'])) {
-                $errors['category_id'][] = 'category_id phải là số và không được để trống';
+                $errors['category_id'][] = 'Vui lòng chọn danh mục';
             }
             if (!isset($input['amount']) || !is_numeric($input['amount']) || floatval($input['amount']) < 1) {
-                $errors['amount'][] = 'amount phải là số >= 1';
+                $errors['amount'][] = 'Số tiền phải lớn hơn 0';
             }
             if (!isset($input['period']) || !in_array($input['period'], ['weekly', 'monthly', 'yearly'], true)) {
-                $errors['period'][] = 'period phải là một trong: weekly, monthly, yearly';
+                $errors['period'][] = 'Chu kỳ không hợp lệ';
             }
 
             if (!empty($errors)) {
@@ -208,10 +209,61 @@ class Budgets extends Controllers
                 return;
             }
 
-            // Calculate start_date and end_date based on period
+            // --- [NEW] LOGIC KIỂM TRA QUỸ CỦA HŨ (JAR VALIDATION) ---
+
+            // Bước 1: Xác định Hũ (Jar) của danh mục này
+            $stmt = $this->db->prepare("SELECT group_type, name FROM categories WHERE id = ?");
+            $stmt->execute([$input['category_id']]);
+            $cat = $stmt->fetch();
+
+            if ($cat) {
+                $jarCode = $cat['group_type']; // Ví dụ: 'nec', 'play'
+
+                // Bước 2: Tính TỔNG QUỸ của hũ này trong tháng
+                // Lấy tổng thu nhập
+                $startDate = date('Y-m-01');
+                $endDate = date('Y-m-t');
+                $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
+                $totalIncome = (float)($totals['income'] ?? 0);
+
+                // Lấy % phân bổ của hũ
+                $settings = $this->budgetModel->getUserSmartSettings($userId);
+                $jarPercent = (float)($settings[$jarCode . '_percent'] ?? 0);
+
+                // Tổng tiền Hũ có = Thu nhập * %
+                $jarCapacity = ($totalIncome * $jarPercent) / 100;
+
+                // Bước 3: Tính tổng các ngân sách ĐÃ TẠO cho hũ này (trừ cái đang tạo)
+                $stmt = $this->db->prepare("
+                SELECT SUM(b.amount) as total_planned 
+                FROM budgets b
+                JOIN categories c ON b.category_id = c.id
+                WHERE b.user_id = ? AND c.group_type = ?
+            ");
+                $stmt->execute([$userId, $jarCode]);
+                $planned = $stmt->fetch();
+                $totalPlanned = (float)($planned['total_planned'] ?? 0);
+
+                // Bước 4: Kiểm tra số dư còn lại để phân bổ
+                $availableToPlan = $jarCapacity - $totalPlanned;
+                $requestAmount = floatval($input['amount']);
+
+                if ($requestAmount > $availableToPlan) {
+                    Response::errorResponse(
+                        "Không đủ tiền trong hũ " . strtoupper($jarCode) . "!",
+                        [
+                            "message" => "Hũ này chỉ còn " . number_format($availableToPlan) . "đ chưa phân bổ ngân sách. Bạn đang cố tạo " . number_format($requestAmount) . "đ."
+                        ],
+                        400
+                    );
+                    return;
+                }
+            }
+            // --- [END NEW LOGIC] ---
+
+            // Tính ngày bắt đầu/kết thúc
             $period = $input['period'];
             $now = new \DateTime();
-            
             switch ($period) {
                 case 'weekly':
                     $startDate = $now->modify('monday this week')->format('Y-m-d');
@@ -239,37 +291,8 @@ class Budgets extends Controllers
                 'is_active' => 1
             ];
 
-            // Server-side check: total budgets for the period must not exceed total income for that period
-            try {
-                $summary = $this->budgetModel->getSummary($userId, $period);
-                $existingTotal = isset($summary['total_budget_amount']) ? floatval($summary['total_budget_amount']) : 0.0;
-
-                $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
-                $totalIncome = isset($totals['income']) ? floatval($totals['income']) : 0.0;
-
-                $attemptedTotal = $existingTotal + $data['amount'];
-
-                if ($totalIncome > 0 && $attemptedTotal > $totalIncome) {
-                    Response::errorResponse('Tổng giới hạn ngân sách trong kỳ không được vượt tổng thu nhập', [
-                        'total_income' => $totalIncome,
-                        'existing_budgets_total' => $existingTotal,
-                        'attempted_total' => $attemptedTotal
-                    ], 400);
-                    return;
-                }
-            } catch (\Exception $e) {
-                // If summary/totals calculation fails, log and continue — do not block creation
-                try {
-                    $logDir = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
-                    if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
-                    $msg = '[' . date('Y-m-d H:i:s') . '] budget_limit_check error: ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
-                    @file_put_contents($logDir . DIRECTORY_SEPARATOR . 'budgets_error.log', $msg, FILE_APPEND);
-                } catch (\Exception $ex) {
-                }
-            }
-
             $budgetId = $this->budgetModel->create($data);
-            
+
             if ($budgetId) {
                 Response::successResponse('Tạo ngân sách thành công', ['budget_id' => $budgetId]);
             } else {
@@ -296,7 +319,7 @@ class Budgets extends Controllers
         try {
             $userId = $this->getCurrentUserId();
             $input = $this->request->json();
-            
+
             // Validate input (manual)
             $errors = [];
             if (!isset($input['amount']) || !is_numeric($input['amount']) || floatval($input['amount']) < 1) {
@@ -322,7 +345,7 @@ class Budgets extends Controllers
             ];
 
             $result = $this->budgetModel->update($id, $data);
-            
+
             if ($result) {
                 Response::successResponse('Cập nhật ngân sách thành công');
             } else {
@@ -348,16 +371,16 @@ class Budgets extends Controllers
 
         try {
             $userId = $this->getCurrentUserId();
-            
+
             // Check if budget exists
             $budget = $this->budgetModel->getById($id);
             if (!$budget || $budget['user_id'] != $userId) {
                 Response::errorResponse('Không tìm thấy ngân sách', null, 404);
                 return;
             }
-            
+
             $result = $this->budgetModel->delete($id);
-            
+
             if ($result) {
                 Response::successResponse('Xóa ngân sách thành công');
             } else {
@@ -383,18 +406,18 @@ class Budgets extends Controllers
 
         try {
             $userId = $this->getCurrentUserId();
-            
+
             // Check if budget exists
             $budget = $this->budgetModel->getById($id);
             if (!$budget || $budget['user_id'] != $userId) {
                 Response::errorResponse('Không tìm thấy ngân sách', null, 404);
                 return;
             }
-            
+
             $result = $this->budgetModel->update($id, [
                 'is_active' => $budget['is_active'] ? 0 : 1
             ]);
-            
+
             if ($result) {
                 Response::successResponse('Cập nhật trạng thái thành công', [
                     'is_active' => !$budget['is_active']
@@ -420,7 +443,7 @@ class Budgets extends Controllers
 
         try {
             $userId = $this->getCurrentUserId();
-            
+
             // 1. Xác định thời gian (Tháng này)
             $startDate = date('Y-m-01');
             $endDate = date('Y-m-t');
@@ -429,30 +452,32 @@ class Budgets extends Controllers
             $totals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
             $totalIncome = (float)($totals['income'] ?? 0);
 
-           // 3. Lấy Cài đặt tỷ lệ
+            // 3. Lấy Cài đặt tỷ lệ
             $settings = $this->budgetModel->getUserSmartSettings($userId);
-            
+
             // 4. Lấy Chi tiêu thực tế (Model Transaction trả về theo nhóm lớn: needs/wants/savings)
             $actualSpending = $this->transactionModel->getSpendingByGroup($userId, $startDate, $endDate);
 
-            // If transaction model returned 3-way groups (needs/wants/savings), map/allocate them into 6 jars
-            // so that the front-end can display spent amounts per jar. If model already returns per-jar keys,
-            // keep them as-is.
+            // Normalize spending: Nếu model trả về 3 nhóm (needs, wants, savings), ta cần chia nhỏ ra 6 hũ
             $normalizedSpending = [];
-            $jarKeys = ['nec','ffa','ltss','edu','play','give'];
+            $jarKeys = ['nec', 'ffa', 'ltss', 'edu', 'play', 'give'];
 
             $hasJarKeys = true;
-            foreach ($jarKeys as $k) { if (!array_key_exists($k, $actualSpending)) { $hasJarKeys = false; break; } }
+            foreach ($jarKeys as $k) {
+                if (!array_key_exists($k, $actualSpending)) {
+                    $hasJarKeys = false;
+                    break;
+                }
+            }
 
             if ($hasJarKeys) {
                 $normalizedSpending = $actualSpending;
             } else {
-                // Expecting needs/wants/savings
+                // Logic chia tách từ 3 nhóm lớn sang 6 hũ (fallback)
                 $needsTotal = floatval($actualSpending['needs'] ?? 0);
                 $wantsTotal = floatval($actualSpending['wants'] ?? 0);
                 $savingsTotal = floatval($actualSpending['savings'] ?? 0);
 
-                // Read configured percents (fallback to defaults)
                 $necPct = intval($settings['nec_percent'] ?? 55);
                 $ffaPct = intval($settings['ffa_percent'] ?? 10);
                 $ltssPct = intval($settings['ltss_percent'] ?? 10);
@@ -460,11 +485,11 @@ class Budgets extends Controllers
                 $playPct = intval($settings['play_percent'] ?? 10);
                 $givePct = intval($settings['give_percent'] ?? 5);
 
-                // Helper to split a group total into two jars based on their percentage ratio
-                $split = function($total, $aPct, $bPct) {
+                // Helper function để chia tiền theo tỷ lệ
+                $split = function ($total, $aPct, $bPct) {
                     $aShare = ($aPct + $bPct) > 0 ? ($aPct / ($aPct + $bPct)) : 0.5;
                     $bShare = 1 - $aShare;
-                    return [ $total * $aShare, $total * $bShare ];
+                    return [$total * $aShare, $total * $bShare];
                 };
 
                 list($necSpent, $ffaSpent) = $split($needsTotal, $necPct, $ffaPct);
@@ -480,29 +505,48 @@ class Budgets extends Controllers
                     'give' => $giveSpent
                 ];
             }
-
-            // Use normalized spending for subsequent output
             $actualSpending = $normalizedSpending;
 
-            // 5. Tính toán dữ liệu so sánh
+            // 5. [MỚI] Lấy tổng Ngân Sách đã lên kế hoạch (Planned) theo từng hũ
+            // Query trực tiếp từ bảng budgets join với categories để gom nhóm
+            $sqlPlanned = "SELECT c.group_type, SUM(b.amount) as total_amount 
+                       FROM budgets b 
+                       JOIN categories c ON b.category_id = c.id 
+                       WHERE b.user_id = ? 
+                       GROUP BY c.group_type";
+
+            $stmt = $this->db->prepare($sqlPlanned);
+            $stmt->execute([$userId]);
+            $plannedMap = [];
+            while ($row = $stmt->fetch()) {
+                $plannedMap[$row['group_type']] = (float)$row['total_amount'];
+            }
+
+            // 6. Tổng hợp dữ liệu trả về
             $jars = [
-                'nec'  => ['label' => 'Thiết yếu (NEC)', 'color' => '#dc3545'], // Red
-                'ffa'  => ['label' => 'Tự do TC (FFA)', 'color' => '#ffc107'],  // Yellow
-                'ltss' => ['label' => 'Tiết kiệm dài hạn (LTSS)', 'color' => '#0d6efd'], // Blue
-                'edu'  => ['label' => 'Giáo dục (EDU)', 'color' => '#0dcaf0'],  // Cyan
-                'play' => ['label' => 'Hưởng thụ (PLAY)', 'color' => '#d63384'], // Pink
-                'give' => ['label' => 'Cho đi (GIVE)', 'color' => '#198754']   // Green
+                'nec'  => ['label' => 'Thiết yếu (NEC)', 'color' => '#dc3545'],
+                'ffa'  => ['label' => 'Tự do TC (FFA)', 'color' => '#ffc107'],
+                'ltss' => ['label' => 'TK dài hạn (LTSS)', 'color' => '#0d6efd'],
+                'edu'  => ['label' => 'Giáo dục (EDU)', 'color' => '#0dcaf0'],
+                'play' => ['label' => 'Hưởng thụ (PLAY)', 'color' => '#d63384'],
+                'give' => ['label' => 'Cho đi (GIVE)', 'color' => '#198754']
             ];
 
             $groupsData = [];
             foreach ($jars as $key => $info) {
                 $percent = intval($settings[$key . '_percent'] ?? 0);
+
+                // Tính toán các thông số
+                $allocated = ($totalIncome * $percent) / 100; // Tổng quỹ được phép tiêu
+                $spent     = floatval($actualSpending[$key] ?? 0); // Thực tế đã tiêu
+                $planned   = floatval($plannedMap[$key] ?? 0);   // Đã lên kế hoạch (tạo budget)
+
                 $groupsData[$key] = [
                     'label'     => $info['label'],
                     'color'     => $info['color'],
                     'percent'   => $percent,
-                    'allocated' => ($totalIncome * $percent) / 100,
-                    'spent'     => floatval($actualSpending[$key] ?? 0)
+                    'allocated' => $allocated,
+                    'planned' => floatval($plannedMap[$key] ?? 0)
                 ];
             }
 
@@ -511,7 +555,6 @@ class Budgets extends Controllers
                 'settings' => $settings,
                 'groups' => $groupsData
             ]);
-
         } catch (\Exception $e) {
             Response::errorResponse('Lỗi: ' . $e->getMessage());
         }
@@ -528,7 +571,7 @@ class Budgets extends Controllers
             return;
         }
 
-       try {
+        try {
             $data = $this->request->json();
             $nec  = intval($data['nec'] ?? 0);
             $ffa  = intval($data['ffa'] ?? 0);
@@ -547,7 +590,6 @@ class Budgets extends Controllers
 
             if ($result) Response::successResponse('Cập nhật thành công');
             else Response::errorResponse('Cập nhật thất bại');
-
         } catch (\Exception $e) {
             Response::errorResponse('Lỗi: ' . $e->getMessage());
         }
