@@ -154,9 +154,10 @@ class Reports extends Controllers
         echo '<tr><td>Loại</td><td>' . htmlspecialchars($type) . '</td></tr>';
         echo '<tr><td>Từ ngày</td><td>' . htmlspecialchars($startDate) . '</td></tr>';
         echo '<tr><td>Đến ngày</td><td>' . htmlspecialchars($endDate) . '</td></tr>';
-        echo '<tr><td>Tổng thu nhập</td><td>' . number_format($totalIncome, 0, ',', '.') . '</td></tr>';
-        echo '<tr><td>Tổng chi tiêu</td><td>' . number_format($totalExpense, 0, ',', '.') . '</td></tr>';
-        echo '<tr><td>Chênh lệch</td><td>' . number_format($balance, 0, ',', '.') . '</td></tr>';
+        // Output totals as raw numeric values and instruct Excel to format them
+        echo '<tr><td>Tổng thu nhập</td><td style="mso-number-format:\#\,\#\#0;">' . ((float)$totalIncome) . '</td></tr>';
+        echo '<tr><td>Tổng chi tiêu</td><td style="mso-number-format:\#\,\#\#0;">' . ((float)$totalExpense) . '</td></tr>';
+        echo '<tr><td>Chênh lệch</td><td style="mso-number-format:\#\,\#\#0;">' . ((float)$balance) . '</td></tr>';
         echo '</table><br />';
 
         // Detail table
@@ -174,13 +175,14 @@ class Reports extends Controllers
             $typeText = ($r['type'] === 'income') ? 'Thu nhập' : 'Chi tiêu';
             $cat = htmlspecialchars($r['category'] ?? '');
             $desc = htmlspecialchars($r['description'] ?? '');
-            $amount = number_format((float)$r['amount'], 0, ',', '.');
+            // Output amount as numeric value so Excel treats it as number (format via mso-number-format)
+            $rawAmount = (float)$r['amount'];
             echo '<tr>'
                 . '<td>' . $date . '</td>'
                 . '<td>' . $typeText . '</td>'
                 . '<td>' . $cat . '</td>'
                 . '<td>' . $desc . '</td>'
-                . '<td style="mso-number-format:\\#\\,\\#\\#0;">' . $amount . '</td>'
+                . '<td style="mso-number-format:\#\,\#\#0;">' . $rawAmount . '</td>'
                 . '</tr>';
         }
         echo '</table>';
@@ -267,7 +269,9 @@ class Reports extends Controllers
         $sheet->setCellValue('B3', $type);
         $sheet->setCellValue('C3', $startDate);
         $sheet->setCellValue('D3', $endDate);
-        $sheet->setCellValue('E3', number_format($totalIncome - $totalExpense, 2, '.', ','));
+        // Write numeric balance value and apply number format
+        $sheet->setCellValue('E3', ($totalIncome - $totalExpense));
+        $sheet->getStyle('E3')->getNumberFormat()->setFormatCode('#,##0');
 
         // Detail table header
         $startRow = 6;
@@ -279,7 +283,9 @@ class Reports extends Controllers
             $sheet->setCellValue('B' . $r, ($row['type'] === 'income') ? 'Thu nhập' : 'Chi tiêu');
             $sheet->setCellValue('C' . $r, $row['category']);
             $sheet->setCellValue('D' . $r, $row['description']);
+            // Set numeric amount and apply number format for column E
             $sheet->setCellValue('E' . $r, (float)$row['amount']);
+            $sheet->getStyle('E' . $r)->getNumberFormat()->setFormatCode('#,##0');
             $r++;
         }
 

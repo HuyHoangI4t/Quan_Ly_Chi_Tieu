@@ -73,6 +73,16 @@ final class CsrfProtection
     public static function verify(): void
     {
         if (!self::validateToken()) {
+            // Log CSRF failures for debugging
+            try {
+                $req = new Request();
+                $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                $uri = $_SERVER['REQUEST_URI'] ?? '';
+                $payload = json_encode([ 'post'=>$_POST, 'get'=>$_GET ]);
+                $msg = sprintf("[%s] CSRF failed: ip=%s uri=%s payload=%s\n", date('Y-m-d H:i:s'), $ip, $uri, $payload);
+                @file_put_contents(__DIR__ . '/../../storage/logs/csrf_fail.log', $msg, FILE_APPEND);
+            } catch (\Throwable $t) {}
+
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode([

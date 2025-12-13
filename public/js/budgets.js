@@ -1,5 +1,5 @@
 window.jarBalances = {};
-const BudgetsApp = (function () {
+window.BudgetsApp = window.BudgetsApp || (function () {
     let categories = [];
     let currentPeriod = 'monthly';
     let budgetsCache = [];

@@ -185,6 +185,15 @@
         const rawAmount = formData.get('amount') || '';
         formData.set('amount', String(rawAmount).replace(/[^\d]/g, ''));
 
+        // Client-side validation: amount must be provided and > 0
+        const cleanedAmount = String(rawAmount).replace(/[^\d]/g, '');
+        if (!cleanedAmount || Number(cleanedAmount) <= 0) {
+            SmartSpending.showToast('Vui lòng nhập số tiền lớn hơn 0', 'error');
+            formSending = false;
+            if(btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = '<i class="fas fa-save me-2"></i> Xác nhận'; }
+            return;
+        }
+
         try {
             const response = await fetch(`${window.BASE_URL}/goals/api_deposit`, {
                 method: 'POST',
@@ -252,41 +261,74 @@
         }
     }
 
+    // Delete using Bootstrap confirmation modal
+    const deleteModalElement = document.getElementById('deleteGoalModal');
+    let deleteModalInstance = null;
+    const deleteConfirmBtn = document.getElementById('btnConfirmDeleteGoal');
+
     function handleDeleteGoal(goalId) {
         if(!goalId || goalId === 'undefined') {
             console.error('Goal ID is missing');
             return;
         }
 
-        SmartSpending.showConfirm(
-            'Xóa Mục Tiêu?',
-            'Bạn có chắc chắn muốn xóa mục tiêu này? Hành động này không thể hoàn tác.',
-            async () => {
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                SmartSpending.showLoader();
-                try {
-                    const response = await fetch(`${window.BASE_URL}/goals/api_delete_goal/${goalId}`, {
-                        method: 'POST',
-                        headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {}
-                    });
-                    const text = await response.text();
-                    let respData = null;
-                    try { respData = JSON.parse(text); } catch (e) {}
+        // Fill modal fields
+        const goalCard = document.querySelector(`[data-goal-id="${goalId}"]`);
+        const goalName = goalCard ? (goalCard.querySelector('h5')?.textContent.trim() || '') : '';
+        const deleteIdInput = document.getElementById('deleteGoalId');
+        const deleteNameEl = document.getElementById('deleteGoalName');
+        if (deleteIdInput) deleteIdInput.value = goalId;
+        if (deleteNameEl) deleteNameEl.textContent = goalName;
 
-                    if (response.ok && (respData?.success || respData?.status === 'success')) {
-                        SmartSpending.showToast('Xóa mục tiêu thành công!', 'success');
-                        setTimeout(() => window.location.reload(), 500);
-                    } else {
-                        SmartSpending.showToast(respData?.message || 'Không thể xóa mục tiêu', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error deleting goal:', error);
-                    SmartSpending.showToast('Lỗi khi xóa mục tiêu', 'error');
-                } finally {
-                    SmartSpending.hideLoader();
-                }
+        if (deleteModalElement) {
+            deleteModalInstance = new bootstrap.Modal(deleteModalElement);
+            deleteModalInstance.show();
+        } else {
+            // Fallback to native confirm
+            if (!confirm('Bạn có chắc chắn muốn xóa mục tiêu này?')) return;
+            performDeleteGoal(goalId);
+        }
+    }
+
+    // Perform deletion request
+    async function performDeleteGoal(goalId) {
+        SmartSpending.showLoader();
+        try {
+            const csrfToken = document.getElementById('deleteCsrfToken')?.value || document.querySelector('input[name="csrf_token"]')?.value || '';
+            const headers = {};
+            if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+
+            const response = await fetch(`${window.BASE_URL}/goals/api_delete_goal/${goalId}`, {
+                method: 'POST',
+                headers: headers,
+                credentials: 'same-origin'
+            });
+
+            const text = await response.text();
+            let respData = null;
+            try { respData = JSON.parse(text); } catch (e) {}
+
+            if (response.ok && (respData?.success || respData?.status === 'success')) {
+                SmartSpending.showToast('Xóa mục tiêu thành công!', 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                SmartSpending.showToast(respData?.message || 'Không thể xóa mục tiêu', 'error');
             }
-        );
+        } catch (error) {
+            console.error('Error deleting goal:', error);
+            SmartSpending.showToast('Lỗi khi xóa mục tiêu', 'error');
+        } finally {
+            SmartSpending.hideLoader();
+            if (deleteModalInstance) deleteModalInstance.hide();
+        }
+    }
+
+    // Bind confirm button (ensure single listener)
+    if (deleteConfirmBtn) {
+        deleteConfirmBtn.addEventListener('click', function(e) {
+            const id = document.getElementById('deleteGoalId')?.value;
+            if (id) performDeleteGoal(id);
+        });
     }
 
     async function handleMarkCompleted(goalId) {

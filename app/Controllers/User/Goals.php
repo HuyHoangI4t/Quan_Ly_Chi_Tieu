@@ -69,9 +69,29 @@ class Goals extends Controllers
         
         try {
             $data = $this->request->all();
-            
+
+            // DEBUG: log raw input + headers + parsed data for troubleshooting 400
+            try {
+                $raw = @file_get_contents('php://input');
+                $headers = function_exists('getallheaders') ? getallheaders() : [];
+                $dbg = sprintf("[%s] api_deposit incoming raw=%s post=%s data=%s headers=%s\n",
+                    date('Y-m-d H:i:s'),
+                    substr($raw ?? '', 0, 2000),
+                    json_encode($_POST ?? []),
+                    json_encode($data ?? []),
+                    json_encode($headers)
+                );
+                @file_put_contents(__DIR__ . '/../../../storage/logs/goals_error.log', $dbg, FILE_APPEND);
+            } catch (\Throwable $t) {}
+
             // Validate
             if (empty($data['goal_id']) || empty($data['amount']) || empty($data['date'])) {
+                // Log bad request payload for debugging
+                try {
+                    $logMsg = sprintf("[%s] api_deposit bad request: user=%s data=%s\n", date('Y-m-d H:i:s'), $this->getCurrentUserId(), json_encode($data));
+                    @file_put_contents(__DIR__ . '/../../../storage/logs/goals_error.log', $logMsg, FILE_APPEND);
+                } catch (\Throwable $t) {}
+
                 Response::errorResponse('Thiếu thông tin nạp tiền');
                 return;
             }
@@ -82,9 +102,44 @@ class Goals extends Controllers
             $date = $data['date'];
             $note = htmlspecialchars($data['note'] ?? '');
 
+            // Kiểm tra trạng thái mục tiêu: nếu đã hoàn thành hoặc tiến độ >= 100% thì từ chối nạp thêm
+            $goal = $this->goalModel->getById($goalId, $userId);
+            if (!$goal) {
+                Response::errorResponse('Mục tiêu không tồn tại');
+                return;
+            }
+            $currentPercent = isset($goal['progress_percentage']) ? floatval($goal['progress_percentage']) : 0;
+            if ($goal['status'] === 'completed' || $currentPercent >= 100) {
+                Response::errorResponse('Mục tiêu đã hoàn thành, không thể nạp thêm tiền');
+                return;
+            }
+
+            // Tính số tiền đã nạp và số tiền còn lại được phép nạp
+            $currentAmount = isset($goal['current_amount']) ? floatval($goal['current_amount']) : 0.0;
+            $targetAmount = isset($goal['target_amount']) ? floatval($goal['target_amount']) : 0.0;
+            $remaining = $targetAmount - $currentAmount;
+            if ($remaining <= 0) {
+                Response::errorResponse('Mục tiêu đã đủ tiền, không thể nạp thêm');
+                return;
+            }
+
+            // Nếu người dùng nhập số lớn hơn phần còn lại, tự động giới hạn xuống phần còn lại
+            $wasAdjusted = false;
+            $originalAmount = $amount;
+            if ($amount > $remaining) {
+                $amount = $remaining;
+                $wasAdjusted = true;
+            }
+
             // Gọi model xử lý transaction
             if ($this->goalModel->deposit($userId, $goalId, $amount, $date, $note)) {
-                Response::successResponse('Đã nạp tiền vào mục tiêu thành công!');
+                if (isset($wasAdjusted) && $wasAdjusted) {
+                    $fmtNew = number_format($amount, 0, ',', '.') . ' ₫';
+                    $fmtOrig = number_format($originalAmount, 0, ',', '.') . ' ₫';
+                    Response::successResponse('Đã nạp ' . $fmtNew . ' (đã điều chỉnh từ ' . $fmtOrig . ' để không vượt quá mục tiêu)');
+                } else {
+                    Response::successResponse('Đã nạp tiền vào mục tiêu thành công!');
+                }
             } else {
                 Response::errorResponse('Lỗi khi nạp tiền, vui lòng thử lại.');
             }

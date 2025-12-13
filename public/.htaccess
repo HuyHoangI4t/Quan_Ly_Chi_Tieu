@@ -16,8 +16,8 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Ensure favicon requests (from browser root) are served from this app's public folder
-    RewriteRule ^favicon\.ico$ /Quan_Ly_Chi_Tieu/public/favicon.ico [L,NC]
+    # Ensure favicon requests are served from this app's public folder (use relative path to avoid redirect loops)
+    RewriteRule ^favicon\.ico$ favicon.ico [L,NC]
 
     # Remove /public/ from URL
     RewriteBase /Quan_Ly_Chi_Tieu/public/

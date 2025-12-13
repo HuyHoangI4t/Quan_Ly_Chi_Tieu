@@ -11,6 +11,30 @@ document.addEventListener('DOMContentLoaded', function() {
     let lineChartInstance = null;
     let pieChartInstance = null;
 
+    // Safely destroy any Chart.js instance attached to a canvas or id
+    function safeDestroyChart(idOrElement) {
+        if (typeof Chart === 'undefined') return;
+        try {
+            let existing = null;
+            if (typeof Chart.getChart === 'function') {
+                // Try by id or element directly
+                existing = Chart.getChart(idOrElement);
+                // If passed a string id and not found, try to resolve element
+                if (!existing && typeof idOrElement === 'string') {
+                    const el = document.getElementById(idOrElement);
+                    if (el) existing = Chart.getChart(el);
+                }
+                // If passed an element with an id, try by its id
+                if (!existing && idOrElement && idOrElement.id) {
+                    existing = Chart.getChart(idOrElement.id);
+                }
+            }
+            if (existing) existing.destroy();
+        } catch (e) {
+            // best-effort: ignore errors
+        }
+    }
+
     /**
      * Load report data via AJAX
      */
@@ -62,25 +86,33 @@ document.addEventListener('DOMContentLoaded', function() {
             // Kiểm tra dữ liệu đầu vào
             const hasLineData = data.lineChart && Array.isArray(data.lineChart.income) && data.lineChart.income.length > 0 && Array.isArray(data.lineChart.expense) && data.lineChart.expense.length > 0;
             if (!hasLineData) {
-                // Xóa biểu đồ cũ nếu có
-                if (lineChartInstance) {
-                    lineChartInstance.destroy();
-                }
+                // Destroy any existing chart attached to this canvas id or element
+                safeDestroyChart('lineChart');
+                safeDestroyChart(lineChartCanvas);
+                lineChartInstance = null;
                 // Hiển thị thông báo không có dữ liệu
-                lineChartCanvas.parentElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Chưa có dữ liệu để hiển thị</div>';
+                const container = lineChartCanvas && lineChartCanvas.parentElement ? lineChartCanvas.parentElement : document.querySelector('#lineChart')?.parentElement;
+                if (container) container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Chưa có dữ liệu để hiển thị</div>';
             } else {
                 // Nếu có dữ liệu thì vẽ biểu đồ
+                // Always destroy any previous chart (either stored or attached to the canvas)
+                safeDestroyChart('lineChart');
+                safeDestroyChart(lineChartCanvas);
                 if (lineChartInstance) {
-                    lineChartInstance.destroy();
+                    try { lineChartInstance.destroy(); } catch (e) {}
                 }
+                lineChartInstance = null;
                 // Đảm bảo canvas tồn tại (có thể đã bị thay thế bởi thông báo)
+                const container = lineChartCanvas && lineChartCanvas.parentElement ? lineChartCanvas.parentElement : document.querySelector('#lineChart')?.parentElement;
                 if (!document.getElementById('lineChart')) {
                     const newCanvas = document.createElement('canvas');
                     newCanvas.id = 'lineChart';
                     newCanvas.style.height = '350px';
                     newCanvas.style.position = 'relative';
-                    lineChartCanvas.parentElement.innerHTML = '';
-                    lineChartCanvas.parentElement.appendChild(newCanvas);
+                    if (container) {
+                        container.innerHTML = '';
+                        container.appendChild(newCanvas);
+                    }
                 }
                 const lineCtx = document.getElementById('lineChart').getContext('2d');
                 lineChartInstance = new Chart(lineCtx, {
@@ -146,21 +178,30 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pieChartCanvas) {
             const hasPieData = data.pieChart && Array.isArray(data.pieChart.data) && data.pieChart.data.length > 0;
             if (!hasPieData) {
-                if (pieChartInstance) {
-                    pieChartInstance.destroy();
-                }
-                pieChartCanvas.parentElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Chưa có dữ liệu để hiển thị</div>';
+                // Ensure any existing pie chart is destroyed
+                safeDestroyChart('pieChart');
+                safeDestroyChart(pieChartCanvas);
+                pieChartInstance = null;
+                const container = pieChartCanvas && pieChartCanvas.parentElement ? pieChartCanvas.parentElement : document.querySelector('#pieChart')?.parentElement;
+                if (container) container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Chưa có dữ liệu để hiển thị</div>';
             } else {
+                // Destroy any existing pie chart
+                safeDestroyChart('pieChart');
+                safeDestroyChart(pieChartCanvas);
                 if (pieChartInstance) {
-                    pieChartInstance.destroy();
+                    try { pieChartInstance.destroy(); } catch (e) {}
                 }
+                pieChartInstance = null;
+                const container = pieChartCanvas && pieChartCanvas.parentElement ? pieChartCanvas.parentElement : document.querySelector('#pieChart')?.parentElement;
                 if (!document.getElementById('pieChart')) {
                     const newCanvas = document.createElement('canvas');
                     newCanvas.id = 'pieChart';
                     newCanvas.style.height = '350px';
                     newCanvas.style.position = 'relative';
-                    pieChartCanvas.parentElement.innerHTML = '';
-                    pieChartCanvas.parentElement.appendChild(newCanvas);
+                    if (container) {
+                        container.innerHTML = '';
+                        container.appendChild(newCanvas);
+                    }
                 }
                 const pieCtx = document.getElementById('pieChart').getContext('2d');
                 const pieColors = [

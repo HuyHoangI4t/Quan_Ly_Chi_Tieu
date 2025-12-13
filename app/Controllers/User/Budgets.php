@@ -248,6 +248,20 @@ class Budgets extends Controllers
                 $availableToPlan = $jarCapacity - $totalPlanned;
                 $requestAmount = floatval($input['amount']);
 
+                // Debug log for jar validation (helps diagnose client/server mismatch)
+                try {
+                    $logDir = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
+                    if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
+                    $dbg = '[' . date('Y-m-d H:i:s') . '] budgets: jarCode=' . $jarCode
+                        . ' totalIncome=' . number_format($totalIncome)
+                        . ' jarPercent=' . $jarPercent
+                        . ' jarCapacity=' . number_format($jarCapacity)
+                        . ' totalPlanned=' . number_format($totalPlanned)
+                        . ' availableToPlan=' . number_format($availableToPlan)
+                        . ' requestAmount=' . number_format($requestAmount) . "\n";
+                    @file_put_contents($logDir . DIRECTORY_SEPARATOR . 'budgets_error.log', $dbg, FILE_APPEND);
+                } catch (\Throwable $t) {}
+
                 if ($requestAmount > $availableToPlan) {
                     Response::errorResponse(
                         "Không đủ tiền trong hũ " . strtoupper($jarCode) . "!",

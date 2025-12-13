@@ -87,9 +87,10 @@
                     <?php if (!empty($goals)): ?>
                         <?php foreach ($goals as $goal):
                             $percent = min(100, max(0, $goal['progress_percentage']));
-                            $isCompleted = $goal['status'] === 'completed';
+                            // Consider goal completed when status is 'completed' or progress reached 100%
+                            $isCompleted = ($goal['status'] === 'completed' || $percent >= 100);
                             $statusBadge = '';
-                            if ($goal['status'] === 'completed') $statusBadge = '<span class="badge bg-success rounded-pill">Hoàn thành</span>';
+                            if ($isCompleted) $statusBadge = '<span class="badge bg-success rounded-pill">Hoàn thành</span>';
                             elseif ($goal['status'] === 'active') $statusBadge = '<span class="badge badge-running rounded-pill">Đang thực hiện</span>';
                             else $statusBadge = '<span class="badge bg-secondary rounded-pill">Đã hủy</span>';
                         ?>
@@ -114,6 +115,7 @@
                                                     <i class="fas fa-ellipsis-v"></i>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2">
+                                                    <?php if (!$isCompleted): ?>
                                                     <li>
                                                         <a class="dropdown-item py-2 fw-medium btn-deposit-trigger" href="#"
                                                             data-id="<?php echo $goal['id']; ?>"
@@ -121,6 +123,13 @@
                                                             <i class="fas fa-coins text-warning me-2" style="width:20px"></i>Nạp tiền
                                                         </a>
                                                     </li>
+                                                    <?php else: ?>
+                                                    <li>
+                                                        <a class="dropdown-item py-2 text-success disabled" href="#">
+                                                            <i class="fas fa-check-circle me-2" style="width:20px"></i>Hoàn thành
+                                                        </a>
+                                                    </li>
+                                                    <?php endif; ?>
                                                     <li>
                                                         <hr class="dropdown-divider my-1">
                                                     </li>
@@ -146,11 +155,21 @@
                                             <div class="progress" style="height: 8px;">
                                                 <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo $percent; ?>%"></div>
                                             </div>
+                                            <div class="d-flex justify-content-between mt-2">
+                                                <small class="text-muted"><?php echo number_format($goal['current_amount'] ?? 0, 0, ',', '.'); ?> ₫ / <?php echo number_format($goal['target_amount'] ?? 0, 0, ',', '.'); ?> ₫</small>
+                                                <small class="text-muted"><?php echo round($percent); ?>%</small>
+                                            </div>
                                         </div>
 
+                                        <?php if (!$isCompleted): ?>
                                         <button class="btn btn-sm btn-outline-primary w-100 mt-auto btn-deposit-trigger" data-id="<?php echo $this->escape($goal['id']); ?>" data-name="<?php echo $this->escape($goal['name']); ?>">
                                             <i class="fas fa-plus-circle me-1"></i> Nạp thêm tiền
                                         </button>
+                                        <?php else: ?>
+                                        <button class="btn btn-sm btn-success w-100 mt-auto" disabled>
+                                            <i class="fas fa-check-circle me-1"></i> Hoàn thành
+                                        </button>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 
@@ -295,6 +314,28 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteGoalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold">Xác nhận xóa mục tiêu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="deleteGoalId" value="">
+                <input type="hidden" id="deleteCsrfToken" value="<?php echo $csrf_token; ?>">
+                <p class="text-muted">Bạn có chắc chắn muốn xóa mục tiêu này? Hành động này sẽ xóa cả các giao dịch đã nạp (nếu có) liên quan đến mục tiêu.</p>
+                <p class="fw-bold" id="deleteGoalName"></p>
+            </div>
+            <div class="modal-footer border-top-0 px-4 pb-4">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4" id="btnConfirmDeleteGoal">Xóa</button>
+            </div>
         </div>
     </div>
 </div>

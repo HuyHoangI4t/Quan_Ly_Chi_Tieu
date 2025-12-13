@@ -93,33 +93,33 @@
     <script>
         const ctx = document.getElementById('mainChart').getContext('2d');
 
-        // Lấy dữ liệu từ PHP
+        
         const activityData = <?php echo json_encode($stats['system_activity'] ?? []); ?>;
 
-        // Chuẩn bị dữ liệu vẽ
+        
         const labels = activityData.map(item => {
             const d = new Date(item.activity_date);
-            return d.getDate() + '/' + (d.getMonth() + 1); // Định dạng ngày/tháng
-        }).reverse(); // Đảo ngược để hiện từ cũ đến mới
+            return d.getDate() + '/' + (d.getMonth() + 1); 
+        }).reverse(); 
 
         const incomeData = activityData.map(item => item.total_income).reverse();
         const expenseData = activityData.map(item => item.total_expense).reverse();
 
         new Chart(ctx, {
-            type: 'bar', // Dạng cột nhìn sẽ gọn hơn dạng đường cho dòng tiền
+            type: 'bar', 
             data: {
                 labels: labels.length ? labels : ['Không có dữ liệu'],
                 datasets: [{
                         label: 'Thu nhập',
                         data: incomeData,
-                        backgroundColor: '#4f46e5', // Màu tím (Primary)
+                        backgroundColor: '#4f46e5', 
                         borderRadius: 4,
                         barPercentage: 0.6
                     },
                     {
                         label: 'Chi tiêu',
                         data: expenseData,
-                        backgroundColor: '#ef4444', // Màu đỏ (Danger)
+                        backgroundColor: '#ef4444', 
                         borderRadius: 4,
                         barPercentage: 0.6
                     }
@@ -127,7 +127,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // [QUAN TRỌNG] Ngăn biểu đồ tự phóng to chiều cao
+                maintainAspectRatio: false, 
                 plugins: {
                     legend: {
                         position: 'bottom'

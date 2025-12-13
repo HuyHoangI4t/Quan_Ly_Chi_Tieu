@@ -44,25 +44,23 @@ class Goal {
      * Lấy chi tiết 1 Goal (Logic thủ công)
      */
     public function getById($id, $userId) {
-        $sql = "SELECT g.*, 
-                       COALESCE(SUM(ABS(t.amount)), 0) as current_amount, 
-                       CASE 
-                           WHEN g.target_amount > 0 THEN 
-                               ROUND((COALESCE(SUM(ABS(t.amount)), 0) / g.target_amount) * 100, 2)
-                           ELSE 0 
+        $sql = "SELECT g.*,
+                       COALESCE(SUM(ABS(t.amount)), 0) as current_amount,
+                       CASE
+                           WHEN g.target_amount > 0 THEN ROUND((COALESCE(SUM(ABS(t.amount)), 0) / g.target_amount) * 100, 2)
+                           ELSE 0
                        END as progress_percentage
                 FROM goals g
                 LEFT JOIN goal_transactions gt ON g.id = gt.goal_id
                 LEFT JOIN transactions t ON gt.transaction_id = t.id
                 WHERE g.id = :id AND g.user_id = :user_id
-                GROUP BY g.id";
-        
+                GROUP BY g.id
+                LIMIT 1";
+
         $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-        
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->execute([':id' => $id, ':user_id' => $userId]);
+        $goal = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $goal ?: false;
     }
     
     /**
@@ -183,11 +181,40 @@ class Goal {
     }
 
     public function delete($id, $userId) {
-        $sql = "DELETE FROM goals WHERE id = :id AND user_id = :user_id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        return $stmt->execute();
+        try {
+            $this->db->beginTransaction();
+
+            // 1) Lấy danh sách transaction_id được liên kết với goal này
+            $stmt = $this->db->prepare("SELECT transaction_id FROM goal_transactions WHERE goal_id = :id");
+            $stmt->execute([':id' => $id]);
+            $rows = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+
+            // 2) Xóa các giao dịch nạp mục tiêu liên quan (chỉ những giao dịch có mô tả 'Nạp mục tiêu:%' và của user)
+            if (!empty($rows)) {
+                // Tạo chuỗi placeholders an toàn
+                $placeholders = implode(',', array_fill(0, count($rows), '?'));
+                $params = $rows;
+                // Thêm userId làm tham số cuối
+                $params[] = $userId;
+                $delTransSql = "DELETE FROM transactions WHERE id IN ($placeholders) AND user_id = ? AND description LIKE 'Nạp mục tiêu:%'";
+                $delTrans = $this->db->prepare($delTransSql);
+                $delTrans->execute($params);
+            }
+
+            // 3) Xóa liên kết trong goal_transactions
+            $delLinks = $this->db->prepare("DELETE FROM goal_transactions WHERE goal_id = :id");
+            $delLinks->execute([':id' => $id]);
+
+            // 4) Xóa bản ghi mục tiêu
+            $delGoal = $this->db->prepare("DELETE FROM goals WHERE id = :id AND user_id = :user_id");
+            $delGoal->execute([':id' => $id, ':user_id' => $userId]);
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            try { $this->db->rollBack(); } catch (\Exception $ex) {}
+            return false;
+        }
     }
     
     public function getStatistics($userId) {
