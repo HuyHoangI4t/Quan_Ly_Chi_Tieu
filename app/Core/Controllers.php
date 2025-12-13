@@ -11,6 +11,11 @@ class Controllers
     protected $session;
     protected $container;
     protected $db;
+    /**
+     * Route parameters (populated by router if available)
+     * @var array
+     */
+    protected $params = [];
 
     /**
      * Constructor with dependency injection
@@ -32,6 +37,18 @@ class Controllers
         
         // Ensure session is started
         $this->session->start();
+        // If the Request object has route params already set, attempt to read common numeric keys
+        if (method_exists($this->request, 'getRouteParam')) {
+            // leave $this->params empty by default; router may set via setParams()
+        }
+    }
+
+    /**
+     * Optional setter used by router to inject route parameters
+     */
+    public function setParams(array $params = [])
+    {
+        $this->params = $params;
     }
 
     /**
