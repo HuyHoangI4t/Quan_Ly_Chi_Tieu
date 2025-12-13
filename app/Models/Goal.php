@@ -70,6 +70,24 @@ class Goal {
      */
     public function deposit($userId, $goalId, $amount, $date, $note) {
         try {
+            // Prevent rapid duplicate deposits (double-submit protection)
+            $checkSql = "SELECT t.id FROM transactions t
+                         WHERE t.user_id = :uid AND t.amount = :amount AND t.date = :date
+                         AND t.description LIKE 'Nạp mục tiêu:%' AND t.created_at >= DATE_SUB(NOW(), INTERVAL 5 SECOND) LIMIT 1";
+            $chk = $this->db->prepare($checkSql);
+            $chk->execute([':uid' => $userId, ':amount' => -abs($amount), ':date' => $date]);
+            $existing = $chk->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                // Ensure link exists in goal_transactions
+                $existsLink = $this->db->prepare("SELECT id FROM goal_transactions WHERE goal_id = :gid AND transaction_id = :tid LIMIT 1");
+                $existsLink->execute([':gid' => $goalId, ':tid' => $existing['id']]);
+                if (!$existsLink->fetch(PDO::FETCH_ASSOC)) {
+                    $ins = $this->db->prepare("INSERT INTO goal_transactions (goal_id, transaction_id, created_at) VALUES (:gid, :tid, NOW())");
+                    $ins->execute([':gid' => $goalId, ':tid' => $existing['id']]);
+                }
+                return true;
+            }
+
             $this->db->beginTransaction();
 
             // 1. Lấy thông tin goal để biết category_id (nếu có)
@@ -111,6 +129,20 @@ class Goal {
     
     // Giữ nguyên các hàm create, update, delete cũ...
     public function create($data) {
+        // Guard against rapid duplicate goal creation (double-submit)
+        $dupSql = "SELECT id FROM goals WHERE user_id = :user_id AND name = :name AND target_amount = :target_amount
+                   AND deadline = :deadline AND created_at >= DATE_SUB(NOW(), INTERVAL 5 SECOND) LIMIT 1";
+        $dupStmt = $this->db->prepare($dupSql);
+        $dupStmt->execute([
+            ':user_id' => $data['user_id'],
+            ':name' => $data['name'],
+            ':target_amount' => $data['target_amount'],
+            ':deadline' => $data['deadline']
+        ]);
+        if ($dupStmt->fetch(PDO::FETCH_ASSOC)) {
+            return true; // consider duplicate as success to avoid creating twice
+        }
+
         $sql = "INSERT INTO goals (user_id, name, description, target_amount, start_date, deadline, category_id, status, created_at) 
                 VALUES (:user_id, :name, :description, :target_amount, :start_date, :deadline, :category_id, :status, NOW())";
         $stmt = $this->db->prepare($sql);

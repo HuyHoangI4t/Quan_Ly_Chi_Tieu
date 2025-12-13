@@ -1,66 +1,108 @@
-<?php $this->partial('admin_header', ['title' => 'Nhật ký hoạt động']); ?>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Nhật ký hoạt động</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="<?php echo BASE_URL; ?>/css/admin.css" rel="stylesheet">
+</head>
+<body>
 
-<div class="table-card">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h5 mb-0"><i class="fas fa-list-alt"></i> Nhật ký hoạt động</h1>
-        <a href="<?php echo BASE_URL; ?>/admin/dashboard" class="btn btn-secondary">Quay lại</a>
-    </div>
+<div class="admin-wrapper">
+    <?php require __DIR__ . '/partials/sidebar.php'; ?>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Người thực hiện</th>
-                                <th>Hành động</th>
-                                <th>Target ID</th>
-                                <th>IP</th>
-                                <th>Thời gian</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($logs)): ?>
-                                <?php foreach ($logs as $log): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($log['id']); ?></td>
-                                        <td><?php echo htmlspecialchars($log['username'] ?? ('#' . ($log['user_id'] ?? '-'))); ?></td>
-                                        <td><?php echo htmlspecialchars($log['action']); ?></td>
-                                        <td><?php echo htmlspecialchars($log['target_id'] ?? '-'); ?></td>
-                                        <td><?php echo htmlspecialchars($log['ip_address'] ?? '-'); ?></td>
-                                        <td><?php echo date('d/m/Y H:i:s', strtotime($log['created_at'])); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr><td colspan="6" class="text-center">Không có nhật ký</td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1>Nhật ký hệ thống</h1>
+                <p>Theo dõi các tác vụ quan trọng của quản trị viên</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-primary" style="background: #fff; color: #64748b; border: 1px solid #e2e8f0;">
+                    <i class="fas fa-filter me-2"></i> Lọc
+                </button>
+                <button class="btn-primary">
+                    <i class="fas fa-download me-2"></i> Xuất CSV
+                </button>
             </div>
         </div>
 
+        <div class="card-box" style="padding: 0; overflow: hidden;">
+            <table class="table-pro">
+                <thead>
+                    <tr>
+                        <th>Người thực hiện</th>
+                        <th>Hành động</th>
+                        <th>Chi tiết (Target)</th>
+                        <th>Địa chỉ IP</th>
+                        <th style="text-align: right;">Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($logs)): ?>
+                        <?php foreach ($logs as $log): ?>
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="avatar" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                        <?php echo strtoupper(substr($log['username'] ?? '?', 0, 1)); ?>
+                                    </div>
+                                    <span style="font-weight: 600; font-size: 0.9rem;">
+                                        <?php echo htmlspecialchars($log['username'] ?? 'Unknown'); ?>
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <?php 
+                                    // Tạo màu badge dựa trên hành động
+                                    $action = strtolower($log['action']);
+                                    $badgeClass = 'badge-role'; // Mặc định màu xanh dương
+                                    if (strpos($action, 'delete') !== false) $badgeClass = 'badge-inactive'; // Đỏ
+                                    if (strpos($action, 'create') !== false) $badgeClass = 'badge-active';   // Xanh lá
+                                    if (strpos($action, 'update') !== false) $badgeClass = 'badge-role';     // Xanh dương
+                                ?>
+                                <span class="badge <?php echo $badgeClass; ?>">
+                                    <?php echo htmlspecialchars($log['action']); ?>
+                                </span>
+                            </td>
+                            <td style="color: #64748b; font-family: monospace;">
+                                ID: <?php echo htmlspecialchars($log['target_id']); ?>
+                            </td>
+                            <td style="color: #64748b;">
+                                <?php echo htmlspecialchars($log['ip_address']); ?>
+                            </td>
+                            <td style="text-align: right; color: #64748b;">
+                                <?php echo date('H:i d/m/Y', strtotime($log['created_at'])); ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: #94a3b8;">
+                                <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                                Chưa có nhật ký nào được ghi lại
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+
+            <?php if (isset($totalPages) && $totalPages > 1): ?>
+            <div style="padding: 16px; display: flex; justify-content: flex-end; border-top: 1px solid #e2e8f0;">
+                <div style="display: flex; gap: 5px;">
+                    <?php for($i=1; $i<=$totalPages; $i++): ?>
+                        <a href="?page=<?php echo $i; ?>" 
+                           style="padding: 6px 12px; border-radius: 6px; text-decoration: none; border: 1px solid #e2e8f0; font-size: 0.85rem;
+                                  <?php echo ($i == ($currentPage ?? 1)) ? 'background:var(--primary); color:#fff;' : 'background:#fff; color:#333;'; ?>">
+                           <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
-    </div>
+    </main>
+</div>
 
-    <?php if (!empty($total_pages) && $total_pages > 1): ?>
-        <nav aria-label="Page navigation" class="mt-3">
-            <ul class="pagination">
-                <?php $base = BASE_URL . '/admin/logs'; $current = $current_page ?? 1; $tp = $total_pages ?? 1; ?>
-                <li class="page-item <?php echo ($current <= 1) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="<?php echo $base . '?page=' . max(1, $current - 1); ?>">Previous</a>
-                </li>
-                <?php for ($i = 1; $i <= $tp; $i++): ?>
-                    <li class="page-item <?php echo ($i == $current) ? 'active' : ''; ?>">
-                        <a class="page-link" href="<?php echo $base . '?page=' . $i; ?>"><?php echo $i; ?></a>
-                    </li>
-                <?php endfor; ?>
-                <li class="page-item <?php echo ($current >= $tp) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="<?php echo $base . '?page=' . min($tp, $current + 1); ?>">Next</a>
-                </li>
-            </ul>
-        </nav>
-    <?php endif; ?>
-
-<?php $this->partial('admin_footer'); ?>
+</body>
+</html>

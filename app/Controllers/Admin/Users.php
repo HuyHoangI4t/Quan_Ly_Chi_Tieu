@@ -129,4 +129,43 @@ class Users extends Controllers
             Response::errorResponse('Không thể cập nhật vai trò của Super Admin');
         }
     }
+    /**
+     * API: Đăng nhập dưới quyền User khác (Impersonate)
+     * Chỉ dành cho Admin chuyển sang User ID 2 (hoặc user bất kỳ nếu muốn mở rộng)
+     */
+    public function api_login_as_user()
+    {
+        // 1. Chỉ cho phép POST
+        if ($this->request->method() !== 'POST') {
+            Response::errorResponse('Method Not Allowed', null, 405);
+            return;
+        }
+
+        // 2. Lấy dữ liệu
+        $data = $this->request->json();
+        $targetUserId = $data['user_id'] ?? null;
+
+        // 3. Kiểm tra: Chỉ cho phép vào User ID 2
+        if ($targetUserId != 2) {
+            Response::errorResponse('Chỉ được phép truy cập vào User Demo (ID 2)');
+            return;
+        }
+
+        // 4. Lấy thông tin user từ DB
+        $targetUser = $this->userModel->getUserById($targetUserId);
+
+        if ($targetUser) {
+            // 5. TRÁO ĐỔI SESSION (Biến Admin thành User)
+            $_SESSION['user_id'] = $targetUser['id'];
+            $_SESSION['username'] = $targetUser['username'];
+            $_SESSION['email'] = $targetUser['email'];
+            $_SESSION['role'] = $targetUser['role'];
+            $_SESSION['full_name'] = $targetUser['full_name'];
+
+            // Trả về thành công
+            Response::successResponse('Chuyển đổi thành công');
+        } else {
+            Response::errorResponse('User ID 2 không tồn tại trong hệ thống');
+        }
+    }
 }

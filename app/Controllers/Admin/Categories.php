@@ -24,10 +24,39 @@ class Categories extends Controllers
     {
         // Get all default categories (user_id IS NULL)
         $categories = $this->categoryModel->getAll(null);
-        
+        // Build basic stats similar to dashboard to avoid undefined variable in view
+        $userModel = $this->model('User');
+        $transactionModel = $this->model('Transaction');
+
+        $allUsers = [];
+        try { $allUsers = method_exists($userModel, 'getAllUsers') ? $userModel->getAllUsers() : []; } catch (\Exception $e) { $allUsers = []; }
+        $totalUsers = is_array($allUsers) ? count($allUsers) : 0;
+        $activeUsers = is_array($allUsers) ? count(array_filter($allUsers, function($u){ return ($u['is_active'] ?? 0) == 1; })) : 0;
+
+        $totalTransactions = 0;
+        try {
+            $db = (new \App\Core\ConnectDB())->getConnection();
+            $stmt = $db->query("SELECT COUNT(*) as total FROM transactions");
+            $res = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $totalTransactions = $res['total'] ?? 0;
+        } catch (\Exception $e) { $totalTransactions = 0; }
+
+        $recentUsers = [];
+        try { $recentUsers = method_exists($userModel, 'getRecent') ? $userModel->getRecent(5) : (method_exists($userModel,'getRecentUsers') ? $userModel->getRecentUsers(5) : []); } catch (\Exception $e) { $recentUsers = []; }
+
+        $stats = [
+            'total_users' => $totalUsers,
+            'active_users' => $activeUsers,
+            'total_transactions' => $totalTransactions,
+            'total_categories' => is_array($categories) ? count($categories) : 0,
+            'recent_users' => $recentUsers,
+            'system_activity' => []
+        ];
+
         $data = [
             'title' => 'Quản lý Danh mục Gốc',
-            'categories' => $categories
+            'categories' => $categories,
+            'stats' => $stats
         ];
         
         $this->view('admin/categories', $data);

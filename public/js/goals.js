@@ -3,6 +3,9 @@
 (function() {
     'use strict';
 
+    // Prevent this script from initializing multiple times (safeguard for PJAX/turbolinks)
+    if (window.__goals_js_inited) return;
+    window.__goals_js_inited = true;
     // State
     let currentGoalId = null;
     let formSending = false;
@@ -27,7 +30,10 @@
         renderCharts(); // Load charts immediately
     }
 
+    let listenersAttached = false;
     function setupEventListeners() {
+        if (listenersAttached) return;
+        listenersAttached = true;
         // 1. Add Goal Button
         if (btnAddGoal) btnAddGoal.addEventListener('click', handleAddGoal);
         
@@ -134,8 +140,8 @@
         let targetAmount = '0';
         if(textMuted.length > 0) {
             const txt = textMuted[0].textContent; 
-            const match = txt.match(/(\d{1,3}(?:\.\d{3})*)₫ mục tiêu/); // Regex bắt số tiền
-            if(match) targetAmount = match[1].replace(/\./g, '');
+            const match = txt.match(/(\d{1,3}(?:[.,]\d{3})*)₫ mục tiêu/); // Regex bắt số tiền (hỗ trợ '.' hoặc ',')
+            if(match) targetAmount = match[1].replace(/[.,]/g, '');
         }
 
         // Fill form
@@ -167,6 +173,7 @@
     // Xử lý Submit Nạp tiền
     async function handleDepositSubmit(e) {
         e.preventDefault();
+        console.debug('goals.js: handleDepositSubmit called');
         if (formSending) return;
         formSending = true;
 
@@ -210,6 +217,7 @@
     // Xử lý Submit Tạo/Sửa Goal
     async function handleFormSubmit(e) {
         e.preventDefault();
+        console.debug('goals.js: handleFormSubmit called; currentGoalId=', currentGoalId);
         if (formSending) return;
         formSending = true;
         const saveBtn = document.getElementById('btnSaveGoal');
@@ -356,7 +364,7 @@
     }
 
     function formatNumber(num) {
-        return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     }
 
     // Init

@@ -229,22 +229,6 @@
     width: 100%;
 }
 
-/* --- Dropdown Styling --- */
-.dropdown-toggle {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--medium-text);
-    font-size: 13px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.dropdown-toggle:hover {
-    background-color: #F9FAFB;
-    border-color: var(--primary);
-}
 
 .dropdown-menu {
     border: 1px solid var(--border-color);

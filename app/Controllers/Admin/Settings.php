@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Core\Controllers;
@@ -19,9 +20,9 @@ class Settings extends Controllers
 
     public function index()
     {
-        $this->budgets();
+        // Ở đây bạn có thể load config từ file .env hoặc database
+        $this->view->render('admin/settings');
     }
-
     public function budgets()
     {
         // list all budgets with user and category info
@@ -45,7 +46,10 @@ class Settings extends Controllers
     public function edit()
     {
         $id = isset($this->params[0]) ? (int)$this->params[0] : 0;
-        if (!$id) { header('Location: ' . BASE_URL . '/admin/settings/budgets'); exit; }
+        if (!$id) {
+            header('Location: ' . BASE_URL . '/admin/settings/budgets');
+            exit;
+        }
         $b = $this->budgetModel->getById($id);
         $cats = $this->db->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll(\PDO::FETCH_ASSOC);
         $users = $this->db->query("SELECT id, username FROM users ORDER BY username ASC")->fetchAll(\PDO::FETCH_ASSOC);
@@ -58,12 +62,15 @@ class Settings extends Controllers
 
     public function save()
     {
-        if ($this->request->method() !== 'POST') { header('Location: ' . BASE_URL . '/admin/settings/budgets'); exit; }
+        if ($this->request->method() !== 'POST') {
+            header('Location: ' . BASE_URL . '/admin/settings/budgets');
+            exit;
+        }
         $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
         $data = [
             'user_id' => (int)($_POST['user_id'] ?? 0),
             'category_id' => (int)($_POST['category_id'] ?? 0),
-            'amount' => floatval(str_replace([',',' '], ['',''], $_POST['amount'] ?? 0)),
+            'amount' => floatval(str_replace([',', ' '], ['', ''], $_POST['amount'] ?? 0)),
             'period' => $_POST['period'] ?? 'monthly',
             'start_date' => $_POST['start_date'] ?? date('Y-m-01'),
             'end_date' => $_POST['end_date'] ?? date('Y-m-t'),

@@ -625,12 +625,17 @@ const BudgetsApp = (function () {
         new bootstrap.Modal(document.getElementById('createBudgetModal')).show();
     }
 
-    function submitBudgetForm() {
+    async function submitBudgetForm() {
 
         // 1. Lấy giá trị từ form (Vanilla JS - Không dùng $)
         const id = document.getElementById('budget_id').value;
-        const rawAmount = document.getElementById('budget_amount').value;
-        const amount = parseFloat(rawAmount);
+        // Accept either the hidden numeric field or the visible formatted display field.
+        const rawField = document.getElementById('budget_amount');
+        const displayField = document.getElementById('budget_amount_display');
+        const rawAmount = (rawField && String(rawField.value).trim()) || (displayField && String(displayField.value).trim()) || '';
+        // Normalize Vietnamese thousand separators (e.g. "10.000") and commas before parsing
+        const cleaned = String(rawAmount).replace(/[.,\s]/g, '');
+        const amount = Number(cleaned) || 0;
         const categoryId = document.getElementById('budget_category').value;
 
         const selectedCat = categories.find(c => c.id == categoryId);
@@ -653,6 +658,33 @@ const BudgetsApp = (function () {
             return;
         }
 
+        // Ensure we have latest jar balances (availableToPlan) before validation
+        try {
+            await loadJarsSummary();
+        } catch (e) {
+            // ignore - loadJarsSummary handles its own errors
+        }
+
+        // Compute available amount for this jar. If editing existing budget, allow reclaiming current amount.
+        const availableRaw = typeof window.jarBalances[jarKey] !== 'undefined' ? Number(window.jarBalances[jarKey]) : null;
+        let availableForThis = availableRaw;
+        if (availableForThis !== null && id) {
+            // find existing budget amount to add back
+            const existing = budgetsCache.find(b => String(b.id) === String(id));
+            if (existing) {
+                const existingAmt = Number(existing.amount) || 0;
+                availableForThis = availableForThis + existingAmt;
+            }
+        }
+
+        if (availableForThis !== null && amount > availableForThis) {
+            const msg = `Số tiền bạn nhập (${formatCurrency(amount)}) vượt khả năng lập plan của hũ liên quan (${formatCurrency(availableForThis)}). Tiếp tục tạo ngân sách?`;
+            console.warn('Budgets: validation fail', { jarKey, availableForThis, amount, existingId: id });
+            if (!confirm(msg)) return;
+        }
+
+        console.debug('Budgets: submitting', { jarKey, availableForThis, amount, payload });
+
         const url = id ? `${window.BASE_URL}/budgets/api_update/${id}` : `${window.BASE_URL}/budgets/api_create`;
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -670,6 +702,10 @@ const BudgetsApp = (function () {
                     console.error('Invalid JSON response from server:', text);
                     alert('Lỗi: phản hồi không hợp lệ từ server');
                     return;
+                }
+
+                if (!res.success) {
+                    console.error('Budgets: server rejected', res, 'raw:', text);
                 }
 
                 if (res.success) {

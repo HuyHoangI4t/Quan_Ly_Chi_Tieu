@@ -1,251 +1,156 @@
-<?php $this->partial('admin_header', ['title' => $title ?? 'Admin Dashboard']); ?>
-<style>
-        .stat-card.active {
-            border-color: var(--warning);
-        }
+<!DOCTYPE html>
+<html lang="vi">
 
-        .quick-action {
-            transition: all 0.3s;
-        }
-
-        .quick-action:hover {
-            background-color: #f8f9fa;
-            transform: scale(1.02);
-        }
-    </style>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard | SmartAdmin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="<?php echo BASE_URL; ?>/css/admin.css" rel="stylesheet">
 </head>
 
 <body>
-    <div class="admin-header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
-                    <p class="mb-0">Xin chào, <?php echo $_SESSION['full_name'] ?? 'Admin'; ?></p>
+
+    <div class="admin-wrapper">
+
+        <?php require __DIR__ . '/partials/sidebar.php'; ?>
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Tổng quan hệ thống</h1>
+                    <p>Số liệu cập nhật ngày <?php echo date('d/m/Y'); ?></p>
+                </div>
+                <button class="btn-primary"><i class="fas fa-download me-2"></i> Xuất báo cáo</button>
+            </div>
+
+            <div class="stat-grid">
+                <div class="card-box stat-card">
+                    <div class="stat-icon bg-indigo"><i class="fas fa-users"></i></div>
+                    <div>
+                        <div style="font-size: 1.5rem; font-weight: 700;"><?php echo $stats['total_users']; ?></div>
+                        <div style="color: #64748b; font-size: 0.85rem;">Tổng thành viên</div>
+                    </div>
+                </div>
+                <div class="card-box stat-card">
+                    <div class="stat-icon bg-emerald"><i class="fas fa-user-check"></i></div>
+                    <div>
+                        <div style="font-size: 1.5rem; font-weight: 700;"><?php echo $stats['active_users']; ?></div>
+                        <div style="color: #64748b; font-size: 0.85rem;">Đang hoạt động</div>
+                    </div>
+                </div>
+                <div class="card-box stat-card">
+                    <div class="stat-icon bg-amber"><i class="fas fa-exchange-alt"></i></div>
+                    <div>
+                        <div style="font-size: 1.5rem; font-weight: 700;"><?php echo number_format($stats['total_transactions']); ?></div>
+                        <div style="color: #64748b; font-size: 0.85rem;">Giao dịch</div>
+                    </div>
+                </div>
+                <div class="card-box stat-card">
+                    <div class="stat-icon bg-rose"><i class="fas fa-tags"></i></div>
+                    <div>
+                        <div style="font-size: 1.5rem; font-weight: 700;"><?php echo $stats['total_categories']; ?></div>
+                        <div style="color: #64748b; font-size: 0.85rem;">Danh mục</div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card-box h-100">
+                        <h5 class="fw-bold mb-4">Biểu đồ dòng tiền (30 ngày)</h5>
+
+                        <div style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card-box h-100 p-0 overflow-hidden">
+                        <div class="p-3 border-bottom bg-light">
+                            <h6 class="fw-bold mb-0">Thành viên mới</h6>
+                        </div>
+                        <div>
+                            <?php foreach ($stats['recent_users'] as $u): ?>
+                                <div class="d-flex align-items-center p-3 border-bottom">
+                                    <div class="avatar me-3"><?php echo strtoupper(substr($u['username'], 0, 1)); ?></div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold small"><?php echo htmlspecialchars($u['username']); ?></div>
+                                        <div class="text-muted small"><?php echo htmlspecialchars($u['email']); ?></div>
+                                    </div>
+                                    <span class="badge bg-light text-dark border"><?php echo date('d/m', strtotime($u['created_at'])); ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
 
-    <div class="container">
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card stat-card users">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h3 class="mb-0"><?php echo $stats['total_users']; ?></h3>
-                                <small class="text-muted">Tổng Users</small>
-                            </div>
-                            <div class="text-primary" style="font-size: 2.5rem;">
-                                <i class="fas fa-users"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stat-card active">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h3 class="mb-0"><?php echo $stats['active_users']; ?></h3>
-                                <small class="text-muted">Users Hoạt động</small>
-                            </div>
-                            <div class="text-warning" style="font-size: 2.5rem;">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stat-card transactions">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h3 class="mb-0"><?php echo number_format($stats['total_transactions']); ?></h3>
-                                <small class="text-muted">Giao dịch</small>
-                            </div>
-                            <div class="text-success" style="font-size: 2.5rem;">
-                                <i class="fas fa-exchange-alt"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stat-card categories">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h3 class="mb-0"><?php echo $stats['total_categories']; ?></h3>
-                                <small class="text-muted">Danh mục</small>
-                            </div>
-                            <div class="text-danger" style="font-size: 2.5rem;">
-                                <i class="fas fa-tags"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('mainChart').getContext('2d');
 
-        <div class="row">
-            <!-- Quick Actions -->
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    
-                    <div class="card-body p-0">
-                        <a href="<?php echo BASE_URL; ?>/admin/users" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
-                            <i class="fas fa-users-cog"></i> Quản lý Users
-                        </a>
-                        <a href="<?php echo BASE_URL; ?>/admin/categories" class="d-block p-3 text-decoration-none text-dark quick-action border-bottom">
-                            <i class="fas fa-tags"></i> Quản lý Danh mục Gốc
-                        </a>
-                    </div>
-                </div>
-            </div>
+        // Lấy dữ liệu từ PHP
+        const activityData = <?php echo json_encode($stats['system_activity'] ?? []); ?>;
 
-            <!-- Recent Users -->
-            <div class="col-md-8 mb-4">
-                <div class="card">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="fas fa-user-plus"></i> Users đăng ký gần đây</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Username</th>
-                                        <th>Email</th>
-                                        <th>Vai trò</th>
-                                        <th>Ngày tạo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($stats['recent_users'])): ?>
-                                        <?php foreach ($stats['recent_users'] as $user): ?>
-                                            <tr>
-                                                <td><?php echo $user['id']; ?></td>
-                                                <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                                <td><?php echo htmlspecialchars($user['email']); ?></td>
-                                                <td>
-                                                    <span class="badge <?php echo $user['role'] === 'admin' ? 'bg-danger' : 'bg-secondary'; ?>">
-                                                        <?php echo ucfirst($user['role']); ?>
-                                                    </span>
-                                                </td>
-                                                <td><?php echo date('d/m/Y H:i', strtotime($user['created_at'])); ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <tr>
-                                            <td colspan="5" class="text-center">Chưa có users nào</td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        // Chuẩn bị dữ liệu vẽ
+        const labels = activityData.map(item => {
+            const d = new Date(item.activity_date);
+            return d.getDate() + '/' + (d.getMonth() + 1); // Định dạng ngày/tháng
+        }).reverse(); // Đảo ngược để hiện từ cũ đến mới
 
-        <!-- System Activity -->
-        <?php if (!empty($stats['system_activity'])): ?>
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Hoạt động hệ thống (7 ngày gần nhất)</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Ngày</th>
-                                            <th>Số giao dịch</th>
-                                            <th>Thu nhập</th>
-                                            <th>Chi tiêu</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($stats['system_activity'] as $activity): ?>
-                                            <tr>
-                                                <td><?php echo date('d/m/Y', strtotime($activity['activity_date'])); ?></td>
-                                                <td><?php echo $activity['transaction_count']; ?></td>
-                                                <td class="text-success">+<?php echo number_format($activity['total_income'], 0, ',', '.'); ?>đ</td>
-                                                <td class="text-danger">-<?php echo number_format($activity['total_expense'], 0, ',', '.'); ?>đ</td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
+        const incomeData = activityData.map(item => item.total_income).reverse();
+        const expenseData = activityData.map(item => item.total_expense).reverse();
 
-            <!-- Charts -->
-            <div class="row mt-4">
-                <div class="col-md-8 mb-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Thu/Chi theo tháng (12 tháng)</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="monthlyChart" height="120"></canvas>
-                        </div>
-                    </div>
-                </div>
+        new Chart(ctx, {
+            type: 'bar', // Dạng cột nhìn sẽ gọn hơn dạng đường cho dòng tiền
+            data: {
+                labels: labels.length ? labels : ['Không có dữ liệu'],
+                datasets: [{
+                        label: 'Thu nhập',
+                        data: incomeData,
+                        backgroundColor: '#4f46e5', // Màu tím (Primary)
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    },
+                    {
+                        label: 'Chi tiêu',
+                        data: expenseData,
+                        backgroundColor: '#ef4444', // Màu đỏ (Danger)
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // [QUAN TRỌNG] Ngăn biểu đồ tự phóng to chiều cao
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            borderDash: [2, 4],
+                            color: '#f1f5f9'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 
-                <div class="col-md-4 mb-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Phân bố theo danh mục (30 ngày)</h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="categoryChart" height="200"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
+</body>
 
-            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script>
-                (function(){
-                    const chartData = <?php echo json_encode($chart ?? ['labels'=>[],'income'=>[],'expense'=>[]]); ?>;
-                    const catData = <?php echo json_encode($category_breakdown ?? ['labels'=>[], 'data'=>[]]); ?>;
-
-                    const ctx = document.getElementById('monthlyChart').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: chartData.labels,
-                            datasets: [
-                                { label: 'Thu nhập', data: chartData.income, borderColor: 'var(--success)', backgroundColor: 'rgba(39,174,96,0.08)', tension:0.2 },
-                                { label: 'Chi tiêu', data: chartData.expense, borderColor: 'var(--danger)', backgroundColor: 'rgba(231,76,60,0.08)', tension:0.2 }
-                            ]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false }
-                    });
-
-                    const cctx = document.getElementById('categoryChart').getContext('2d');
-                    new Chart(cctx, {
-                        type: 'pie',
-                        data: {
-                            labels: catData.labels,
-                            datasets: [{ data: catData.data, backgroundColor: ['#10b981','#6366f1','#f59e0b','#ef4444','#3b82f6','#f97316'] }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false }
-                    });
-                })();
-            </script>
-    </div>
-
-<?php $this->partial('admin_footer'); ?>
+</html>

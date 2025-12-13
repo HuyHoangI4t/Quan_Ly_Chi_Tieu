@@ -112,6 +112,17 @@ class App
         }
         
         $this->params = $url ? array_values($url) : [];
+
+        // If controller supports receiving params via setParams(), inject them for controller code that
+        // expects $this->params to be available.
+        if (is_object($this->controller) && method_exists($this->controller, 'setParams')) {
+            try {
+                $this->controller->setParams($this->params);
+            } catch (\TypeError $e) {
+                // ignore if signature mismatch
+            }
+        }
+
         call_user_func_array([$this->controller, $this->method], $this->params);
     }    public function parseUrl()
     {

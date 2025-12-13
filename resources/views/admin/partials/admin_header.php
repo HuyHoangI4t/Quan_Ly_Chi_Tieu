@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link href="<?php echo BASE_URL; ?>/shared/style.css" rel="stylesheet">
   <link href="<?php echo BASE_URL; ?>/css/admin.css" rel="stylesheet">
+  
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <script>window.BASE_URL = '<?php echo BASE_URL; ?>';</script>
 </head>
@@ -26,6 +27,7 @@
         echo $link('users','Quản lý Users');
         echo $link('categories','Quản lý Danh mục');
         echo $link('logs','Nhật ký hoạt động');
+        echo $link('settings','Cài đặt');
         ?>
       </nav>
     </aside>
@@ -38,10 +40,7 @@
         </div>
 
         <div class="flex-gap">
-          <form class="top-search" method="get" action="<?php echo BASE_URL; ?>/admin/users">
-            <input type="search" name="q" placeholder="Tìm kiếm..." aria-label="Search">
-            <button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-search"></i></button>
-          </form>
+         
 
           <div class="top-avatar dropdown">
             <a href="#" class="d-flex align-items-center text-decoration-none" id="adminUserMenu" data-bs-toggle="dropdown" aria-expanded="false">
