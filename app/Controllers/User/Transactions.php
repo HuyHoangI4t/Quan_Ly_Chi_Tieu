@@ -196,7 +196,7 @@ class Transactions extends Controllers
 
                 // Calculate spent in this jar (group_type) within the same period
                 // Use a DB connection directly to query spent per group_type
-                $db = (new \App\Core\ConnectDB())->getConnection();
+                $db = (new ConnectDB())->getConnection();
                 $stmt = $db->prepare(
                     "SELECT COALESCE(SUM(ABS(t.amount)),0) as spent FROM transactions t JOIN categories c ON t.category_id = c.id WHERE t.user_id = ? AND t.type = 'expense' AND c.group_type = ? AND t.date BETWEEN ? AND ?"
                 );

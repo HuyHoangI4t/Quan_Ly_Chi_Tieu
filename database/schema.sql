@@ -132,6 +132,32 @@ CREATE TABLE `user_budget_settings` (
   CONSTRAINT `fk_user_budget_settings_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 2.8. User Wallets (Lưu số dư thực tế của 6 chiếc lọ)
+CREATE TABLE `user_wallets` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `jar_code` enum('nec', 'ffa', 'ltss', 'edu', 'play', 'give') NOT NULL COMMENT 'Mã lọ khớp với group_type của categories',
+  `balance` decimal(15,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_user_jar` (`user_id`, `jar_code`),
+  CONSTRAINT `fk_wallets_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2.9. System Logs
+CREATE TABLE IF NOT EXISTS `system_logs` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT NULL,
+  `action` VARCHAR(255) NOT NULL,
+  `target_id` INT NULL,
+  `ip_address` VARCHAR(45) NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_system_logs_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- ==========================================================
 -- 3. SEED DATA
 -- ==========================================================
@@ -295,5 +321,9 @@ INSERT INTO `transactions` (user_id, category_id, amount, date, description, typ
 (2, 30, -300000, '2025-11-15', 'Bảo hiểm xe', 'expense'),
 (2, 31, -1200000, '2025-11-16', 'Đầu tư chứng khoán', 'expense'),
 (2, 32, -70000, '2025-11-17', 'Chi phí khác', 'expense');
+
+-- 3.4. Insert User Wallets (Khởi tạo số dư 0 cho 6 lọ của user_id = 2)
+INSERT IGNORE INTO `user_wallets` (user_id, jar_code, balance) VALUES 
+(2, 'nec', 0), (2, 'ffa', 0), (2, 'ltss', 0), (2, 'edu', 0), (2, 'play', 0), (2, 'give', 0);
 
 SET FOREIGN_KEY_CHECKS = 1;

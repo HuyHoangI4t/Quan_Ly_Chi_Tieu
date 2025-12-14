@@ -1,6 +1,6 @@
 // === REPORTS PAGE JS ===
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Current filter state
     let currentFilters = {
         period: document.getElementById('periodFilter')?.value || 'last_3_months',
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 updateCharts(data.data);
-                
+
                 // Update URL without reloading
                 const newUrl = `${BASE_URL}/reports/index/${currentFilters.period}/${currentFilters.type}`;
                 window.history.pushState({ filters: currentFilters }, '', newUrl);
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 safeDestroyChart('lineChart');
                 safeDestroyChart(lineChartCanvas);
                 if (lineChartInstance) {
-                    try { lineChartInstance.destroy(); } catch (e) {}
+                    try { lineChartInstance.destroy(); } catch (e) { }
                 }
                 lineChartInstance = null;
                 // Đảm bảo canvas tồn tại (có thể đã bị thay thế bởi thông báo)
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 grid: { color: gridColor },
                                 ticks: {
                                     color: textColor,
-                                    callback: function(value) {
+                                    callback: function (value) {
                                         if (value >= 1000000) return (value / 1000000) + 'tr';
                                         if (value >= 1000) return (value / 1000) + 'k';
                                         return value;
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             tooltip: {
                                 backgroundColor: '#1F2937',
                                 callbacks: {
-                                    label: function(context) {
+                                    label: function (context) {
                                         let label = context.dataset.label || '';
                                         if (label) label += ': ';
                                         label += new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' ₫';
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 safeDestroyChart('pieChart');
                 safeDestroyChart(pieChartCanvas);
                 if (pieChartInstance) {
-                    try { pieChartInstance.destroy(); } catch (e) {}
+                    try { pieChartInstance.destroy(); } catch (e) { }
                 }
                 pieChartInstance = null;
                 const container = pieChartCanvas && pieChartCanvas.parentElement ? pieChartCanvas.parentElement : document.querySelector('#pieChart')?.parentElement;
@@ -215,13 +215,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         datasets: [{
                             label: 'Phân bổ chi tiêu',
                             data: data.pieChart.data,
-                            backgroundColor: pieColors,
-                            borderWidth: 2,
-                            borderColor: '#ffffff',
-                            hoverOffset: 15
+                            //backgroundColor: pieColors,
+                            borderWidth: 4,
+                            hoverOffset: 8,
+                            borderRadius: 4
                         }]
                     },
                     options: {
+                        cutout: '50%',
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
@@ -236,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             tooltip: {
                                 backgroundColor: '#1F2937',
                                 callbacks: {
-                                    label: function(context) {
+                                    label: function (context) {
                                         let label = context.label || '';
                                         if (label) label += ': ';
                                         label += new Intl.NumberFormat('vi-VN', {
@@ -285,14 +286,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const typeFilter = document.getElementById('typeFilter');
 
     if (periodFilter) {
-        periodFilter.addEventListener('change', function() {
+        periodFilter.addEventListener('change', function () {
             currentFilters.period = this.value;
             loadReportData();
         });
     }
 
     if (typeFilter) {
-        typeFilter.addEventListener('change', function() {
+        typeFilter.addEventListener('change', function () {
             currentFilters.type = this.value;
             loadReportData();
         });
@@ -301,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Export functionality
     const exportBtn = document.getElementById('exportReport');
     if (exportBtn) {
-        exportBtn.addEventListener('click', function() {
+        exportBtn.addEventListener('click', function () {
             exportExcel();
         });
     }
@@ -335,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle browser back/forward
-    window.addEventListener('popstate', function(event) {
+    window.addEventListener('popstate', function (event) {
         if (event.state && event.state.filters) {
             currentFilters = event.state.filters;
             if (periodFilter) periodFilter.value = currentFilters.period;

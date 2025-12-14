@@ -14,7 +14,55 @@
             Xuất báo cáo
         </button>
     </div>
-    
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="periodFilter" class="form-label">
+                        <i class="fas fa-calendar me-1"></i>
+                        Kỳ báo cáo
+                    </label>
+                    <select id="periodFilter" class="form-select">
+                        <option value="this_month" <?php echo ($current_period ?? 'last_3_months') === 'this_month' ? 'selected' : ''; ?>>
+                            Tháng này
+                        </option>
+                        <option value="last_3_months" <?php echo ($current_period ?? 'last_3_months') === 'last_3_months' ? 'selected' : ''; ?>>
+                            3 tháng gần đây
+                        </option>
+                        <option value="last_6_months" <?php echo ($current_period ?? 'last_3_months') === 'last_6_months' ? 'selected' : ''; ?>>
+                            6 tháng gần đây
+                        </option>
+                        <option value="this_year" <?php echo ($current_period ?? 'last_3_months') === 'this_year' ? 'selected' : ''; ?>>
+                            Năm nay
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="typeFilter" class="form-label">
+                        <i class="fas fa-filter me-1"></i>
+                        Loại giao dịch
+                    </label>
+                    <select id="typeFilter" class="form-select">
+                        <option value="all" <?php echo ($current_type ?? 'all') === 'all' ? 'selected' : ''; ?>>
+                            Tất cả
+                        </option>
+                        <option value="expense" <?php echo ($current_type ?? 'all') === 'expense' ? 'selected' : ''; ?>>
+                            Chi tiêu
+                        </option>
+                        <option value="income" <?php echo ($current_type ?? 'all') === 'income' ? 'selected' : ''; ?>>
+                            Thu nhập
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Biểu đồ sẽ cập nhật tự động
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Summary Stats (Optional) -->
     <div class="row g-4 mt-2">
         <div class="col-md-3">
@@ -96,55 +144,7 @@
             </div>
         </div>
     </div>
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label for="periodFilter" class="form-label">
-                        <i class="fas fa-calendar me-1"></i>
-                        Kỳ báo cáo
-                    </label>
-                    <select id="periodFilter" class="form-select">
-                        <option value="this_month" <?php echo ($current_period ?? 'last_3_months') === 'this_month' ? 'selected' : ''; ?>>
-                            Tháng này
-                        </option>
-                        <option value="last_3_months" <?php echo ($current_period ?? 'last_3_months') === 'last_3_months' ? 'selected' : ''; ?>>
-                            3 tháng gần đây
-                        </option>
-                        <option value="last_6_months" <?php echo ($current_period ?? 'last_3_months') === 'last_6_months' ? 'selected' : ''; ?>>
-                            6 tháng gần đây
-                        </option>
-                        <option value="this_year" <?php echo ($current_period ?? 'last_3_months') === 'this_year' ? 'selected' : ''; ?>>
-                            Năm nay
-                        </option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="typeFilter" class="form-label">
-                        <i class="fas fa-filter me-1"></i>
-                        Loại giao dịch
-                    </label>
-                    <select id="typeFilter" class="form-select">
-                        <option value="all" <?php echo ($current_type ?? 'all') === 'all' ? 'selected' : ''; ?>>
-                            Tất cả
-                        </option>
-                        <option value="expense" <?php echo ($current_type ?? 'all') === 'expense' ? 'selected' : ''; ?>>
-                            Chi tiêu
-                        </option>
-                        <option value="income" <?php echo ($current_type ?? 'all') === 'income' ? 'selected' : ''; ?>>
-                            Thu nhập
-                        </option>
-                    </select>
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <div class="text-muted small">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Biểu đồ sẽ cập nhật tự động
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
 </section>
 
 <?php $this->partial('footer'); ?>

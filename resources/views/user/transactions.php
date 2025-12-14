@@ -155,7 +155,7 @@ $this->partial('header');
 
 <!-- Add Transaction Modal -->
 <div class="modal fade" id="addTransactionModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Thêm giao dịch mới</h5>
@@ -213,7 +213,7 @@ $this->partial('header');
 
 <!-- Edit Transaction Modal -->
 <div class="modal fade" id="editTransactionModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Sửa giao dịch</h5>

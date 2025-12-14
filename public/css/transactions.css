@@ -8,14 +8,15 @@
     --success: #27ae60;
     --danger: #e74c3c;
     --radius-lg: 12px;
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1); 
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08); 
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
     --bg-white: #ffffff;
 }
 
 /* 1. LAYOUT VÀ HEADER - Tăng Specificity */
 .container .transactions-header {
-    display: flex; /* LAYOUT FIX: Ép nằm ngang */
+    display: flex;
+    /* LAYOUT FIX: Ép nằm ngang */
     justify-content: space-between;
     align-items: center;
     margin-bottom: 32px;
@@ -46,27 +47,30 @@
 
 /* 2. SUMMARY CARDS - FIX LAYOUT & AESTHETICS & HOVER */
 .container .summary-cards {
-    display: flex; /* BẮT BUỘC FIX LAYOUT */
+    display: flex;
+    /* BẮT BUỘC FIX LAYOUT */
     gap: 20px;
     margin-bottom: 24px;
     flex-wrap: wrap;
 }
 
 .container .summary-cards .summary-card {
-    flex: 1; 
+    flex: 1;
     min-width: 200px;
-    
+
     padding: 20px;
     background: var(--bg-white);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
-    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Hiệu ứng mượt */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    /* Hiệu ứng mượt */
 }
 
 .container .summary-cards .summary-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* Đổ bóng mạnh hơn khi hover */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    /* Đổ bóng mạnh hơn khi hover */
 }
 
 .summary-card-label {
@@ -102,14 +106,15 @@
 }
 
 .transactions-filters {
-    display: flex; /* LAYOUT FIX */
+    display: flex;
+    /* LAYOUT FIX */
     gap: 16px;
     flex-wrap: wrap;
     align-items: center;
 }
 
 .transactions-filters .form-select {
-    flex: 1; 
+    flex: 1;
     min-width: 150px;
     padding: 10px 12px;
     border-radius: 8px;
@@ -123,7 +128,7 @@
 .transactions-table-card {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md); 
+    box-shadow: var(--shadow-md);
     overflow: hidden;
     background: var(--bg-white);
     margin-top: 24px;
@@ -131,9 +136,11 @@
 
 .transactions-table {
     width: 100%;
-    margin-bottom: 0 !important; 
-    border-collapse: collapse; /* ensure borders render as a single line */
-    table-layout: fixed; /* keep columns stable */
+    margin-bottom: 0 !important;
+    border-collapse: collapse;
+    /* ensure borders render as a single line */
+    table-layout: fixed;
+    /* keep columns stable */
     display: table;
 }
 
@@ -153,23 +160,25 @@
 /* 5. Dòng giao dịch (Table Row) - HOVER & AESTHETICS */
 .transactions-table tbody tr {
     transition: background-color 0.2s ease;
-    border-bottom: 1px solid var(--border); /* move border to row for full-width line */
+    border-bottom: 1px solid var(--border);
+    /* move border to row for full-width line */
 }
 
 .transactions-table tbody tr:hover {
-    background-color: #f5f7fa; 
+    background-color: #f5f7fa;
 }
 
 .transactions-table td {
     padding: 18px 24px;
     font-size: 14px;
     color: var(--text-dark);
-    border-bottom: none; /* removed from cells to avoid gaps */
+    border-bottom: none;
+    /* removed from cells to avoid gaps */
     box-sizing: border-box;
 }
 
 .transactions-category-icon {
-    border-radius: 8px; 
+    border-radius: 8px;
     width: 36px;
     height: 36px;
     display: flex;
@@ -189,7 +198,8 @@
 
 .transactions-amount {
     font-weight: 600;
-    text-align: right; /* ensure numbers align to right */
+    text-align: right;
+    /* ensure numbers align to right */
     white-space: nowrap;
 }
 
@@ -204,7 +214,8 @@
 /* Table alignment improvements */
 .transactions-table th,
 .transactions-table td {
-    vertical-align: middle; /* center content vertically */
+    vertical-align: middle;
+    /* center content vertically */
 }
 
 .transactions-category-wrapper {
@@ -232,17 +243,20 @@
 }
 
 .transactions-type-badge {
-    text-align: center; /* center the badge cell */
+    text-align: center;
+    /* center the badge cell */
 }
 
 .transactions-actions {
     display: flex;
     gap: 8px;
-    justify-content: center; /* center action buttons */
+    justify-content: center;
+    /* center action buttons */
     align-items: center;
 }
 
-.transactions-btn-edit, .transactions-btn-delete {
+.transactions-btn-edit,
+.transactions-btn-delete {
     width: 36px;
     height: 36px;
     padding: 0;
@@ -262,27 +276,29 @@
         align-items: flex-start;
         gap: 16px;
     }
-    
+
     .container .summary-cards {
-        flex-direction: column; /* Stack cards vertically on smaller screens */
+        flex-direction: column;
+        /* Stack cards vertically on smaller screens */
     }
-    
+
     .transactions-add-btn {
         width: 100%;
         justify-content: center;
     }
 
     .transactions-filters {
-        display: grid; 
+        display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
-    
+
     .transactions-table {
         min-width: 700px;
     }
 
-    .transactions-table th, .transactions-table td {
+    .transactions-table th,
+    .transactions-table td {
         padding: 12px 16px;
         font-size: 13px;
     }
@@ -292,6 +308,7 @@
     .transactions-filters {
         grid-template-columns: 1fr;
     }
+
     .transactions-amount {
         font-size: 14px;
     }
@@ -319,8 +336,15 @@
     transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
-.transactions-btn-edit { background: #fff8e6; color: #d4a017; }
-.transactions-btn-delete { background: #fff0f1; color: var(--danger); }
+.transactions-btn-edit {
+    background: #fff8e6;
+    color: #d4a017;
+}
+
+.transactions-btn-delete {
+    background: #fff0f1;
+    color: var(--danger);
+}
 
 .transactions-empty {
     text-align: center;
@@ -372,6 +396,7 @@
     background: #fff8e6 !important;
     color: #d4a017 !important;
 }
+
 .transactions-btn-delete {
     background: #fff0f1 !important;
     color: var(--danger) !important;
@@ -383,8 +408,10 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    justify-content: center; /* center the pagination controls */
+    justify-content: center;
+    /* center the pagination controls */
 }
+
 .transactions-pagination .page-link,
 .transactions-pagination-number,
 .transactions-pagination-btn {
@@ -395,15 +422,17 @@
     padding: 4px 8px;
     cursor: pointer;
 }
+
 .transactions-pagination-number.active,
-.transactions-pagination .page-item.active > .page-link {
+.transactions-pagination .page-item.active>.page-link {
     color: #fff !important;
     background: var(--success);
     border-radius: 20px;
     padding: 6px 12px;
     box-shadow: none;
 }
-.transactions-pagination .page-item.disabled > .page-link,
+
+.transactions-pagination .page-item.disabled>.page-link,
 .transactions-pagination-btn[disabled] {
     opacity: 0.5;
     pointer-events: none;
@@ -433,7 +462,33 @@
     padding: 6px 8px !important;
     box-shadow: none !important;
 }
+
 .transactions-pagination .page-link i {
     font-size: 14px;
     line-height: 1;
+}
+
+/* Modal buttons: make submit green and cancel neutral */
+.transactions-modal-footer .transactions-modal-btn-submit {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.01)), var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 6px 14px rgba(39, 174, 96, 0.18);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.transactions-modal-footer .transactions-modal-btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(39, 174, 96, 0.22);
+}
+
+.transactions-modal-footer .transactions-modal-btn-cancel {
+    background: transparent;
+    color: var(--text-dark);
+    border: 1px solid #e6e6e6;
+    padding: 8px 14px;
+    border-radius: 8px;
 }
