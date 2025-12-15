@@ -23,9 +23,9 @@ class ConnectDB
             $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             $this->connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            // [BẢO MẬT] Không echo lỗi chi tiết ra màn hình
-            error_log("DB Connection Error: " . $e->getMessage()); // Ghi vào log server
-            die("Hệ thống đang bảo trì kết nối cơ sở dữ liệu. Vui lòng quay lại sau."); 
+            error_log("DB Connection Error: " . $e->getMessage()); 
+            // Không die() để App có thể catch và hiển thị trang lỗi đẹp hơn
+            throw new \Exception("Không thể kết nối cơ sở dữ liệu.");
         }
     }
 

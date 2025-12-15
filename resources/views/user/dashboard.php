@@ -1,16 +1,12 @@
 <?php
-
 use App\Services\FinancialUtils;
-
 $this->partial('header', ['title' => 'SmartSpending - Quản Lý Tài Chính']);
 ?>
 
-<!-- Dashboard Specific Styles -->
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/dashboard.css">
 
 <main class="main-content">
     <div class="container">
-        <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="card stat-card">
                 <h3>Tổng Số Dư</h3>
@@ -183,7 +179,6 @@ $this->partial('header', ['title' => 'SmartSpending - Quản Lý Tài Chính']);
                                 <td><?php echo $this->escape($tx['description']); ?></td>
                                 <td><?php echo $this->escape($tx['category_name']); ?></td>
                                 <?php
-                                // Safely resolve transaction date from multiple possible keys
                                 $rawDate = $tx['transaction_date'] ?? $tx['date'] ?? $tx['transactionDate'] ?? $tx['created_at'] ?? null;
                                 $displayDate = $rawDate ? date('d/m/Y', strtotime($rawDate)) : '-';
                                 ?>
@@ -209,7 +204,6 @@ $this->partial('header', ['title' => 'SmartSpending - Quản Lý Tài Chính']);
     </div>
 </main>
 
-<!-- Data for JS -->
 <script>
     window.pieChartData = <?php echo $pieChartData ?? '[]'; ?>;
     window.lineChartData = <?php echo $lineChartData ?? '[]'; ?>;

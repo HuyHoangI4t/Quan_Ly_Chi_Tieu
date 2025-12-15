@@ -159,42 +159,84 @@ class Goal {
             return true; // consider duplicate as success to avoid creating twice
         }
 
-        $sql = "INSERT INTO goals (user_id, name, description, target_amount, start_date, deadline, category_id, status, created_at) 
-                VALUES (:user_id, :name, :description, :target_amount, :start_date, :deadline, :category_id, :status, NOW())";
+        // Detect existing columns in `goals` table so we only insert supported fields
+        $availableCols = [];
+        try {
+            $colStmt = $this->db->query("SHOW COLUMNS FROM goals");
+            $cols = $colStmt->fetchAll(PDO::FETCH_COLUMN, 0);
+            if (is_array($cols)) $availableCols = $cols;
+        } catch (\Exception $e) {
+            // If table doesn't exist or SHOW failed, fallback to expected set
+            $availableCols = ['user_id','name','description','target_amount','start_date','deadline','category_id','status','created_at'];
+        }
+
+        $fields = [];
+        $placeholders = [];
+        $bindings = [];
+
+        $candidates = [
+            'user_id','name','description','target_amount','start_date','deadline','category_id','status'
+        ];
+
+        foreach ($candidates as $col) {
+            if (in_array($col, $availableCols, true) && isset($data[$col])) {
+                $fields[] = $col;
+                $placeholders[] = ':' . $col;
+                $bindings[':' . $col] = $data[$col];
+            }
+        }
+
+        // Always add created_at if availableCols contains it (handled by DB default otherwise)
+        if (in_array('created_at', $availableCols, true) && !in_array('created_at', $fields, true)) {
+            // do not bind created_at, let DB default NOW() if column has default
+        }
+
+        if (empty($fields)) return false;
+
+        $sql = "INSERT INTO goals (" . implode(',', $fields) . ") VALUES (" . implode(',', $placeholders) . ")";
         $stmt = $this->db->prepare($sql);
-        // ... (Bind param như cũ) ...
-        $stmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
-        $stmt->bindParam(':name', $data['name'], PDO::PARAM_STR);
-        $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
-        $stmt->bindParam(':target_amount', $data['target_amount'], PDO::PARAM_STR);
-        
-        $startDate = !empty($data['start_date']) ? $data['start_date'] : null;
-        $categoryId = !empty($data['category_id']) ? $data['category_id'] : null;
-        
-        $stmt->bindParam(':start_date', $startDate, $startDate ? PDO::PARAM_STR : PDO::PARAM_NULL);
-        $stmt->bindParam(':deadline', $data['deadline'], PDO::PARAM_STR);
-        $stmt->bindParam(':category_id', $categoryId, $categoryId ? PDO::PARAM_INT : PDO::PARAM_NULL);
-        $stmt->bindParam(':status', $data['status'], PDO::PARAM_STR);
+        foreach ($bindings as $k => $v) {
+            // Bind types: numeric vs string
+            if (is_int($v)) $stmt->bindValue($k, $v, PDO::PARAM_INT);
+            else $stmt->bindValue($k, $v, PDO::PARAM_STR);
+        }
         return $stmt->execute();
     }
 
     public function update($id, $userId, $data) {
-        $sql = "UPDATE goals SET name=:name, description=:description, target_amount=:target_amount, start_date=:start_date, deadline=:deadline, category_id=:category_id, status=:status, updated_at=NOW() WHERE id=:id AND user_id=:user_id";
+        // Build dynamic UPDATE SET based on available columns
+        $availableCols = [];
+        try {
+            $colStmt = $this->db->query("SHOW COLUMNS FROM goals");
+            $cols = $colStmt->fetchAll(PDO::FETCH_COLUMN, 0);
+            if (is_array($cols)) $availableCols = $cols;
+        } catch (\Exception $e) {
+            $availableCols = ['name','description','target_amount','start_date','deadline','category_id','status','updated_at'];
+        }
+
+        $setParts = [];
+        $bindings = [':id' => $id, ':user_id' => $userId];
+        $candidates = ['name','description','target_amount','start_date','deadline','category_id','status'];
+        foreach ($candidates as $col) {
+            if (in_array($col, $availableCols, true) && array_key_exists($col, $data)) {
+                $setParts[] = "$col = :$col";
+                $bindings[':' . $col] = $data[$col];
+            }
+        }
+
+        if (empty($setParts)) return false;
+
+        // Add updated_at if column exists
+        if (in_array('updated_at', $availableCols, true)) {
+            $setParts[] = "updated_at = NOW()";
+        }
+
+        $sql = "UPDATE goals SET " . implode(', ', $setParts) . " WHERE id = :id AND user_id = :user_id";
         $stmt = $this->db->prepare($sql);
-        // ... (Bind param tương tự create) ...
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':name', $data['name'], PDO::PARAM_STR);
-        $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
-        $stmt->bindParam(':target_amount', $data['target_amount'], PDO::PARAM_STR);
-        
-        $startDate = !empty($data['start_date']) ? $data['start_date'] : null;
-        $categoryId = !empty($data['category_id']) ? $data['category_id'] : null;
-        
-        $stmt->bindParam(':start_date', $startDate, $startDate ? PDO::PARAM_STR : PDO::PARAM_NULL);
-        $stmt->bindParam(':deadline', $data['deadline'], PDO::PARAM_STR);
-        $stmt->bindParam(':category_id', $categoryId, $categoryId ? PDO::PARAM_INT : PDO::PARAM_NULL);
-        $stmt->bindParam(':status', $data['status'], PDO::PARAM_STR);
+        foreach ($bindings as $k => $v) {
+            if ($k === ':id' || $k === ':user_id' || (is_int($v) && $v !== null)) $stmt->bindValue($k, $v, PDO::PARAM_INT);
+            else $stmt->bindValue($k, $v, PDO::PARAM_STR);
+        }
         return $stmt->execute();
     }
 

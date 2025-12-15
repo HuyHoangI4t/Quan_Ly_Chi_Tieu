@@ -172,8 +172,11 @@ class Profile extends Controllers
 
     public function api_clear_data()
     {
+        // 1. Set Header JSON ngay lập tức
+        header('Content-Type: application/json');
+
         if ($this->request->method() !== 'POST') {
-            Response::errorResponse('Method Not Allowed', null, 405);
+            echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed']);
             return;
         }
 
@@ -181,20 +184,66 @@ class Profile extends Controllers
             // Verify CSRF token
             CsrfProtection::verify();
 
-            $userModel = $this->model('User');
-            $transactionModel = $this->model('Transaction');
             $userId = $this->getCurrentUserId();
+            
+            // Lấy kết nối DB trực tiếp để chạy lệnh Raw SQL
+            $db = (new \App\Core\ConnectDB())->getConnection();
 
-            // Delete all transactions for this user
-            $success = $transactionModel->deleteAllByUser($userId);
+            // Bắt đầu Transaction
+            $db->beginTransaction();
 
-            if ($success) {
-                Response::successResponse('Đã xóa tất cả dữ liệu');
-            } else {
-                Response::errorResponse('Không thể xóa dữ liệu');
+            // --- QUAN TRỌNG: Tắt kiểm tra khóa ngoại ---
+            $db->exec("SET FOREIGN_KEY_CHECKS = 0");
+
+            // 2. Danh sách các bảng cần dọn dẹp (Dựa trên schema.sql của bạn)
+            // Xóa Giao dịch
+            $db->prepare("DELETE FROM transactions WHERE user_id = ?")->execute([$userId]);
+            
+            // Xóa Mục tiêu
+            $db->prepare("DELETE FROM goals WHERE user_id = ?")->execute([$userId]);
+            
+            // Xóa Ngân sách
+            $db->prepare("DELETE FROM budgets WHERE user_id = ?")->execute([$userId]);
+            
+            // Xóa Ví (Các hũ) - Hoặc có thể UPDATE balance = 0 nếu muốn giữ lại hũ
+            $db->prepare("DELETE FROM user_wallets WHERE user_id = ?")->execute([$userId]);
+            
+            // Reset cài đặt (nếu muốn)
+            // $db->prepare("DELETE FROM user_budget_settings WHERE user_id = ?")->execute([$userId]);
+
+            // --- Bật lại kiểm tra khóa ngoại ---
+            $db->exec("SET FOREIGN_KEY_CHECKS = 1");
+
+            // 3. Khởi tạo lại các ví rỗng (Optional - Để user không bị lỗi hiển thị Dashboard)
+            $codes = ['nec', 'ffa', 'ltss', 'edu', 'play', 'give'];
+            $sqlInit = "INSERT INTO user_wallets (user_id, jar_code, balance) VALUES (?, ?, 0)";
+            foreach ($codes as $code) {
+                $db->prepare($sqlInit)->execute([$userId, $code]);
             }
-        } catch (Exception $e) {
-            Response::errorResponse('Lỗi: ' . $e->getMessage(), null, 500);
+            
+            // Commit thay đổi
+            $db->commit();
+
+            echo json_encode([
+                'status' => 'success', 
+                'success' => true, // Thêm field này để tương thích JS cũ/mới
+                'message' => 'Đã xóa sạch dữ liệu! Tài khoản như mới.'
+            ]);
+            exit;
+
+        } catch (\Throwable $e) { // Dùng Throwable để bắt cả Error và Exception
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            
+            // Trả về JSON lỗi (Không để PHP tự bắn HTML lỗi 500)
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'success' => false,
+                'message' => 'Lỗi Server: ' . $e->getMessage()
+            ]);
+            exit;
         }
     }
 

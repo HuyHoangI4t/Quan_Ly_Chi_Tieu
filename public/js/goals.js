@@ -259,44 +259,94 @@
         }
     }
 
-    // Xử lý Submit Tạo/Sửa Goal
+    
     async function handleFormSubmit(e) {
         e.preventDefault();
-        console.debug('goals.js: handleFormSubmit called; currentGoalId=', currentGoalId);
+        console.debug('goals.js: handleFormSubmit called');
+        
         if (formSending) return;
         formSending = true;
+
         const saveBtn = document.getElementById('btnSaveGoal');
         if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Đang lưu...'; }
 
-        const formData = new FormData(goalForm);
-        const rawAmount = formData.get('target_amount') || '';
-        formData.set('target_amount', String(rawAmount).replace(/[^\d]/g, ''));
-
         try {
-            const url = currentGoalId ? `${window.BASE_URL}/goals/api_update_goal/${currentGoalId}` : `${window.BASE_URL}/goals/api_create_goal`;
-            const response = await fetch(url, { method: 'POST', body: formData });
+            // 1. Lấy dữ liệu CHÍNH XÁC theo ID (Không dùng FormData để tránh sai tên)
+            // Lưu ý: Các ID này phải khớp với HTML của bạn
+            const nameEl = document.getElementById('goalName');
+            const targetEl = document.getElementById('goalTargetAmount');
+            const deadlineEl = document.getElementById('goalDeadline');
+            const colorEl = document.getElementById('goalColor');
+            const currentAmountEl = document.getElementById('goalCurrentAmount'); // Nếu có field này
+
+            // Validate sơ bộ
+            if (!nameEl || !targetEl || !deadlineEl) {
+                throw new Error("Không tìm thấy các trường nhập liệu (ID HTML bị sai). Kiểm tra lại file View.");
+            }
+
+            // 2. Làm sạch số tiền (Xóa dấu chấm, phẩy)
+            const rawTarget = targetEl.value;
+            const cleanTarget = parseInt(rawTarget.replace(/\D/g, '')) || 0;
+            
+            const rawCurrent = currentAmountEl ? currentAmountEl.value : '0';
+            const cleanCurrent = parseInt(rawCurrent.replace(/\D/g, '')) || 0;
+
+            // 3. Đóng gói JSON chuẩn chỉnh (Key phải khớp với PHP Controller)
+            const payload = {
+                name: nameEl.value.trim(),
+                target_amount: cleanTarget,
+                current_amount: cleanCurrent,
+                deadline: deadlineEl.value,
+                color: colorEl ? colorEl.value : '#4e73df' // Màu mặc định nếu không chọn
+            };
+
+            console.log("Dữ liệu gửi đi:", payload); // F12 để xem
+
+            // 4. Xác định URL (Tạo mới hay Cập nhật)
+            const url = currentGoalId 
+                ? `${window.BASE_URL}/goals/api_update_goal/${currentGoalId}` 
+                : `${window.BASE_URL}/goals/api_create_goal`;
+
+            // 5. Gửi Request JSON
+            const response = await fetch(url, { 
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'application/json', // Bắt buộc
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload) 
+            });
+
+            // 6. Xử lý kết quả
             const text = await response.text();
             let result = null;
             try { result = text ? JSON.parse(text) : null; } catch (err) { result = null; }
-            const resp = result || { success: response.ok, message: text };
+            
+            // Nếu không phải JSON, in ra text lỗi để debug
+            if (!result) {
+                console.error("Server trả về lỗi không phải JSON:", text);
+                throw new Error("Lỗi Server: " + text.substring(0, 50) + "...");
+            }
 
-            if (resp.success) {
-                SmartSpending.showToast(resp.message || 'Thành công', 'success');
+            if (response.ok && (result.success || result.status === 'success')) {
+                SmartSpending.showToast(result.message || 'Thành công!', 'success');
+                
                 const modal = bootstrap.Modal.getInstance(goalModalElement);
                 if (modal) modal.hide();
+                
                 setTimeout(() => window.location.reload(), 800);
             } else {
-                SmartSpending.showToast(resp.message || 'Có lỗi xảy ra', 'error');
+                throw new Error(result.message || 'Có lỗi xảy ra (400/500)');
             }
+
         } catch (err) {
             console.error('Error:', err);
-            SmartSpending.showToast('Có lỗi xảy ra khi xử lý yêu cầu', 'error');
+            SmartSpending.showToast(err.message, 'error');
         } finally {
             formSending = false;
             if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Lưu Mục Tiêu'; }
         }
     }
-
     // Delete using Bootstrap confirmation modal
     const deleteModalElement = document.getElementById('deleteGoalModal');
     let deleteModalInstance = null;

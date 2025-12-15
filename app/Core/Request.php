@@ -134,7 +134,21 @@ class Request
 
     public function all(): array
     {
-        return array_merge($_GET, $_POST);
+        $data = array_merge($_GET, $_POST);
+
+        // If request uses JSON body (Content-Type: application/json), merge it too
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+        if ($contentType && stripos($contentType, 'application/json') !== false) {
+            $raw = @file_get_contents('php://input');
+            if ($raw) {
+                $json = json_decode($raw, true);
+                if (is_array($json)) {
+                    $data = array_merge($data, $json);
+                }
+            }
+        }
+
+        return $data;
     }
 
     public function setRouteParams(array $params): void

@@ -16,9 +16,7 @@ class User
     public function createUser($username, $email, $password, $fullName)
     {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-        // Luôn gán role là 'user' khi đăng ký mới
-        $role = 'user';
+        $role = 'user'; // Mặc định là user
 
         $stmt = $this->db->prepare("INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)");
         if ($stmt->execute([$username, $email, $hashedPassword, $fullName, $role])) {
@@ -53,13 +51,6 @@ class User
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Get paginated users with optional search
-     * @param int $limit
-     * @param int $offset
-     * @param string|null $search
-     * @return array
-     */
     public function getUsersPaginated($limit, $offset, $search = null)
     {
         $sql = "SELECT id, username, email, full_name, role, is_active, created_at FROM users";
@@ -73,7 +64,6 @@ class User
         $sql .= " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($sql);
 
-        // bind values (limit/offset as integers)
         $stmt->bindValue(':limit', (int)$limit, \PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, \PDO::PARAM_INT);
 
@@ -85,11 +75,6 @@ class User
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Count users (with optional search)
-     * @param string|null $search
-     * @return int
-     */
     public function countUsers($search = null)
     {
         $sql = "SELECT COUNT(*) as cnt FROM users";
@@ -111,38 +96,31 @@ class User
 
     public function updateUserStatus($userId, $isActive)
     {
+        // Prevent disabling Super Admin
+        if ($this->isSuperAdmin($userId) && $isActive == 0) {
+            return false;
+        }
         $stmt = $this->db->prepare("UPDATE users SET is_active = ? WHERE id = ?");
         return $stmt->execute([$isActive, $userId]);
     }
 
     public function updateUserRole($userId, $role)
     {
-        // Check if user is super admin (cannot be demoted)
-        $checkStmt = $this->db->prepare("SELECT is_super_admin FROM users WHERE id = ?");
-        $checkStmt->execute([$userId]);
-        $user = $checkStmt->fetch(\PDO::FETCH_ASSOC);
-
-        if ($user && $user['is_super_admin'] == 1) {
-            return false; // Cannot change super admin role
+        // FIX: Check ID trực tiếp thay vì cột không tồn tại
+        if ($this->isSuperAdmin($userId)) {
+            return false; // Cannot change role of super admin
         }
 
         $stmt = $this->db->prepare("UPDATE users SET role = ? WHERE id = ?");
         return $stmt->execute([$role, $userId]);
     }
 
-    /**
-     * Check if user is super admin
-     */public function isSuperAdmin($userId)
+    public function isSuperAdmin($userId)
     {
-        // Cách 1: Check hardcode ID admin đầu tiên
-        // Cách 2: Nếu sau này bạn thêm cột is_super_admin vào DB thì đổi lại code cũ
-        $stmt = $this->db->prepare("SELECT id, role FROM users WHERE id = ?");
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
-        // Admin có ID = 1 là Super Admin
-        return $user && $user['role'] === 'admin' && $user['id'] == 1;
+        // Quy ước: ID 1 là Super Admin
+        return (int)$userId === 1;
     }
+
     public function getUserByUsername($username)
     {
         $stmt = $this->db->prepare("SELECT * FROM users WHERE username = ?");
@@ -177,15 +155,8 @@ class User
         return $stmt->execute([$hashedPassword, $userId]);
     }
 
-    /**
-     * Cập nhật cài đặt thông báo (Bước 2)
-     * @param int $userId ID người dùng
-     * @param string $column Tên cột cần update (notify_budget_limit, ...)
-     * @param int $value Giá trị 0 hoặc 1
-     */
     public function updateNotificationSetting($userId, $column, $value)
     {
-        // Đảm bảo tên này khớp y chang Database của bạn
         $allowedColumns = [
             'notify_budget_limit',
             'notify_goal_reminder',
@@ -193,8 +164,6 @@ class User
         ];
 
         if (!in_array($column, $allowedColumns)) {
-            // Thêm log để biết nếu bị chặn ở đây
-            error_log("Security Block: Column '$column' not in whitelist.");
             return false;
         }
 
@@ -203,12 +172,6 @@ class User
         return $stmt->execute([$value, $userId]);
     }
 
-    /**
-     * Update user's avatar URL/path
-     * @param int $userId
-     * @param string $avatarPath
-     * @return bool
-     */
     public function updateAvatar($userId, $avatarPath)
     {
         $stmt = $this->db->prepare("UPDATE users SET avatar = ? WHERE id = ?");

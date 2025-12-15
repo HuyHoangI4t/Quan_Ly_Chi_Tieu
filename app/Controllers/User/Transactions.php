@@ -364,10 +364,11 @@ class Transactions extends Controllers
                 'play' => $settings['play_percent'], 'give' => $settings['give_percent']
             ];
 
-            $sql = "UPDATE user_wallets SET balance = balance + ? WHERE user_id = ? AND jar_code = ?";
+            // Use upsert to create wallet rows if missing
+            $upsert = $this->db->prepare("INSERT INTO user_wallets (user_id, jar_code, balance) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE balance = balance + ?");
             foreach ($jars as $code => $percent) {
                 $val = round($amount * ($percent / 100), 2) * $multiplier;
-                $this->db->prepare($sql)->execute([$val, $userId, $code]);
+                $upsert->execute([$userId, $code, $val, $val]);
             }
         } else {
             // Expense
@@ -378,8 +379,9 @@ class Transactions extends Controllers
             
             if ($jar && $jar !== 'none') {
                 $val = ($isRevert ? $amount : -$amount); // Revert -> Cộng lại, Apply -> Trừ đi
-                $this->db->prepare("UPDATE user_wallets SET balance = balance + ? WHERE user_id = ? AND jar_code = ?")
-                         ->execute([$val, $userId, $jar]);
+                // Use upsert to ensure row exists; this will add negative balance if necessary
+                $upsertExp = $this->db->prepare("INSERT INTO user_wallets (user_id, jar_code, balance) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE balance = balance + ?");
+                $upsertExp->execute([$userId, $jar, $val, $val]);
             }
         }
     }

@@ -14,21 +14,21 @@ class DashboardService
 
     public function getDashboardData($userId, $range = 'this_month')
     {
-        // 1. Determine Current and Previous Date Ranges using FinancialUtils
+        // 1. Determine Current and Previous Date Ranges
         list($startDate, $endDate, $prevStartDate, $prevEndDate) = FinancialUtils::getPeriodDates($range);
 
         // 2. Get Totals for Both Periods
         $currentTotals = $this->transactionModel->getTotalsForPeriod($userId, $startDate, $endDate);
         $previousTotals = $this->transactionModel->getTotalsForPeriod($userId, $prevStartDate, $prevEndDate);
 
-        // 3. Calculate Trends using FinancialUtils
+        // 3. Calculate Trends
         $incomeTrend = FinancialUtils::calculatePercentageChange($previousTotals['income'], $currentTotals['income']);
         $expenseTrend = FinancialUtils::calculatePercentageChange($previousTotals['expense'], $currentTotals['expense']);
         
         // Get Total Balance
         $totalBalance = $this->transactionModel->getTotalBalance($userId);
 
-        // Calculate savings rate using FinancialUtils
+        // Calculate savings rate
         $currentSavingsRate = FinancialUtils::calculateSavingsRate($currentTotals['income'], $currentTotals['expense']);
         $previousSavingsRate = FinancialUtils::calculateSavingsRate($previousTotals['income'], $previousTotals['expense']);
         $savingsRateTrend = $currentSavingsRate - $previousSavingsRate;
@@ -46,7 +46,7 @@ class DashboardService
         // --- Get Recent Transactions ---
         $recentTransactions = $this->transactionModel->getRecentTransactions($userId);
 
-        // --- Get Data for Pie Chart (Category Breakdown for current period) ---
+        // --- Get Data for Pie Chart ---
         $pieChartData = $this->transactionModel->getCategoryBreakdown($userId, $startDate, $endDate, 'expense');
 
         // Calculate Remaining Balance for Pie Chart
@@ -61,7 +61,7 @@ class DashboardService
         // --- 4. Get Data for Line Chart ---
         $lineChartData = $this->transactionModel->getLineChartData($userId);
 
-        // Calculate Net Income and Trend Class for View
+        // Calculate Net Income and Trend Class
         $netIncome = $totals['income'] - $totals['expense'];
         $netTrendClass = ($netIncome >= 0) ? 'up' : 'down';
         
