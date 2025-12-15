@@ -309,8 +309,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 SmartSpending.showToast(`Lỗi khi tải lên: ${err.message || err}`, 'error');
             });
         });
+
     } catch (e) {
         // swallow errors silently to avoid breaking other pages
         console.error('Avatar upload init error', e);
     }
 });
+

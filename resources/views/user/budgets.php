@@ -139,9 +139,7 @@ $this->partial('header');
                 </div>
             </div>
             <div class="d-flex gap-2">
-                <button id="openIncomeModal" class="btn btn-success shadow-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#incomeDistributeModal">
-                    <i class="fas fa-hand-holding-usd me-2"></i>Nạp tiền
-                </button>
+                <!-- "Nạp tiền" button removed per request -->
 
                 <button id="editSmartRatiosBtn" class="btn btn-outline-primary bg-white shadow-sm fw-medium" data-bs-toggle="modal" data-bs-target="#smartBudgetModal">
                     <i class="fas fa-sliders-h me-2"></i>Cấu hình
@@ -343,37 +341,7 @@ $this->partial('header');
         </div>
     </div>
 
-    <div class="modal fade" id="incomeDistributeModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header border-0 bg-success text-white rounded-top-4 px-4 py-3">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-coins me-2"></i>Phân bổ Thu nhập</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="mb-4 text-center">
-                        <label class="form-label text-muted small text-uppercase fw-bold">Nhập tổng thu nhập</label>
-                        <div class="input-group input-group-lg border rounded-3 overflow-hidden shadow-sm">
-                            <span class="input-group-text bg-white border-0 ps-3 text-success fw-bold">₫</span>
-                            <input type="text" class="form-control border-0 fw-bold text-success fs-2 text-center"
-                                id="incomeAmountInput" placeholder="0" onkeyup="SmartSpending.previewIncome(this)">
-                        </div>
-                    </div>
-
-                    <h6 class="fw-bold text-dark mb-3 small text-uppercase border-bottom pb-2">Dự kiến phân bổ</h6>
-                    <div class="row g-2" id="incomePreviewList">
-                        <div class="text-center text-muted py-3 small">Nhập số tiền để xem phân bổ</div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 px-4 pb-4">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-success px-4 fw-bold" id="confirmDistributeBtn" onclick="SmartSpending.submitIncome()">
-                        <i class="fas fa-check me-2"></i>Xác nhận Nạp
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Income distribution modal removed -->
 
 </main>
 
@@ -384,5 +352,101 @@ $this->partial('header');
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="<?php echo BASE_URL; ?>/js/budgets.js"></script>
 <script src="<?php echo BASE_URL; ?>/js/smart-budget.js"></script>
+
+<?php $this->partial('footer'); ?>
+<style>
+    #toast-container {
+        position: fixed;
+        top: 80px; /* Thấp xuống xíu để không che Header */
+        right: 20px;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .custom-toast {
+        min-width: 300px;
+        background: #fff;
+        border-left: 5px solid #28a745;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        animation: slideInRight 0.4s ease forwards;
+        opacity: 0;
+        transform: translateX(100%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .custom-toast.show { opacity: 1; transform: translateX(0); }
+    
+    .custom-toast.toast-success { border-color: #28a745; }
+    .custom-toast.toast-success i { color: #28a745; }
+    
+    .custom-toast.toast-error { border-color: #dc3545; }
+    .custom-toast.toast-error i { color: #dc3545; }
+    
+    .custom-toast.toast-warning { border-color: #ffc107; }
+    .custom-toast.toast-warning i { color: #ffc107; }
+
+    .toast-content { display: flex; align-items: center; gap: 12px; font-weight: 600; color: #333; }
+    .toast-close { cursor: pointer; color: #aaa; transition: 0.2s; }
+    .toast-close:hover { color: #000; }
+
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(100%); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+</style>
+
+<script>
+    // Đảm bảo object SmartSpending tồn tại
+    if (typeof window.SmartSpending === 'undefined') window.SmartSpending = {};
+
+    // Định nghĩa hàm showToast ngay tại đây để chắc chắn nó chạy
+    window.SmartSpending.showToast = function(message, type = 'success') {
+        // Tạo container nếu chưa có
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        // Icon tương ứng
+        let icon = 'fa-check-circle';
+        if(type === 'error') icon = 'fa-times-circle';
+        if(type === 'warning') icon = 'fa-exclamation-triangle';
+
+        // Tạo phần tử Toast
+        const toast = document.createElement('div');
+        toast.className = `custom-toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${icon} fa-lg"></i>
+                <span>${message}</span>
+            </div>
+            <i class="fas fa-times toast-close" onclick="this.parentElement.remove()"></i>
+        `;
+
+        container.appendChild(toast);
+
+        // Kích hoạt animation hiện ra
+        setTimeout(() => toast.classList.add('show'), 10);
+
+        // Tự động xóa sau 3s
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 400);
+        }, 3000);
+    };
+
+    console.log("✅ Toast System Loaded Successfully!");
+</script>
+
+<script src="<?php echo BASE_URL; ?>/js/smart-budget.js"></script>
+<script src="<?php echo BASE_URL; ?>/js/budgets.js"></script>
 
 <?php $this->partial('footer'); ?>

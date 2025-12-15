@@ -31,13 +31,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             const response = await fetch(`${BASE_URL}/transactions/api_get_transactions?${params}`);
-            
+
             // Xử lý an toàn khi response không phải JSON
             const text = await response.text();
             let data = null;
-            try { 
-                data = JSON.parse(text); 
-            } catch (e) { 
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
                 console.error("Server response is not JSON:", text);
                 data = null;
             }
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 console.warn("Load transactions failed:", respData);
                 // Nếu lỗi, hiển thị bảng trống thay vì crash
-                renderTransactions([]); 
+                renderTransactions([]);
                 if (respData.message) SmartSpending.showToast(respData.message, 'error');
             }
         } catch (error) {
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (startPage > 1) {
             paginationHTML = paginationHTML.replace('<ul', `<ul`);
             // prepend first page + ellipsis
-                const prefix = `
+            const prefix = `
                 <li class="page-item ${1 === pagination.current_page ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" data-page="1" role="button" tabindex="0">1</a></li>
                 <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
             `;
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (this.parentElement.classList.contains('disabled')) return;
 
                 // Remove focus from the clicked link to avoid browser auto-scrolling it into view
-                try { this.blur(); } catch (err) {}
+                try { this.blur(); } catch (err) { }
 
                 const page = parseInt(this.dataset.page);
                 if (page > 0 && page <= pagination.total_pages) {
@@ -365,97 +365,83 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
     /**
-     * Attach event listeners to transaction buttons
-     */
+         * Gắn sự kiện Xóa và Sửa giao dịch (Đã Fix lỗi data/json)
+         */
     function attachTransactionListeners() {
         const tbody = document.querySelector('.transactions-table tbody');
         if (!tbody) return;
 
-        // Avoid attaching multiple delegation handlers
         if (tbody.dataset.listenerAttached === '1') return;
         tbody.dataset.listenerAttached = '1';
 
         tbody.addEventListener('click', function (e) {
+            // --- XÓA ---
             const deleteBtn = e.target.closest('.btn-delete-transaction');
             if (deleteBtn) {
                 e.preventDefault();
                 const transactionId = deleteBtn.dataset.id;
 
-                SmartSpending.showConfirm(
-                    'Xóa Giao Dịch?',
-                    'Bạn có chắc chắn muốn xóa giao dịch này? Hành động này không thể hoàn tác.',
-                    () => {
-                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                SmartSpending.showConfirm('Xóa Giao Dịch?', 'Hành động này không thể hoàn tác.', () => {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    (async () => {
+                        try {
+                            const response = await fetch(`${BASE_URL}/transactions/api_delete/${transactionId}`, {
+                                method: 'POST',
+                                headers: { 'X-CSRF-Token': csrfToken }
+                            });
 
-                        (async () => {
-                            try {
-                                const response = await fetch(`${BASE_URL}/transactions/api_delete/${transactionId}`, {
-                                    method: 'POST',
-                                    headers: {
-                                        'X-CSRF-Token': csrfToken
-                                    }
-                                });
+                            const text = await response.text();
+                            let json = null;
+                            try { json = JSON.parse(text); } catch (e) { }
 
-                                const text = await response.text();
-                                let json = null;
-                                try { json = text ? JSON.parse(text) : null; } catch (err) { json = null; }
-                                const respData = data || { success: response.ok, message: text };
+                            // [FIX LỖI] Dùng biến json vừa parse
+                            const respData = json || { success: false, message: text };
 
-                                // Defensive: ensure respData.data exists when success is true
-                                if (respData.success && !respData.data) {
-                                    console.warn('loadTransactions: success response missing data, full response:', respData, 'rawText:', text);
-                                    // normalize to safe defaults to avoid exceptions
-                                    respData.data = { transactions: [], pagination: { total_pages: 1, current_page: 1, has_prev: false, has_next: false } };
-                                }
-
-                                if (respData.success) {
-                                    const transactionsList = (respData.data && Array.isArray(respData.data.transactions)) ? respData.data.transactions : [];
-                                    const paginationObj = (respData.data && respData.data.pagination) ? respData.data.pagination : { total_pages: 1, current_page: 1, has_prev: false, has_next: false };
-
-                                    renderTransactions(transactionsList);
-                                    renderPagination(paginationObj);
-                                    SmartSpending.showToast(respData.message || 'Không thể xóa giao dịch', 'error');
-                                }
-                            } catch (error) {
-                                console.error('Error deleting transaction:', error);
-                                SmartSpending.showToast('Lỗi khi xóa giao dịch', 'error');
+                            if (respData.success) {
+                                SmartSpending.showToast(respData.message || 'Đã xóa!', 'success');
+                                loadTransactions(false);
+                            } else {
+                                SmartSpending.showToast(respData.message || 'Lỗi xóa', 'error');
                             }
-                        })();
-                    }
-                );
-
+                        } catch (error) {
+                            console.error(error);
+                            SmartSpending.showToast('Lỗi kết nối', 'error');
+                        }
+                    })();
+                });
                 return;
             }
 
+            // --- SỬA ---
             const editBtn = e.target.closest('.btn-edit-transaction');
             if (editBtn) {
                 const editForm = document.getElementById('editTransactionForm');
                 if (!editForm) return;
 
-                const amountInput = document.getElementById('edit_amount');
-                const rawAmount = editBtn.dataset.amount;
-
                 document.getElementById('edit_transaction_id').value = editBtn.dataset.id;
 
-                // Set amount and trigger input event to format it
+                // Fill số tiền & kích hoạt format
+                const amountInput = document.getElementById('edit_amount');
                 if (amountInput) {
-                    amountInput.value = rawAmount;
-                    amountInput.dataset.numericValue = rawAmount;
+                    amountInput.value = editBtn.dataset.amount;
                     amountInput.dispatchEvent(new Event('input'));
                 }
 
-                const editTypeEl = document.getElementById('edit_type');
-                const editDateEl = document.getElementById('edit_date');
-                const editDescEl = document.getElementById('edit_description');
-                const editCategoryEl = document.getElementById('edit_category_id');
+                // Fill thông tin khác
+                const fields = ['type', 'date', 'description'];
+                fields.forEach(f => {
+                    const el = document.getElementById('edit_' + f);
+                    if (el) {
+                        el.value = editBtn.dataset[f];
+                        if (f === 'type') el.dispatchEvent(new Event('change'));
+                    }
+                });
 
-                if (editTypeEl) editTypeEl.value = editBtn.dataset.type;
-                if (editDateEl) editDateEl.value = editBtn.dataset.date;
-                if (editDescEl) editDescEl.value = editBtn.dataset.description;
-
-                // Set category and trigger type change to filter categories
-                if (editTypeEl) editTypeEl.dispatchEvent(new Event('change'));
-                if (editCategoryEl) editCategoryEl.value = editBtn.dataset.category;
+                // Chọn category (delay nhẹ để list load xong nếu có)
+                setTimeout(() => {
+                    const catEl = document.getElementById('edit_category_id');
+                    if (catEl) catEl.value = editBtn.dataset.category;
+                }, 50);
             }
         });
     }
@@ -539,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Gọi hàm gửi dữ liệu (lần 1 - chưa confirm)
             submitTransaction(data, false).finally(() => {
                 // clear sending flag in case submitTransaction didn't (safety)
-                try { delete addTransactionForm.dataset.sending; } catch(e){}
+                try { delete addTransactionForm.dataset.sending; } catch (e) { }
                 if (immediateSubmitBtn) immediateSubmitBtn.disabled = false;
             });
         });
@@ -564,14 +550,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify(data)
             });
 
-                // Disable submit button to prevent duplicate requests (redundant safety)
-                const submitBtn = document.querySelector('#addTransactionForm button[type=submit]');
-                if (submitBtn) submitBtn.disabled = true;
+            // Disable submit button to prevent duplicate requests (redundant safety)
+            const submitBtn = document.querySelector('#addTransactionForm button[type=submit]');
+            if (submitBtn) submitBtn.disabled = true;
 
-                const text = await response.text();
-                console.log('transactions/api_add status:', response.status, 'body:', text);
-                let respData = null;
-                try { respData = text ? JSON.parse(text) : null; } catch (e) { respData = null; }
+            const text = await response.text();
+            console.log('transactions/api_add status:', response.status, 'body:', text);
+            let respData = null;
+            try { respData = text ? JSON.parse(text) : null; } catch (e) { respData = null; }
 
             // --- XỬ LÝ LOGIC MỚI ---
 
@@ -632,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Re-enable submit button
             if (submitBtn) submitBtn.disabled = false;
-            try { delete addTransactionForm.dataset.sending; } catch(e){}
+            try { delete addTransactionForm.dataset.sending; } catch (e) { }
 
         } catch (error) {
             console.error('Error:', error);

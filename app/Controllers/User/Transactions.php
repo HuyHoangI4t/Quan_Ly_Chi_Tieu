@@ -280,6 +280,51 @@ class Transactions extends Controllers
         }
     }
 
+    /**
+     * API: Chuyển tiền giữa các hũ (transfer jar)
+     * POST payload: { from: 'play', to: 'nec', amount: 100000 }
+     */
+    public function api_transfer_jar()
+    {
+        if ($this->request->method() !== 'POST') {
+            Response::errorResponse('Method Not Allowed', null, 405);
+            return;
+        }
+
+        try {
+            CsrfProtection::verify();
+            $userId = $this->getCurrentUserId();
+            $payload = $this->request->json();
+
+            $from = isset($payload['from']) ? trim($payload['from']) : null;
+            $to = isset($payload['to']) ? trim($payload['to']) : null;
+            $amount = isset($payload['amount']) ? floatval($payload['amount']) : 0;
+
+            $validJars = ['nec','ffa','ltss','edu','play','give'];
+            if (!$from || !$to || $from === $to) {
+                Response::errorResponse('Tham số không hợp lệ');
+                return;
+            }
+            if (!in_array($from, $validJars) || !in_array($to, $validJars)) {
+                Response::errorResponse('Mã hũ không hợp lệ');
+                return;
+            }
+            if ($amount <= 0) {
+                Response::errorResponse('Số tiền phải lớn hơn 0');
+                return;
+            }
+
+            $res = $this->transferBetweenJars($userId, $from, $to, $amount);
+            if ($res['success']) {
+                Response::successResponse('Chuyển tiền thành công', ['jar_updates' => $this->getJarUpdates($userId, date('Y-m-d'))]);
+            } else {
+                Response::errorResponse($res['message'] ?? 'Không thể chuyển tiền');
+            }
+        } catch (\Exception $e) {
+            Response::errorResponse('Lỗi: ' . $e->getMessage());
+        }
+    }
+
     // --- CÁC HÀM HELPER (Private/Protected) ---
 
     protected function createTransaction($userId, $data)
@@ -339,9 +384,68 @@ class Transactions extends Controllers
         }
     }
 
+    /**
+     * Helper: transfer money between jars atomically
+     * Returns ['success'=>bool, 'message'=>string]
+     */
+    private function transferBetweenJars($userId, $fromJar, $toJar, $amount)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Lock both rows for update (ensure deterministic order to avoid deadlocks)
+            $ordered = [$fromJar, $toJar];
+            sort($ordered);
+            $balances = [];
+            $stmt = $this->db->prepare("SELECT jar_code, balance FROM user_wallets WHERE user_id = ? AND jar_code = ? FOR UPDATE");
+            foreach ($ordered as $code) {
+                $stmt->execute([$userId, $code]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $balances[$code] = $row ? floatval($row['balance']) : 0.0;
+            }
+
+            $fromBalance = $balances[$fromJar] ?? 0.0;
+            if ($fromBalance < $amount) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Số dư Hũ ' . strtoupper($fromJar) . ' không đủ'];
+            }
+
+            // Update balances
+            $up = $this->db->prepare("INSERT INTO user_wallets (user_id, jar_code, balance) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE balance = ?");
+            // subtract from source
+            $newFrom = $fromBalance - $amount;
+            $up->execute([$userId, $fromJar, $newFrom, $newFrom]);
+
+            $toBalance = $balances[$toJar] ?? 0.0;
+            $newTo = $toBalance + $amount;
+            $up->execute([$userId, $toJar, $newTo, $newTo]);
+
+            $this->db->commit();
+            return ['success' => true];
+        } catch (\Exception $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
     private function getJarUpdates($userId, $date)
     {
-        // Trả về null để FE tự reload dashboard nếu cần, hoặc code logic lấy số dư mới tại đây
-        return null; 
+        try {
+            $stmt = $this->db->prepare("SELECT jar_code, balance FROM user_wallets WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $defaults = ['nec' => 0, 'ffa' => 0, 'ltss' => 0, 'edu' => 0, 'play' => 0, 'give' => 0];
+            foreach ($rows as $r) {
+                $code = $r['jar_code'] ?? null;
+                if ($code && array_key_exists($code, $defaults)) {
+                    $defaults[$code] = floatval($r['balance']);
+                }
+            }
+
+            return $defaults;
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

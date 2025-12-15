@@ -35,30 +35,55 @@ var SmartSpending = window.SmartSpending;
         }
     }
 
-    if(saveBtn) {
-        saveBtn.addEventListener('click', async () => {
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async (ev) => {
+            try { ev.preventDefault(); ev.stopPropagation(); } catch (e) { /* ignore */ }
+
             let vals = {};
-            keys.forEach(k => vals[k] = parseInt(inputs[k].value));
-            
+            keys.forEach(k => vals[k] = parseInt(inputs[k]?.value || 0));
+
             saveBtn.disabled = true; saveBtn.innerHTML = 'Đang lưu...';
+            const modalEl = document.getElementById('smartBudgetModal');
+            const modalInstance = (modalEl && typeof bootstrap !== 'undefined') ? bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+
             try {
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
                 const resRaw = await fetch(`${BASE_URL}/budgets/api_update_ratios`, {
                     method: 'POST',
                     credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
                     body: JSON.stringify(Object.assign({}, vals, { csrf_token: csrf }))
                 });
-                const res = await (async () => { try { return await resRaw.json(); } catch(e) { return { success:false, message:'Invalid JSON response' }; } })();
 
-                if(res.success) {
-                    alert('Đã lưu cấu hình!');
-                    window.location.reload();
-                } else {
-                    alert('Lỗi: ' + res.message);
+                const ctype = (resRaw.headers && resRaw.headers.get) ? (resRaw.headers.get('content-type') || '') : '';
+                if (!ctype.includes('application/json')) {
+                    const txt = await resRaw.text();
+                    if ((txt || '').trim().startsWith('<')) {
+                        SmartSpending.showModal('Phiên đăng nhập có thể đã hết hạn. Bạn sẽ được chuyển tới trang đăng nhập.', 'Phiên hết hạn', 'error', false);
+                        setTimeout(() => window.location.href = `${BASE_URL}/auth/login`, 1400);
+                        return;
+                    }
                 }
-            } catch(e) { alert('Lỗi hệ thống'); }
-            finally { saveBtn.disabled = false; saveBtn.innerHTML = 'Lưu Cấu Hình'; }
+
+                let res;
+                try { res = await resRaw.json(); } catch (e) { res = { success: false, message: 'Invalid JSON response' }; }
+
+                if (res.success) {
+                    SmartSpending.showModal('Đã lưu cấu hình!', 'Thành công', 'success', false);
+                    // hide modal after success
+                    if (modalInstance && typeof modalInstance.hide === 'function') {
+                        setTimeout(() => modalInstance.hide(), 200);
+                    }
+                    try { window.dispatchEvent(new CustomEvent('smartbudget:ratios_updated', { detail: vals })); } catch (e) {}
+                } else {
+                    SmartSpending.showModal('Lỗi: ' + (res.message || 'Không lưu được'), 'Lỗi', 'error', false);
+                }
+            } catch (e) {
+                console.error('Error saving ratios', e);
+                SmartSpending.showModal('Lỗi hệ thống khi lưu cấu hình', 'Lỗi', 'error', false);
+            } finally {
+                saveBtn.disabled = false; saveBtn.innerHTML = 'Lưu Cấu Hình';
+            }
         });
     }
 
@@ -108,7 +133,7 @@ var SmartSpending = window.SmartSpending;
         const amount = input.value.replace(/\D/g, '');
         const btn = document.getElementById('confirmDistributeBtn');
         
-        if(!amount || amount <= 0) { alert('Vui lòng nhập số tiền!'); return; }
+        if(!amount || amount <= 0) { SmartSpending.showModal('Vui lòng nhập số tiền!', 'Lỗi', 'error', false); return; }
         
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang chia tiền...';
         
@@ -126,14 +151,14 @@ var SmartSpending = window.SmartSpending;
             const res = await (async () => { try { return await resRaw.json(); } catch(e) { return { success:false, message:'Invalid JSON response' }; } })();
 
             if(res.success) {
-                alert('Đã phân bổ thành công!');
-                window.location.reload();
+                SmartSpending.showModal('Đã phân bổ thành công!', 'Thành công', 'success', false);
+                setTimeout(() => window.location.reload(), 500);
             } else {
-                alert('Lỗi: ' + res.message);
+                SmartSpending.showModal('Lỗi: ' + res.message, 'Lỗi', 'error', false);
             }
         } catch(e) {
             console.error(e);
-            alert('Lỗi kết nối server');
+            SmartSpending.showModal('Lỗi kết nối server', 'Lỗi', 'error', false);
         } finally {
             btn.disabled = false; btn.innerHTML = '<i class="fas fa-check me-2"></i>Xác nhận Nạp';
         }

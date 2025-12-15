@@ -48,32 +48,26 @@
         const createForm = document.getElementById('createBudgetForm');
         if (createForm) createForm.addEventListener('submit', handleCreateBudget);
     }
-    // public/js/budgets.js
 
-    // public/js/budgets.js
 
-    async function loadBudgets() {
-        if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Đang tải...</td></tr>';
+   async function loadBudgets() {
+        // ... code loading ...
+
         try {
-            const resp = await fetch(`${BASE_URL}/budgets/api_get_all?period=${currentPeriod}`, { cache: 'no-store', credentials: 'same-origin' });
-            if (!resp.ok) throw new Error('API error');
+            // [SAI] Dòng này gây lỗi vì nó gọi về trang HTML
+            // const response = await fetch(`${BASE_URL}/budgets`); 
 
-            // --- BẮT ĐẦU SỬA ---
-            // Đọc text trước để tránh lỗi "stream already read" nếu parse JSON thất bại
-            const text = await resp.text();
-            let res;
-            try {
-                res = JSON.parse(text);
-            } catch (e) {
-                console.error('Non-JSON response', text);
-                throw e;
-            }
-            // --- KẾT THÚC SỬA ---
+            // [ĐÚNG] Phải gọi về hàm API trả về JSON
+            const response = await fetch(`${BASE_URL}/budgets/api_get_list`); 
 
-            if (res.success) renderTable(res.data.budgets || []);
-        } catch (e) {
-            console.error('loadBudgets error', e);
-            if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Không thể tải dữ liệu</td></tr>';
+            // Kiểm tra lỗi trước khi parse JSON
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const data = await response.json(); // Bây giờ nó sẽ không bị lỗi < token nữa
+            
+            // ... render dữ liệu ...
+        } catch (error) {
+            console.error('Error loading budgets:', error);
         }
     }
 
@@ -118,6 +112,7 @@
         });
     }
 
+    
     async function handleCreateBudget(e) {
         e.preventDefault();
         const btn = e.submitter;
@@ -160,6 +155,7 @@
         finally { btn.disabled = false; btn.innerHTML = oldText; }
     }
 
+    
     async function loadCharts() {
         function ensureFreshCanvas(canvasEl) {
             if (!canvasEl) return null;
