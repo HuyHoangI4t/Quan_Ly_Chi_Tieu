@@ -4,8 +4,8 @@ namespace App\Controllers\User;
 
 use App\Core\Controllers;
 use App\Core\Response;
-use App\Core\ConnectDB;
-use App\Middleware\AuthCheck;
+use App\Core\SessionManager;
+use App\Models\Budget;
 use App\Middleware\CsrfProtection;
 
 class Budgets extends Controllers
@@ -15,112 +15,46 @@ class Budgets extends Controllers
     public function __construct()
     {
         parent::__construct();
-        AuthCheck::requireUser();
-        $this->budgetModel = $this->model('Budget');
+        $this->budgetModel = new Budget();
     }
 
-    /**
-     * Trang danh sách ngân sách
-     */
+    // ... (Giữ nguyên hàm index cũ của bạn nếu có) ...
     public function index()
     {
         $userId = $this->getCurrentUserId();
 
-        $budgets = $this->budgetModel->getBudgetsWithSpending($userId, 'monthly');
-        $summary = $this->budgetModel->getSummary($userId, 'monthly');
-        $alerts = $this->budgetModel->getAlerts($userId, 'monthly');
+        // Load model Category để lấy danh sách
+        $categoryModel = new \App\Models\Category(); // Hoặc $this->model('Category') nếu có base controller hỗ trợ
+        $categories = $categoryModel->getAll($userId);
 
-        $categoryModel = $this->model('Category');
-        $categories = $categoryModel ? $categoryModel->getAll($userId) : [];
-
-        $data = [
-            'title' => 'Ngân Sách',
-            'budgets' => $budgets,
-            'summary' => $summary,
-            'alerts' => $alerts,
-            'categories' => $categories,
-            'csrf_token' => CsrfProtection::generateToken()
-        ];
-
-        $this->view('user/budgets', $data);
+        $this->view('user/budgets', [
+            'title' => 'Quản lý ngân sách',
+            'categories' => $categories // <-- Quan trọng: Truyền biến này xuống view
+        ]);
     }
 
     /**
-     * API: Phân bổ thu nhập vào 6 hũ (VIP PRO LOGIC)
+     * API: Lấy danh sách ngân sách
+     * URL: /budgets/api_get_all?period=monthly
      */
-    public function api_distribute_income()
+    public function api_get_all()
     {
-        if ($this->request->method() !== 'POST') {
-            Response::errorResponse('Method Not Allowed', null, 405);
-            return;
-        }
+        $userId = $this->getCurrentUserId();
+        $period = isset($_GET['period']) ? $_GET['period'] : 'monthly';
 
-        $userId = $this->request->session('user_id');
-        if (!$userId) {
-            Response::errorResponse('Unauthorized', null, 401);
-            return;
-        }
-
-        $data = $this->request->json();
-        $amount = isset($data['amount']) ? floatval($data['amount']) : 0;
-
-        if ($amount <= 0) {
-            Response::errorResponse('Số tiền phải lớn hơn 0');
-            return;
-        }
-
-        $db = (new ConnectDB())->getConnection();
-
-        try {
-            $db->beginTransaction();
-
-            // 1. Lấy cấu hình tỷ lệ hiện tại
-            $stmt = $db->prepare("SELECT * FROM user_budget_settings WHERE user_id = ?");
-            $stmt->execute([$userId]);
-            $settings = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-            // Nếu chưa có, tạo mặc định
-            if (!$settings) {
-                $settings = ['nec_percent'=>55, 'ffa_percent'=>10, 'ltss_percent'=>10, 'edu_percent'=>10, 'play_percent'=>10, 'give_percent'=>5];
-                // Insert default (Optional)
-            }
-
-            // 2. Chia tiền vào các hũ
-            $jars = ['nec', 'ffa', 'ltss', 'edu', 'play', 'give'];
-            $sqlWallet = "INSERT INTO user_wallets (user_id, jar_code, balance) VALUES (?, ?, ?) 
-                          ON DUPLICATE KEY UPDATE balance = balance + VALUES(balance)";
-            $stmtWallet = $db->prepare($sqlWallet);
-
-            foreach ($jars as $jar) {
-                $percent = $settings[$jar . '_percent'] ?? 0;
-                $jarAmount = $amount * ($percent / 100);
-                
-                if ($jarAmount > 0) {
-                    $stmtWallet->execute([$userId, $jar, $jarAmount]);
-                }
-            }
-
-            // 3. Ghi lại lịch sử giao dịch (Transaction)
-            // Lấy ID danh mục Lương (ID 16 - Check lại DB xem đúng ID chưa)
-            $salaryCatId = 16; 
-            
-            $sqlTrans = "INSERT INTO transactions (user_id, category_id, amount, date, description, type) VALUES (?, ?, ?, CURDATE(), ?, 'income')";
-            $stmtTrans = $db->prepare($sqlTrans);
-            $stmtTrans->execute([$userId, $salaryCatId, $amount, 'Phân bổ thu nhập JARS']);
-
-            $db->commit();
-            Response::successResponse('Đã phân bổ thu nhập thành công!');
-
-        } catch (\Exception $e) {
-            $db->rollBack();
-            Response::errorResponse('Lỗi hệ thống: ' . $e->getMessage());
-        }
+        // Gọi đúng tên hàm trong Model: getBudgetsWithSpending
+        $budgets = $this->budgetModel->getBudgetsWithSpending($userId, $period);
+        
+        Response::successResponse('Lấy dữ liệu thành công', [
+            'budgets' => $budgets
+        ]);
     }
 
     /**
-     * API: Cập nhật tỷ lệ 6 hũ (nec, ffa, ltss, edu, play, give)
+     * API: Tạo ngân sách mới
+     * URL: /budgets/api_create
      */
-    public function api_update_ratios()
+    public function api_create()
     {
         if ($this->request->method() !== 'POST') {
             Response::errorResponse('Method Not Allowed', null, 405);
@@ -135,36 +69,120 @@ class Budgets extends Controllers
         }
 
         $userId = $this->getCurrentUserId();
-        if (!$userId) {
-            Response::errorResponse('Unauthorized', null, 401);
-            return;
-        }
-
         $data = $this->request->json();
-        $keys = ['nec','ffa','ltss','edu','play','give'];
-        $vals = [];
-        $total = 0;
-        foreach ($keys as $k) {
-            $v = isset($data[$k]) ? intval($data[$k]) : 0;
-            $vals[$k] = $v;
-            $total += $v;
-        }
 
-        if ($total !== 100) {
-            Response::errorResponse('Tổng tỷ lệ phải bằng 100%');
+        // Validate dữ liệu đầu vào
+        $categoryId = $data['category_id'] ?? null;
+        $amount = $data['amount'] ?? 0;
+        $period = $data['period'] ?? 'monthly';
+
+        if (!$categoryId || $amount <= 0) {
+            Response::errorResponse('Vui lòng nhập danh mục và số tiền hợp lệ');
             return;
         }
 
-        // Persist using Budget model helper
-        try {
-            $ok = $this->budgetModel->updateUserSmartSettings($userId, $vals['nec'], $vals['ffa'], $vals['ltss'], $vals['edu'], $vals['play'], $vals['give']);
-            if ($ok) {
-                Response::successResponse('Đã lưu cấu hình');
-                return;
-            }
-            Response::errorResponse('Không thể lưu cấu hình');
-        } catch (\Exception $e) {
-            Response::errorResponse('Lỗi hệ thống: ' . $e->getMessage());
+        // Tính toán ngày bắt đầu/kết thúc dựa trên period (Logic khớp với Model)
+        $now = new \DateTime();
+        $startDate = '';
+        $endDate = '';
+        
+        switch ($period) {
+            case 'weekly':
+                $startDate = (clone $now)->modify('monday this week')->format('Y-m-d');
+                $endDate = (clone $now)->modify('sunday this week')->format('Y-m-d');
+                break;
+            case 'yearly':
+                $startDate = $now->format('Y-01-01');
+                $endDate = $now->format('Y-12-31');
+                break;
+            case 'daily':
+                $startDate = $now->format('Y-m-d');
+                $endDate = $now->format('Y-m-d');
+                break;
+            case 'monthly':
+            default:
+                $startDate = $now->format('Y-m-01');
+                $endDate = $now->format('Y-m-t');
+                break;
         }
+
+        // Chuẩn bị dữ liệu để gọi hàm create($data) của Model
+        $budgetData = [
+            'user_id' => $userId,
+            'category_id' => $categoryId,
+            'amount' => $amount,
+            'period' => $period,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'alert_threshold' => 80, // Mặc định cảnh báo ở 80%
+            'is_active' => 1
+        ];
+
+        try {
+            // Gọi đúng tên hàm trong Model: create
+            $newId = $this->budgetModel->create($budgetData);
+            
+            if ($newId) {
+                Response::successResponse('Tạo ngân sách thành công', ['id' => $newId]);
+            } else {
+                Response::errorResponse('Lỗi hệ thống khi tạo ngân sách');
+            }
+        } catch (\Exception $e) {
+            // Model ném Exception nếu ngân sách đã tồn tại
+            Response::errorResponse($e->getMessage());
+        }
+    }
+
+    /**
+     * API: Xóa ngân sách
+     * URL: /budgets/api_delete/{id}
+     */
+    public function api_delete($id)
+    {
+        if ($this->request->method() !== 'POST') {
+            Response::errorResponse('Method Not Allowed', null, 405);
+            return;
+        }
+        
+        try {
+            CsrfProtection::verify();
+        } catch (\Exception $e) {
+            Response::errorResponse('CSRF token invalid', null, 403);
+            return;
+        }
+
+        $userId = $this->getCurrentUserId();
+
+        // Kiểm tra quyền sở hữu trước khi xóa (Bảo mật)
+        $budget = $this->budgetModel->getById($id);
+        if (!$budget || $budget['user_id'] != $userId) {
+            Response::errorResponse('Ngân sách không tồn tại hoặc bạn không có quyền xóa');
+            return;
+        }
+        
+        // Gọi đúng tên hàm trong Model: delete
+        $deleted = $this->budgetModel->delete($id);
+
+        if ($deleted) {
+            Response::successResponse('Đã xóa ngân sách');
+        } else {
+            Response::errorResponse('Không thể xóa ngân sách này');
+        }
+    }
+
+    /**
+     * API: Lấy dữ liệu biểu đồ xu hướng
+     * URL: /budgets/api_get_trend
+     */
+    public function api_get_trend()
+    {
+        $userId = $this->getCurrentUserId();
+        
+        // Gọi đúng tên hàm trong Model: getMonthlyTrend
+        $trendData = $this->budgetModel->getMonthlyTrend($userId);
+
+        Response::successResponse('Success', [
+            'trend' => $trendData
+        ]);
     }
 }

@@ -70,7 +70,7 @@ SmartSpending = Object.assign({
             toast.classList.add('toast-hide');
             setTimeout(() => toast.remove(), 300);
         };
-        
+
         closeBtn.addEventListener('click', removeToast);
 
         // Auto remove after 4 seconds
@@ -127,7 +127,7 @@ SmartSpending = Object.assign({
 
     // Loading spinner management
     loaderElement: null,
-    
+
     showLoader: () => {
         if (!SmartSpending.loaderElement) {
             SmartSpending.loaderElement = document.createElement('div');
@@ -141,7 +141,7 @@ SmartSpending = Object.assign({
             `;
             document.body.appendChild(SmartSpending.loaderElement);
         }
-        
+
         SmartSpending.loaderElement.style.display = 'flex';
         setTimeout(() => {
             SmartSpending.loaderElement.classList.add('visible');
@@ -158,10 +158,10 @@ SmartSpending = Object.assign({
             }, 300);
         }
     }
-};
+});
 
 // Global event listeners
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Initialize tooltips if Bootstrap is loaded
     if (typeof bootstrap !== 'undefined') {
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -187,24 +187,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Set CSS variable for header height so layout can compute main-content = 100vh - header
-    function setHeaderHeightVar(){
-        try{
+    function setHeaderHeightVar() {
+        try {
             var header = document.querySelector('header.navbar');
             var h = header ? header.offsetHeight : 72;
             document.documentElement.style.setProperty('--header-height', h + 'px');
-        }catch(e){ /* no-op */ }
+        } catch (e) { /* no-op */ }
     }
 
     // initial set and update on resize
     setHeaderHeightVar();
-    window.addEventListener('resize', function(){ setHeaderHeightVar(); });
+    window.addEventListener('resize', function () { setHeaderHeightVar(); });
 });
 
 // Export for use in other files
 window.SmartSpending = SmartSpending;
 
 // Avatar upload helper: detects profile avatar form and handles AJAX upload
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     try {
         // Find form by action contains 'profile/api_upload_avatar'
         var forms = document.querySelectorAll('form');
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var fileInput = avatarForm.querySelector('input[type=file][name=avatar]');
         if (!fileInput) return;
 
-        avatarForm.addEventListener('submit', function(e) {
+        avatarForm.addEventListener('submit', function (e) {
             e.preventDefault();
 
             var file = fileInput.files[0];
@@ -250,15 +250,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 body: fd,
                 credentials: 'same-origin'
-            }).then(function(res) {
+            }).then(function (res) {
                 SmartSpending.hideLoader();
                 return res.json();
-            }).then(function(json) {
+            }).then(function (json) {
                 if (json && json.status === 'success') {
                     var newUrl = json.data && json.data.avatar ? json.data.avatar : null;
                     if (newUrl) {
                         // Update avatar images on page (img.avatar)
-                        document.querySelectorAll('img.avatar').forEach(function(img) {
+                        document.querySelectorAll('img.avatar').forEach(function (img) {
                             img.src = newUrl + '?t=' + Date.now();
                         });
                     }
@@ -267,9 +267,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     var msg = (json && json.message) ? json.message : 'Không thể tải lên avatar';
                     SmartSpending.showToast(msg, 'error');
                 }
-            }).catch(function(err) {
+            }).catch(function (err) {
                 SmartSpending.hideLoader();
-                SmartSpending.showToast('Lỗi khi tải lên: ' + (err.message || err), 'error');
+                // Sử dụng backtick (`) thay vì nháy đơn để an toàn hơn
+                SmartSpending.showToast(`Lỗi khi tải lên: ${err.message || err}`, 'error');
             });
         });
     } catch (e) {

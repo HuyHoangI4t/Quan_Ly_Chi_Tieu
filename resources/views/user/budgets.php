@@ -243,8 +243,8 @@ $this->partial('header');
 
     <div class="modal fade" id="createBudgetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <form id="budgetForm" novalidate>
+                <div class="modal-content border-0 shadow-lg rounded-4">
+                <form id="createBudgetForm" novalidate>
                     <div class="modal-header border-0 pb-0 px-4 pt-4">
                         <h5 class="modal-title fw-bold" id="budgetModalTitle">Thiết lập ngân sách</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

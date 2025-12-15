@@ -14,6 +14,7 @@ class RecurringTransactions extends Controllers
 {
     private $recurringModel;
     private $categoryModel;
+    private $budgetModel;
 
     public function __construct()
     {
@@ -22,6 +23,7 @@ class RecurringTransactions extends Controllers
         
         $this->recurringModel = $this->model('RecurringTransaction');
         $this->categoryModel = $this->model('Category');
+        $this->budgetModel = $this->model('Budget');
     }
 
     /**
@@ -41,85 +43,58 @@ class RecurringTransactions extends Controllers
     /**
      * API: Get all recurring transactions
      */
-    public function api_get_all()
+   public function api_get_all()
     {
-        if ($this->request->method() !== 'GET') {
-            Response::errorResponse('Method Not Allowed', null, 405);
-            return;
-        }
+        $userId = $this->getCurrentUserId();
+        // Lấy tham số period từ URL (GET param), mặc định là 'monthly'
+        $period = isset($_GET['period']) ? $_GET['period'] : 'monthly';
 
-        try {
-            $userId = $this->getCurrentUserId();
-            $recurring = $this->recurringModel->getByUser($userId);
-            
-            Response::successResponse('Success', [
-                'recurring_transactions' => $recurring
-            ]);
-        } catch (\Exception $e) {
-            Response::errorResponse('Error: ' . $e->getMessage(), null, 500);
-        }
+        $budgets = $this->budgetModel->getBudgetsWithSpending($userId, $period);
+        
+        // Trả về JSON đúng chuẩn để JS không bị lỗi
+        Response::successResponse('Lấy dữ liệu thành công', [
+            'budgets' => $budgets
+        ]);
     }
 
     /**
      * API: Create recurring transaction
      */
-    public function api_create()
+ public function api_create()
     {
         if ($this->request->method() !== 'POST') {
             Response::errorResponse('Method Not Allowed', null, 405);
             return;
         }
 
-        CsrfProtection::verify();
-
         try {
-            $userId = $this->getCurrentUserId();
-            $data = $this->request->json();
-
-            // Validation
-            $errors = [];
-            if (empty($data['category_id'])) {
-                $errors['category_id'] = 'Vui lòng chọn danh mục';
-            }
-            if (empty($data['amount']) || !is_numeric($data['amount']) || $data['amount'] <= 0) {
-                $errors['amount'] = 'Số tiền phải lớn hơn 0';
-            }
-            if (empty($data['frequency']) || !in_array($data['frequency'], ['daily', 'weekly', 'monthly', 'yearly'])) {
-                $errors['frequency'] = 'Tần suất không hợp lệ';
-            }
-            if (empty($data['start_date'])) {
-                $errors['start_date'] = 'Vui lòng chọn ngày bắt đầu';
-            }
-
-            if (!empty($errors)) {
-                Response::errorResponse('Validation failed', $errors, 400);
-                return;
-            }
-
-            // Calculate next occurrence
-            $nextOccurrence = $this->calculateNextOccurrence($data['start_date'], $data['frequency']);
-
-            $recurringData = [
-                'user_id' => $userId,
-                'category_id' => $data['category_id'],
-                'amount' => $data['amount'],
-                'type' => $data['type'] ?? 'expense',
-                'description' => $data['description'] ?? null,
-                'frequency' => $data['frequency'],
-                'start_date' => $data['start_date'],
-                'end_date' => $data['end_date'] ?? null,
-                'next_occurrence' => $nextOccurrence,
-                'is_active' => 1
-            ];
-
-            $id = $this->recurringModel->create($recurringData);
-            
-            Response::successResponse('Tạo thành công', ['id' => $id]);
+            CsrfProtection::verify();
         } catch (\Exception $e) {
-            Response::errorResponse('Error: ' . $e->getMessage(), null, 500);
+            Response::errorResponse('CSRF token invalid', null, 403);
+            return;
+        }
+
+        $userId = $this->getCurrentUserId();
+        $data = $this->request->json();
+
+        $categoryId = $data['category_id'] ?? null;
+        $amount = $data['amount'] ?? 0;
+        $period = $data['period'] ?? 'monthly';
+
+        if (!$categoryId || $amount <= 0) {
+            Response::errorResponse('Vui lòng nhập đầy đủ thông tin');
+            return;
+        }
+
+        // Gọi Model để tạo (giả sử model có hàm createBudget)
+        $result = $this->budgetModel->createBudget($userId, $categoryId, $amount, $period);
+
+        if ($result) {
+            Response::successResponse('Tạo ngân sách thành công');
+        } else {
+            Response::errorResponse('Ngân sách cho danh mục này đã tồn tại hoặc lỗi hệ thống');
         }
     }
-
     /**
      * API: Update recurring transaction
      */
@@ -257,6 +232,18 @@ class RecurringTransactions extends Controllers
         }
     }
 
+    public function api_get_trend()
+    {
+        $userId = $this->getCurrentUserId();
+        
+        // Giả sử model có hàm getTrendData
+        // Nếu model chưa có, bạn cần viết thêm trong Model/Budget.php
+        $trendData = $this->budgetModel->getTrendData($userId);
+
+        Response::successResponse('Success', [
+            'trend' => $trendData
+        ]);
+    }
     /**
      * Calculate next occurrence date
      */

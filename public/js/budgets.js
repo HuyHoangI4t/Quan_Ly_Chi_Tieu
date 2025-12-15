@@ -43,14 +43,28 @@
         const createForm = document.getElementById('createBudgetForm');
         if (createForm) createForm.addEventListener('submit', handleCreateBudget);
     }
+// public/js/budgets.js
+
+    // public/js/budgets.js
 
     async function loadBudgets() {
         if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Đang tải...</td></tr>';
         try {
             const resp = await fetch(`${BASE_URL}/budgets/api_get_all?period=${currentPeriod}`, { cache: 'no-store', credentials: 'same-origin' });
             if (!resp.ok) throw new Error('API error');
+            
+            // --- BẮT ĐẦU SỬA ---
+            // Đọc text trước để tránh lỗi "stream already read" nếu parse JSON thất bại
+            const text = await resp.text();
             let res;
-            try { res = await resp.json(); } catch (e) { const text = await resp.text(); console.error('Non-JSON response', text); throw e; }
+            try { 
+                res = JSON.parse(text); 
+            } catch (e) { 
+                console.error('Non-JSON response', text); 
+                throw e; 
+            }
+            // --- KẾT THÚC SỬA ---
+
             if (res.success) renderTable(res.data.budgets || []);
         } catch (e) {
             console.error('loadBudgets error', e);
@@ -144,12 +158,32 @@
     async function loadCharts() {
         const ctxT = document.getElementById('budgetTrend');
         if (ctxT) {
-            // destroy any Chart instance attached to this canvas (covers cases where a chart
-            // was created outside this module or page re-initialized)
+            // Robustly destroy any Chart instances that may be attached to this canvas.
             try {
+                // Preferred: Chart.getChart should return the chart for this canvas
                 const existingT = Chart.getChart(ctxT);
-                if (existingT) { existingT.destroy(); }
+                if (existingT && typeof existingT.destroy === 'function') {
+                    try { existingT.destroy(); } catch (e) { console.warn('Error destroying existingT', e); }
+                }
             } catch (e) { /* ignore */ }
+
+            // Fallback: iterate global Chart instances (Chart.instances) and destroy those
+            // bound to this canvas id (covers different Chart.js versions/environments)
+            try {
+                if (Chart.instances) {
+                    Object.values(Chart.instances).forEach(c => {
+                        try {
+                            if (!c) return;
+                            const canvasEl = c.canvas && c.canvas.node ? c.canvas.node : c.canvas;
+                            if (!canvasEl) return;
+                            if (canvasEl === ctxT || (canvasEl.id && canvasEl.id === ctxT.id)) {
+                                if (typeof c.destroy === 'function') c.destroy();
+                            }
+                        } catch (ee) { /* ignore per-instance errors */ }
+                    });
+                }
+            } catch (e) { /* ignore */ }
+
             if (trendChartInstance) { try { trendChartInstance.destroy(); } catch(e){} trendChartInstance = null; }
             try {
                 const resp = await fetch(`${BASE_URL}/budgets/api_get_trend`, { cache: 'no-store' });
@@ -176,8 +210,22 @@
             // destroy any Chart instance already bound to this canvas (covers external scripts)
             try {
                 const existingP = Chart.getChart(ctxP);
-                if (existingP) { existingP.destroy(); }
+                if (existingP && typeof existingP.destroy === 'function') { try { existingP.destroy(); } catch(e){ console.warn('destroy existingP', e); } }
             } catch (e) { /* ignore */ }
+            try {
+                if (Chart.instances) {
+                    Object.values(Chart.instances).forEach(c => {
+                        try {
+                            if (!c) return;
+                            const canvasEl = c.canvas && c.canvas.node ? c.canvas.node : c.canvas;
+                            if (!canvasEl) return;
+                            if (canvasEl === ctxP || (canvasEl.id && canvasEl.id === ctxP.id)) {
+                                if (typeof c.destroy === 'function') c.destroy();
+                            }
+                        } catch (ee) {}
+                    });
+                }
+            } catch (e) {}
             if (pieChartInstance) { try { pieChartInstance.destroy(); } catch(e){} pieChartInstance = null; }
             // Improved doughnut appearance
             pieChartInstance = new Chart(ctxP, {
