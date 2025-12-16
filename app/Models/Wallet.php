@@ -13,14 +13,43 @@ class Wallet
         $this->db = (new ConnectDB())->getConnection();
     }
 
-    // Lấy thông tin ví của user
+    // [FIXED] Đổi tên từ getAllWallets -> getUserWallets để khớp với Controller
+    public function getUserWallets($userId)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM user_wallets WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $wallets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // [QUAN TRỌNG] Nếu chưa có ví nào (user mới hoặc lỗi), tự động tạo đủ 6 hũ
+        if (empty($wallets)) {
+            $this->initWallets($userId);
+            // Lấy lại danh sách sau khi tạo
+            $stmt->execute([$userId]);
+            $wallets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return $wallets;
+    }
+
+    // Hàm phụ: Khởi tạo 6 hũ mặc định
+    public function initWallets($userId)
+    {
+        $jarCodes = ['nec', 'ffa', 'ltss', 'edu', 'play', 'give'];
+        $sql = "INSERT IGNORE INTO user_wallets (user_id, jar_code, balance) VALUES (?, ?, 0)";
+        $stmt = $this->db->prepare($sql);
+
+        foreach ($jarCodes as $code) {
+            $stmt->execute([$userId, $code]);
+        }
+    }
+
+    // Lấy thông tin 1 ví cụ thể (giữ nguyên)
     public function getWallet($userId, $jarCode)
     {
         $stmt = $this->db->prepare("SELECT * FROM user_wallets WHERE user_id = ? AND jar_code = ?");
         $stmt->execute([$userId, $jarCode]);
         $wallet = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Nếu chưa có thì tạo mới
         if (!$wallet) {
             $this->db->prepare("INSERT INTO user_wallets (user_id, jar_code, balance) VALUES (?, ?, 0)")
                      ->execute([$userId, $jarCode]);
@@ -29,18 +58,10 @@ class Wallet
         return $wallet;
     }
 
-    // Lấy tất cả ví của user (Trả về mảng danh sách)
-    public function getAllWallets($userId)
-    {
-        $stmt = $this->db->prepare("SELECT * FROM user_wallets WHERE user_id = ?");
-        $stmt->execute([$userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // [MỚI] Lấy số dư dạng Key-Value ['nec' => 100, 'play' => 200...]
+    // Lấy số dư dạng Key-Value (giữ nguyên, nhưng gọi getUserWallets)
     public function getWalletBalances($userId)
     {
-        $wallets = $this->getAllWallets($userId);
+        $wallets = $this->getUserWallets($userId); // [FIXED] Gọi đúng tên hàm mới
         $balances = [];
         foreach ($wallets as $w) {
             $balances[$w['jar_code']] = $w['balance'];
@@ -48,7 +69,7 @@ class Wallet
         return $balances;
     }
 
-    // Cộng tiền vào ví
+    // Cộng tiền (giữ nguyên)
     public function addMoney($userId, $jarCode, $amount)
     {
         $this->getWallet($userId, $jarCode); // Đảm bảo ví tồn tại
@@ -56,7 +77,7 @@ class Wallet
         return $this->db->prepare($sql)->execute([$amount, $userId, $jarCode]);
     }
 
-    // Trừ tiền khỏi ví
+    // Trừ tiền (giữ nguyên)
     public function subtractMoney($userId, $jarCode, $amount)
     {
         $sql = "UPDATE user_wallets SET balance = balance - ? WHERE user_id = ? AND jar_code = ?";

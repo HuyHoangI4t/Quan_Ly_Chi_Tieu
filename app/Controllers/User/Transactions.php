@@ -139,10 +139,36 @@ class Transactions extends Controllers
             'type' => $type
         ];
 
-        if ($this->transactionModel->create($transData)) {
-            Response::successResponse('Thêm giao dịch thành công!');
-        } else {
-            Response::errorResponse('Lỗi khi lưu vào Database.');
+        // If expense, allow confirmation flow when redistribution from other jars is required
+        $userId = $this->getCurrentUserId();
+        $confirmed = !empty($data['confirmed']);
+
+        if ($transData['type'] === 'expense' && !$confirmed) {
+            $expense = abs($transData['amount']);
+            $plan = $this->transactionModel->planExpenseCoverage($userId, $expense, $transData['category_id']);
+
+            if (!$plan['enough']) {
+                Response::errorResponse('Không đủ số dư trong các hũ để thực hiện giao dịch.');
+                return;
+            }
+
+            if ($plan['needs_redistribution']) {
+                // Return requires confirmation with plan details
+                Response::successResponse('Giao dịch cần lấy tiền bù từ các hũ khác. Vui lòng xác nhận.', [
+                    'requires_confirmation' => true,
+                    'plan' => $plan['plan'] ?? [],
+                    'shortfall' => $plan['shortfall'] ?? 0
+                ]);
+                return;
+            }
+            // else no redistribution needed -> proceed
+        }
+
+        try {
+            $newId = $this->transactionModel->create($transData);
+            Response::successResponse('Thêm giao dịch thành công!', ['id' => $newId]);
+        } catch (\Exception $e) {
+            Response::errorResponse($e->getMessage());
         }
     }
 

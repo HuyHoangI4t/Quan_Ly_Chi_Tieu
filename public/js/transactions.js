@@ -668,7 +668,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // --- XỬ LÝ LOGIC MỚI ---
 
-            if (respData && respData.success) {
+                if (respData && respData.success) {
                 // Trường hợp 1: Server trả về yêu cầu xác nhận (Warning)
                 if (respData.data && respData.data.requires_confirmation) {
                     // Lưu lại data để dùng khi bấm nút "Tiếp tục"
@@ -679,7 +679,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Hiển thị Modal Cảnh báo
                     const msgEl = document.getElementById('budgetWarningMessage');
-                    if (msgEl) msgEl.innerText = respData.data.message;
+                    if (msgEl) {
+                        // Server may send message either in top-level 'message' or inside data.message
+                        const serverMsg = (respData.data && respData.data.message) ? respData.data.message : (respData.message || 'Cảnh báo vượt ngân sách');
+                        // If server provided a plan (which is an object {jar:amount}), render it nicely
+                        let planHtml = '';
+                        if (respData.data && respData.data.plan) {
+                            const plan = respData.data.plan;
+                            const lines = [];
+                            for (const jar in plan) {
+                                if (!Object.prototype.hasOwnProperty.call(plan, jar)) continue;
+                                const amt = Number(plan[jar] || 0);
+                                lines.push(`<li>${jar.toUpperCase()}: ${new Intl.NumberFormat('vi-VN').format(amt)} ₫</li>`);
+                            }
+                            if (lines.length) {
+                                planHtml = `<br><strong>Kế hoạch lấy bù:</strong><ul style="margin:6px 0 0 18px; padding:0;">${lines.join('')}</ul>`;
+                            }
+                        }
+                        msgEl.innerHTML = `${serverMsg}${planHtml}`;
+                    }
                     const warningModal = new bootstrap.Modal(document.getElementById('budgetWarningModal'));
                     warningModal.show();
 
@@ -702,8 +720,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         window.dispatchEvent(new CustomEvent('smartbudget:updated', { detail: { jar_updates: respData.data.jar_updates } }));
                         applyJarUpdatesToUI(respData.data.jar_updates);
                     }
-                    loadTransactions(false);
-                    triggerTransactionChange();
+                            loadTransactions(false);
+                            triggerTransactionChange();
+                            // Notify goals page to refresh (so linked-category transactions update goals)
+                            try { window.dispatchEvent(new CustomEvent('goals:updated')); } catch (e) { }
                 }
             } else {
                 // Trường hợp 3: Lỗi (Ví dụ: Không đủ số dư tổng hoặc validation)
@@ -789,8 +809,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     const respData = json || { success: response.ok, message: text };
 
                     if (respData.success === true || respData.status === 'success' || response.ok) {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('editTransactionModal'));
-                        if (modal) modal.hide();
+                        loadTransactions(false);
+                        triggerTransactionChange();
+                        // Notify goals page to refresh (so linked-category transactions update goals)
+                        try { window.dispatchEvent(new CustomEvent('goals:updated')); } catch (e) { }
 
                         SmartSpending.showToast(respData.message || 'Cập nhật giao dịch thành công!', 'success');
 

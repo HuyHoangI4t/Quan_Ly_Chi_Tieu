@@ -1,13 +1,8 @@
 function formatInputMoney(input) {
-    // Lấy giá trị hiện tại, loại bỏ các ký tự không phải số
     let rawValue = (input.value || '').toString().replace(/\D/g, '');
-
     if (rawValue) {
-        // Định dạng lại số tiền (ví dụ: 1000000 -> 1.000.000)
         let formattedValue = new Intl.NumberFormat('vi-VN').format(rawValue);
         input.value = formattedValue;
-
-        // Cập nhật giá trị thực (chỉ số) vào input hidden
         const hiddenInputId = input.id.replace('_display', '');
         const hiddenInput = document.getElementById(hiddenInputId);
         if (hiddenInput) {
@@ -31,7 +26,7 @@ function formatInputMoney(input) {
 
     let trendChartInstance = null;
     let pieChartInstance = null;
-    let budgetsListCache = []; // Cache dữ liệu ngân sách
+    let budgetsListCache = [];
 
     function formatCurrencyLocal(amount) {
         if (window.SmartSpending && typeof window.SmartSpending.formatCurrency === 'function') {
@@ -52,73 +47,46 @@ function formatInputMoney(input) {
         loadCharts();
     }
 
-    // Hàm gọi API đồng bộ JARS (dùng cho smart-budget.js)
     window.syncJarsApi = async function () {
         try {
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
             const resp = await fetch(`${BASE_URL}/dashboard/sync_jars`, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: {
-                    'X-CSRF-Token': csrf
-                }
+                headers: { 'X-CSRF-Token': csrf }
             });
-
-            if (resp.status === 401 || resp.status === 403) {
-                if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Lỗi phiên đăng nhập hoặc CSRF token.', 'error');
-                return { success: false, message: 'Auth/CSRF Error' };
-            }
 
             if (resp.ok) {
                 const resultText = await resp.text();
-
                 if (resultText.includes('🎉 Đã Fix Xong!')) {
                     return { success: true };
-                } else {
-                    console.error('Sync Jars Failed:', resultText);
-                    return { success: false, message: 'Sync API failed, check console for PHP output.' };
                 }
-            } else {
-                if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast(`Lỗi HTTP ${resp.status} khi đồng bộ.`, 'error');
-                return { success: false, message: 'Server responded with error status: ' + resp.status };
             }
-
+            return { success: false };
         } catch (e) {
             console.error('Error syncing Jars:', e);
-            if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Lỗi kết nối mạng khi đồng bộ ví Jars.', 'error');
             return { success: false, message: e.message };
         }
     }
 
-    // Hàm load Số dư Jars từ API và cập nhật UI (real-time)
     async function loadJarBalances() {
-        console.log("DEBUG: loadJarBalances() called to refresh JARS UI.");
         try {
             const response = await fetch(`${BASE_URL}/budgets/api_get_wallets`, { cache: 'no-store' });
             if (!response.ok) throw new Error('API error');
             const data = await response.json();
 
             if (data.success && Array.isArray(data.data)) {
-                // Cập nhật từng hũ
                 data.data.forEach(jar => {
                     const code = jar.jar_code;
                     const balance = parseFloat(jar.balance || 0);
                     const percent = jar.percent;
 
-                    // 1. Cập nhật Số dư
                     const balanceEl = document.getElementById(`jar-balance-${code}`);
-                    if (balanceEl) {
-                        balanceEl.innerHTML = `${formatCurrencyLocal(balance)} <small class="text-muted fs-6">₫</small>`;
-                    }
+                    if (balanceEl) balanceEl.innerHTML = `${formatCurrencyLocal(balance)} <small class="text-muted fs-6">₫</small>`;
 
-                    // 2. Cập nhật Tỷ lệ
                     const percentEl = document.getElementById(`jar-percent-${code}`);
-                    if (percentEl) {
-                        percentEl.innerText = `${percent}%`;
-                    }
+                    if (percentEl) percentEl.innerText = `${percent}%`;
 
-                    // 3. Cập nhật Hiệu ứng nước
                     const waterEl = document.getElementById(`jar-water-${code}`);
                     if (waterEl) {
                         const waterHeight = Math.min(100, (balance / 10000000) * 100);
@@ -143,35 +111,28 @@ function formatInputMoney(input) {
         const createForm = document.getElementById('createBudgetForm');
 
         document.getElementById('openCreateBudget')?.addEventListener('click', () => {
-            // Reset form và trạng thái khi mở modal tạo mới
             createForm.reset();
             if (modalTitle) modalTitle.innerText = 'Thiết lập ngân sách';
             if (budgetIdInput) budgetIdInput.value = '';
-
             if (modalEl) {
                 const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modalInstance.show();
             }
         });
 
-        // [FIX TẠO 1 RA 3 & ĐỔI TÊN HÀM] Hủy đăng ký sự kiện trước khi đăng ký lại (handleBudgetSubmit xử lý cả tạo và sửa)
         if (createForm) {
             createForm.removeEventListener('submit', handleBudgetSubmit);
             createForm.addEventListener('submit', handleBudgetSubmit);
         }
 
-        // [FIX LỖI XÓA] (Giữ nguyên logic)
         window.deleteBudget = async function (id, btn) {
             if (!confirm('Đại ca có chắc chắn muốn xóa ngân sách này không?')) return;
-
             let originalHtml = null;
-
             if (btn) {
                 btn.disabled = true;
                 originalHtml = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             }
-
             try {
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
                 const resp = await fetch(`${BASE_URL}/budgets/api_delete_budget`, {
@@ -180,16 +141,7 @@ function formatInputMoney(input) {
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
                     body: JSON.stringify({ id: id, csrf_token: csrf })
                 });
-
-                let res;
-                try {
-                    res = await resp.json();
-                } catch (e) {
-                    console.error("Failed to parse JSON response on delete:", e);
-                    if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Lỗi server: Phản hồi không hợp lệ.', 'error');
-                    return;
-                }
-
+                let res = await resp.json();
                 if (res.success) {
                     if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Đã xóa ngân sách!', 'success');
                     loadBudgets();
@@ -208,7 +160,6 @@ function formatInputMoney(input) {
             }
         };
 
-
         const categoryList = document.getElementById('categoryList');
         const chooserModalEl = document.getElementById('categoryChooserModal');
         const createModalEl = document.getElementById('createBudgetModal');
@@ -220,10 +171,8 @@ function formatInputMoney(input) {
                     e.preventDefault();
                     const categoryId = item.dataset.categoryId;
                     const categoryName = item.dataset.categoryName;
-
                     document.getElementById('budget_category_picker').value = categoryName;
                     document.getElementById('budget_category').value = categoryId;
-
                     bootstrap.Modal.getInstance(chooserModalEl)?.hide();
                     bootstrap.Modal.getInstance(createModalEl)?.show();
                 }
@@ -243,20 +192,15 @@ function formatInputMoney(input) {
                 loadBudgets();
             });
         }
-
     }
-
 
     async function loadBudgets() {
         try {
             const response = await fetch(`${BASE_URL}/budgets/api_get_list?period=${currentPeriod}`);
-
             if (!response.ok) throw new Error('Network response was not ok');
-
             const data = await response.json();
-
             if (data.success && data.data) {
-                budgetsListCache = data.data; // Cache dữ liệu
+                budgetsListCache = data.data;
                 renderTable(data.data);
                 loadCharts();
             } else {
@@ -269,7 +213,7 @@ function formatInputMoney(input) {
         }
     }
 
-    // [FIX LỆCH DÒNG VÀ BACKGROUND NÚT] Tối ưu hóa renderTable
+    // [QUAN TRỌNG] Render bảng với icon cảnh báo
     function renderTable(budgets) {
         if (!tableBody) return;
         tableBody.innerHTML = '';
@@ -282,52 +226,75 @@ function formatInputMoney(input) {
         budgets.forEach(b => {
             const spent = parseFloat(b.spent || 0);
             const amount = parseFloat(b.amount || 0);
+            // Lấy số dư hũ từ backend gửi xuống
+            const jarBalance = parseFloat(b.current_jar_balance || 0); 
 
             let percent = amount > 0 ? (spent / amount) * 100 : 0;
             if (percent > 100) percent = 100;
 
             const alertThreshold = parseFloat(b.alert_threshold || 80);
-
-            // Logic màu JARS và Tên Hũ
             const jarCode = (b.category_group || 'none').toLowerCase();
             const jarBgClass = `bg-${jarCode}-subtle`;
             const jarTextClass = `text-${jarCode}`;
 
-            // Tính toán màu sắc cho thanh tiến trình
             let pColorClass = `bg-${jarCode}`;
-
             if (percent >= 100) {
                 pColorClass = 'bg-danger';
             } else if (percent >= alertThreshold) {
                 pColorClass = 'bg-warning';
             }
-            if (jarCode === 'none') {
-                pColorClass = percent >= 100 ? 'bg-danger' : (percent >= alertThreshold ? 'bg-warning' : 'bg-success');
-            }
-
 
             const spentFormatted = formatCurrencyLocal(spent);
             const amountFormatted = formatCurrencyLocal(amount);
 
-            // Màu nền mờ cho nút Sửa (Vàng/Cam subtle)
-            const editBgClass = 'bg-ffa-subtle';
-            // Màu nền mờ cho nút Xóa (Đỏ subtle - dùng NEC)
-            const deleteBgClass = 'bg-nec-subtle';
+            // LOGIC CẢNH BÁO: Cải tiến
+            // - Nếu hũ không tồn tại (none) => không cảnh báo
+            // - Nếu số dư <= 0 => cảnh báo nghiêm trọng (đỏ)
+            // - Nếu số dư < amount => cảnh báo, phân biệt nghiêm trọng nếu thiếu >= 50% ngân sách
+            let warningIcon = '';
+            if (jarCode !== 'none') {
+                const current = parseFloat(jarBalance || 0);
+                const target = parseFloat(amount || 0);
 
-            // Kích thước nút hành động
-            const actionStyle = "width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: background 0.3s;";
+                if (target <= 0) {
+                    // Nếu ngân sách bằng 0, chỉ báo nếu hũ rỗng
+                    if (current <= 0) {
+                        const tooltip = `⚠️ <b>Hũ ${jarCode.toUpperCase()} rỗng</b><br>Hiện có: ${formatCurrencyLocal(current)} đ`;
+                        warningIcon = `<span class="ms-2" data-bs-toggle="tooltip" data-bs-html="true" title="${tooltip}"><i class="fas fa-exclamation-circle text-danger" style="cursor:help"></i></span>`;
+                    }
+                } else {
+                    // Treat negative jar balances as 0 for available funds when computing shortfall
+                    const available = Math.max(0, current);
+                    const shortfall = Math.max(0, target - available);
+                        if (shortfall > 0) {
+                            const coveredPct = target > 0 ? Math.min(100, (available / target) * 100) : 0;
+                            const shortPct = 100 - coveredPct;
+                            const shortFmt = formatCurrencyLocal(shortfall);
+                            const currentFmt = formatCurrencyLocal(current);
+                            const tooltip = `⚠️ <b>Thiếu tiền hũ</b><br>Hũ ${jarCode.toUpperCase()}: ${currentFmt} đ<br>Ngân sách: ${formatCurrencyLocal(target)} đ<br>Thiếu: ${shortFmt} đ (${shortPct.toFixed(1)}%)`;
 
+                            // Nếu thiếu lớn (>=50% ngân sách) => đỏ, ngược lại vàng
+                            if (shortPct >= 50) {
+                                warningIcon = `<span class="ms-2" data-bs-toggle="tooltip" data-bs-html="true" title="${tooltip}"><i class="fas fa-exclamation-triangle text-danger" style="cursor: help"></i></span>`;
+                            } else {
+                                warningIcon = `<span class="ms-2" data-bs-toggle="tooltip" data-bs-html="true" title="${tooltip}"><i class="fas fa-exclamation-triangle text-warning" style="cursor: help"></i></span>`;
+                            }
+                    } else if (current > 0 && current <= (target * 0.1)) {
+                        // Dư rất thấp nhưng chưa thiếu => cảnh báo nhẹ
+                        const tooltip = `⚠️ <b>Hũ ${jarCode.toUpperCase()} còn ít</b><br>Hiện có: ${formatCurrencyLocal(current)} đ<br>Ngân sách: ${formatCurrencyLocal(target)} đ`;
+                        warningIcon = `<span class="ms-2" data-bs-toggle="tooltip" data-bs-html="true" title="${tooltip}"><i class="fas fa-info-circle text-warning" style="cursor: help"></i></span>`;
+                    }
+                }
+            }
 
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="ps-4">
                     <div class="d-flex align-items-center">
-                        
                         <div class="me-3 ${jarBgClass} ${jarTextClass}" 
                             style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.1rem;">
                             <i class="fas ${b.category_icon || 'fa-circle'}"></i>
                         </div>
-                        
                         <div>
                             <div class="fw-bold text-dark">${b.category_name}</div>
                             <small class="fw-semibold ${jarTextClass}">${(jarCode).toUpperCase()}</small>
@@ -338,6 +305,7 @@ function formatInputMoney(input) {
                 <td class="text-end fw-semibold budget-amount-cell" style="white-space: nowrap;">
                     <span class="text-danger">${spentFormatted} </span>
                     <span class="text-muted"> / ${amountFormatted} </span>
+                    ${warningIcon}
                 </td>
                 
                 <td class="ps-4 align-middle" style="min-width: 150px;">
@@ -354,80 +322,60 @@ function formatInputMoney(input) {
                 
                 <td class="text-end pe-4 align-middle">
                     <div class="d-flex gap-2 justify-content-end align-items-center">
-                        <span class="${editBgClass} text-ffa opacity-80 hover-opacity-100" style="${actionStyle}">
-                            <button class="btn btn-sm p-0 text-ffa" onclick="openEditBudget(${b.id})" style="line-height: 1;">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </span>
-                        
-                        <span class="${deleteBgClass} text-danger opacity-80 hover-opacity-100" style="${actionStyle}">
-                            <button class="btn btn-sm p-0 text-danger" onclick="deleteBudget(${b.id}, this)" style="line-height: 1;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </span>
+                        <button class="btn btn-sm btn-light text-primary" onclick="openEditBudget(${b.id})" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light text-danger" onclick="deleteBudget(${b.id}, this)" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </td>
             `;
             tableBody.appendChild(row);
         });
+
+        // Kích hoạt tooltip bootstrap
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
     }
 
-    // [HÀM MỚI] Xử lý mở modal để sửa ngân sách
     window.openEditBudget = function (budgetId) {
         const budget = budgetsListCache.find(b => b.id == budgetId);
         const modalEl = document.getElementById('createBudgetModal');
         const modalTitle = document.getElementById('budgetModalTitle');
 
-        if (!budget || !modalEl) {
-            console.error('Budget data not found for ID:', budgetId);
-            return;
-        }
+        if (!budget || !modalEl) return;
 
-        // Set form title
         if (modalTitle) modalTitle.innerText = 'Sửa Ngân Sách';
-
-        // Đổ dữ liệu vào form
         document.getElementById('budget_id').value = budget.id;
         document.getElementById('budget_category').value = budget.category_id;
         document.getElementById('budget_category_picker').value = budget.category_name;
 
-        // Đổ tiền vào input display (cần định dạng lại)
         const formattedAmount = formatCurrencyLocal(budget.amount);
         document.getElementById('budget_amount_display').value = formattedAmount;
         document.getElementById('budget_amount').value = budget.amount;
-
         document.getElementById('budget_period').value = budget.period;
         document.getElementById('budget_threshold').value = budget.alert_threshold;
 
-        // Cập nhật giá trị hiển thị của thanh trượt cảnh báo
         const thresholdValueEl = document.getElementById('thresholdValue');
         if (thresholdValueEl) thresholdValueEl.innerText = budget.alert_threshold + '%';
 
-        // Mở modal
         const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
         modalInstance.show();
     };
 
-
-    // [HÀM MỚI] Xử lý cả Tạo và Sửa Ngân sách
     async function handleBudgetSubmit(e) {
         e.preventDefault();
         const btn = e.submitter;
         const oldText = btn.innerHTML;
-
-        // Lấy ID ngân sách để xác định là Tạo mới hay Sửa
         const budgetId = document.getElementById('budget_id')?.value || 0;
         const isEdit = budgetId > 0;
         const apiEndpoint = isEdit ? `${BASE_URL}/budgets/api_update` : `${BASE_URL}/budgets/api_create`;
 
-        // --- HARD FIX: KIỂM TRA ĐĂNG KÝ TRÙNG LẶP ---
-        if (btn.classList.contains('is-submitting')) {
-            console.warn("Submit ignored: Already processing.");
-            return;
-        }
+        if (btn.classList.contains('is-submitting')) return;
         btn.classList.add('is-submitting');
-        // --- END HARD FIX ---
-
         btn.disabled = true;
         btn.innerHTML = 'Đang xử lý...';
 
@@ -443,9 +391,7 @@ function formatInputMoney(input) {
         };
 
         if (!data.category_id) {
-            if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Vui lòng chọn danh mục.', 'warning');
-            else alert('Vui lòng chọn danh mục.');
-
+            alert('Vui lòng chọn danh mục.');
             btn.classList.remove('is-submitting');
             btn.disabled = false; btn.innerHTML = oldText;
             return;
@@ -460,71 +406,39 @@ function formatInputMoney(input) {
                 body: JSON.stringify(Object.assign({}, data, { csrf_token: csrf }))
             });
 
-            const responseText = await resp.text();
-
-            let res;
-            try {
-                res = JSON.parse(responseText);
-            } catch (e) {
-                console.error('Non-JSON response received (FATAL ERROR LIKELY):', responseText);
-                res = { success: false, message: 'Lỗi API Server hoặc Lỗi PHP nghiêm trọng (FATAL ERROR). Vui lòng kiểm tra PHP Error Log.' };
-            }
+            let res = await resp.json();
 
             if (res.success) {
                 const modal = document.getElementById('createBudgetModal');
-                if (modal) {
-                    bootstrap.Modal.getInstance(modal)?.hide();
-                }
+                if (modal) bootstrap.Modal.getInstance(modal)?.hide();
                 loadBudgets();
                 loadJarBalances();
                 window.dispatchEvent(new CustomEvent('jars:updated'));
-
                 e.target.reset();
-                // Reset modal state
                 if (document.getElementById('budgetModalTitle')) document.getElementById('budgetModalTitle').innerText = 'Thiết lập ngân sách';
                 document.getElementById('budget_id').value = '';
-
                 if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast(res.message, 'success');
-                else alert(res.message);
             } else {
-                let msg = res.message || 'Lỗi';
-
-                // Hiển thị thông báo số dư chi tiết
-                if (res.data && res.data.jar_code) {
-                    const balance = res.data.current_balance;
-                    const jar = res.data.jar_code;
-                    const missing = res.data.missing_amount;
-
-                    msg = `❌ ${msg} Hũ **${jar}** chỉ còn ${balance}₫. (Cần thêm ${missing}₫)`;
-                } else if (res.data && res.data.message) {
-                    msg += "\n" + res.data.message;
-                }
-
-                if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast(msg, 'error');
-                else alert(msg);
+                if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast(res.message, 'error');
+                else alert(res.message);
             }
         } catch (err) {
-            if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Lỗi hệ thống', 'error');
-            else alert('Lỗi hệ thống');
             console.error(err);
-        }
-        finally {
+        } finally {
             btn.classList.remove('is-submitting');
             btn.disabled = false;
             btn.innerHTML = oldText;
         }
     }
 
-
     function ensureFreshCanvas(canvasEl) {
         if (!canvasEl) return null;
         try {
             const existing = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(canvasEl) : null;
             if (existing && typeof existing.destroy === 'function') {
-                try { existing.destroy(); } catch (e) { /* ignore */ }
+                try { existing.destroy(); } catch (e) { }
             }
-        } catch (e) { /* ignore */ }
-
+        } catch (e) { }
         try {
             const newCanvas = canvasEl.cloneNode(true);
             canvasEl.parentNode.replaceChild(newCanvas, canvasEl);
@@ -534,7 +448,6 @@ function formatInputMoney(input) {
         }
     }
 
-    // Hàm load Biểu đồ Xu hướng (Bar Chart)
     async function loadTrendChart() {
         const freshTrend = ensureFreshCanvas(document.getElementById('budgetTrend'));
         if (freshTrend) {
@@ -592,30 +505,61 @@ function formatInputMoney(input) {
                         }
                     });
                 }
-            } catch (e) {
-                console.warn('loadTrendChart error:', e);
-                if (window.SmartSpending && window.SmartSpending.showToast) {
-                    window.SmartSpending.showToast('Lỗi tải biểu đồ xu hướng. Vui lòng kiểm tra Console (F12).', 'error');
-                }
-            }
+            } catch (e) { }
         }
     }
 
-    // Hàm load Biểu đồ Phân bổ JARS (Doughnut Chart)
     async function loadDistributionChart() {
         const freshPie = ensureFreshCanvas(document.getElementById('budgetPie'));
         if (freshPie) {
             if (pieChartInstance) { try { pieChartInstance.destroy(); } catch (e) { } pieChartInstance = null; }
             try {
-                const resp = await fetch(`${BASE_URL}/budgets/api_get_jars`, { cache: 'no-store', credentials: 'same-origin' });
+                // Use existing API that returns wallet objects: [{jar_code,balance,percent},...]
+                const resp = await fetch(`${BASE_URL}/budgets/api_get_wallets`, { cache: 'no-store', credentials: 'same-origin' });
+                // Default safe percentages
                 let jarsData = [55, 10, 10, 10, 10, 5];
                 if (resp.ok) {
                     try {
                         const jr = await resp.json();
-                        if (jr && jr.success && jr.data && Array.isArray(jr.data.jars) && jr.data.jars.length === 6) {
-                            jarsData = jr.data.jars.map(Number);
+                        if (jr && jr.success && Array.isArray(jr.data) && jr.data.length >= 6) {
+                            // Map by jar_code to ensure correct order
+                            const order = ['nec','ffa','ltss','edu','play','give'];
+                            const map = {};
+                            jr.data.forEach(d => { map[(d.jar_code||'').toLowerCase()] = d; });
+
+                            // Try to use percent values first
+                            const percents = order.map(code => {
+                                const item = map[code] || {};
+                                return (item.percent !== undefined && item.percent !== null && item.percent !== '') ? Number(item.percent) : null;
+                            });
+
+                            const hasAllPercents = percents.every(v => v !== null && !isNaN(v));
+                            if (hasAllPercents) {
+                                jarsData = percents.map(v => +Number(v).toFixed(1));
+                                // ensure sums to 100
+                                let total = jarsData.reduce((a,b)=>a+b,0);
+                                if (Math.abs(total - 100) > 0.1) {
+                                    const maxIdx = jarsData.indexOf(Math.max(...jarsData));
+                                    jarsData[maxIdx] = +(jarsData[maxIdx] + (100 - total)).toFixed(1);
+                                }
+                            } else {
+                                // Fallback: compute from balances
+                                const balances = order.map(code => {
+                                    const item = map[code] || {};
+                                    return Number(item.balance || 0);
+                                });
+                                const sum = balances.reduce((s, v) => s + (isFinite(v) ? v : 0), 0);
+                                if (sum > 0) {
+                                    jarsData = balances.map(v => +((v / sum) * 100).toFixed(1));
+                                    let total = jarsData.reduce((a,b)=>a+b,0);
+                                    if (Math.abs(total - 100) > 0.1) {
+                                        const maxIdx = balances.indexOf(Math.max(...balances));
+                                        jarsData[maxIdx] = +(jarsData[maxIdx] + (100 - total)).toFixed(1);
+                                    }
+                                }
+                            }
                         }
-                    } catch (e) { /* fall back to defaults */ }
+                    } catch (e) { }
                 }
 
                 const labels = ['Thiết yếu (NEC)', 'Tự do TC (FFA)', 'TK dài hạn (LTSS)', 'Giáo dục (EDU)', 'Hưởng thụ (PLAY)', 'Cho đi (GIVE)'];
@@ -642,20 +586,15 @@ function formatInputMoney(input) {
                         plugins: {
                             legend: {
                                 position: 'right',
-                                labels: {
-                                    usePointStyle: true,
-                                    pointStyle: 'rect',
-                                    boxWidth: 10,
-                                    padding: 12,
-                                    font: { size: 12 }
-                                }
+                                labels: { usePointStyle: true, pointStyle: 'rect', boxWidth: 10, padding: 12, font: { size: 12 } }
                             },
                             tooltip: {
                                 callbacks: {
                                     label: function (context) {
-                                        const label = context.label;
-                                        const value = Number(context.raw || 0);
-                                        return label + ': ' + value + '%';
+                                        var val = Number(context.raw || 0);
+                                        // show with 1 decimal if needed, otherwise integer
+                                        var display = (Math.abs(val - Math.round(val)) >= 0.05) ? val.toFixed(1) : Math.round(val);
+                                        return context.label + ': ' + display + '%';
                                     }
                                 }
                             }
@@ -664,25 +603,19 @@ function formatInputMoney(input) {
                         elements: { arc: { borderWidth: 0 } }
                     }
                 });
-            } catch (e) {
-                console.warn('loadDistributionChart error', e);
-            }
+            } catch (e) { }
         }
     }
 
-    // [CẬP NHẬT] Hàm gọi cả hai biểu đồ
     async function loadCharts() {
         await loadTrendChart();
         await loadDistributionChart();
     }
 
-
     document.addEventListener('DOMContentLoaded', init);
 })();
 
-/* --- Migrated SmartSpending.showToast from view (ensure it's available) --- */
 if (typeof window.SmartSpending === 'undefined') window.SmartSpending = {};
-
 window.SmartSpending.showToast = function (message, type = 'success') {
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -690,21 +623,12 @@ window.SmartSpending.showToast = function (message, type = 'success') {
         container.id = 'toast-container';
         document.body.appendChild(container);
     }
-
     let icon = 'fa-check-circle';
     if (type === 'error') icon = 'fa-times-circle';
     if (type === 'warning') icon = 'fa-exclamation-triangle';
-
     const toast = document.createElement('div');
     toast.className = `custom-toast toast-${type}`;
-    toast.innerHTML = `
-            <div class="toast-content">
-                <i class="fas ${icon} fa-lg"></i>
-                <span>${message}</span>
-            </div>
-            <i class="fas fa-times toast-close" onclick="this.parentElement.remove()"></i>
-        `;
-
+    toast.innerHTML = `<div class="toast-content"><i class="fas ${icon} fa-lg"></i><span>${message}</span></div><i class="fas fa-times toast-close" onclick="this.parentElement.remove()"></i>`;
     container.appendChild(toast);
     setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
@@ -713,7 +637,3 @@ window.SmartSpending.showToast = function (message, type = 'success') {
         setTimeout(() => toast.remove(), 400);
     }, 3000);
 };
-
-console.log("✅ Toast System Loaded Successfully!");
-
-/* --- End migrated toast --- */

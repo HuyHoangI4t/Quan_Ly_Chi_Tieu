@@ -94,7 +94,15 @@
                             elseif ($goal['status'] === 'active') $statusBadge = '<span class="badge badge-running rounded-pill">Đang thực hiện</span>';
                             else $statusBadge = '<span class="badge bg-secondary rounded-pill">Đã hủy</span>';
                         ?>
-                            <div class="col-md-6" data-goal-id="<?php echo $goal['id']; ?>">
+                               <div class="col-md-6"
+                                   data-goal-id="<?php echo $goal['id']; ?>"
+                                   data-category-id="<?php echo $goal['category_id'] ?? ''; ?>"
+                                   data-deadline="<?php echo $this->escape($goal['deadline'] ?? ''); ?>"
+                                   data-start-date="<?php echo $this->escape($goal['start_date'] ?? ''); ?>"
+                                   data-description="<?php echo $this->escape($goal['description'] ?? ''); ?>"
+                                   data-color="<?php echo $this->escape($goal['color'] ?? ''); ?>"
+                                   data-target-amount="<?php echo $goal['target_amount'] ?? 0; ?>"
+                                   data-current-amount="<?php echo $goal['current_amount'] ?? 0; ?>">
                                 <div class="card goal-card border-0 shadow-sm h-100">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-start mb-3">
@@ -253,10 +261,10 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">DANH MỤC LIÊN KẾT (Tùy chọn)</label>
-                        <select class="form-select bg-light border-0" id="goalCategory" name="category_id">
+                            <select class="form-select bg-light border-0" id="goalCategory" name="category_id">
                             <option value="">-- Không liên kết --</option>
                             <?php if (!empty($categories)): foreach ($categories as $cat): ?>
-                                    <option value="<?php echo $cat['id']; ?>"><?php echo $this->escape($cat['name']); ?></option>
+                                <option value="<?php echo $cat['id']; ?>" data-type="<?php echo $this->escape($cat['type'] ?? 'expense'); ?>"><?php echo $this->escape($cat['name']); ?></option>
                             <?php endforeach;
                             endif; ?>
                         </select>
@@ -269,6 +277,8 @@
                     </div>
 
                     <input type="hidden" id="goalStatus" name="status" value="active">
+                    <input type="hidden" id="goalColor" name="color" value="#4e73df">
+                    <input type="hidden" id="goalCurrentAmount" name="current_amount" value="0">
                 </div>
                 <div class="modal-footer border-top-0 px-4 pb-4">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
