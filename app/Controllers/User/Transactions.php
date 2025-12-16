@@ -24,31 +24,87 @@ class Transactions extends Controllers
     {
         $userId = $this->getCurrentUserId();
         
-        // Lọc theo tháng
         $currentMonth = date('Y-m');
         $filterMonth = isset($_GET['month']) ? $_GET['month'] : $currentMonth;
 
+        // Load data sơ bộ
         $filters = ['range' => $filterMonth];
         $transactions = $this->transactionModel->getAllByUser($userId, $filters);
-        
-        // Lấy danh mục để hiển thị trong modal thêm mới
         $categories = $this->categoryModel->getAll($userId);
+
+        $limit = 10;
+        $totalRecords = count($transactions); 
+        $totalPages = ceil($totalRecords / $limit);
 
         $data = [
             'title' => 'Quản lý thu chi',
-            'transactions' => $transactions,
+            'transactions' => array_slice($transactions, 0, $limit),
             'categories' => $categories,
             'current_month' => $filterMonth,
+            'current_page' => 1,
+            'total_pages' => $totalPages,
+            'current_range' => $filterMonth,
+            'current_category' => 'all',
             'csrf_token' => CsrfProtection::generateToken()
         ];
 
         $this->view('user/transactions', $data);
     }
 
-    /**
-     * API: Tạo giao dịch mới
-     */
-    public function api_create()
+    // API lấy dữ liệu cho bảng (Javascript gọi hàm này)
+    public function api_get_transactions()
+    {
+        $userId = $this->getCurrentUserId();
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $filters = [
+            'range' => $_GET['range'] ?? date('Y-m'),
+            'category_id' => $_GET['category'] ?? 'all',
+            'sort' => $_GET['sort'] ?? 'newest',
+            'limit' => $limit,
+            'offset' => $offset
+        ];
+
+        $transactions = $this->transactionModel->getAllByUser($userId, $filters);
+        $totalRecords = $this->transactionModel->getCount($userId, $filters);
+        $totalPages = ceil($totalRecords / $limit);
+
+        $formatted = [];
+        foreach ($transactions as $t) {
+            $formatted[] = [
+                'id' => $t['id'],
+                'date' => $t['date'],
+                'formatted_date' => date('d M Y', strtotime($t['date'])),
+                'description' => htmlspecialchars($t['description']),
+                'amount' => $t['amount'],
+                'formatted_amount' => number_format(abs($t['amount']), 0, ',', '.') . ' ₫',
+                'type' => isset($t['type']) ? $t['type'] : ($t['amount'] >= 0 ? 'income' : 'expense'),
+                'category_name' => $t['category_name'] ?? 'Khác',
+                'category_id' => $t['category_id'],
+                'transaction_date' => $t['date']
+            ];
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true, 
+            'data' => [
+                'transactions' => $formatted,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                    'has_prev' => $page > 1,
+                    'has_next' => $page < $totalPages
+                ]
+            ]
+        ]);
+        exit;
+    }
+
+    // [FIXED] API Thêm giao dịch (Tên hàm phải là api_add để khớp với JS)
+    public function api_add()
     {
         if ($this->request->method() !== 'POST') {
             Response::errorResponse('Method not allowed');
@@ -58,41 +114,68 @@ class Transactions extends Controllers
         CsrfProtection::verify();
 
         $data = $this->request->all();
+        if (empty($data)) {
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true) ?? [];
+        }
 
-        // Validate cơ bản
-        if (empty($data['amount']) || empty($data['category_id']) || empty($data['date'])) {
+        // Xử lý ngày (JS có thể gửi key 'date' hoặc 'transaction_date')
+        $date = $data['date'] ?? $data['transaction_date'] ?? null;
+
+        if (empty($data['amount']) || empty($data['category_id']) || empty($date)) {
             Response::errorResponse('Vui lòng nhập đủ thông tin');
             return;
         }
 
-        // Chuẩn bị dữ liệu
         $cleanAmount = floatval(str_replace([',', '.'], '', $data['amount']));
-        
-        // Xác định loại (income/expense) dựa trên category nếu form không gửi lên
         $type = $data['type'] ?? 'expense';
-        // Nếu là expense thì lưu số âm (tuỳ logic DB của đại ca, nhưng thường lưu số gốc và dùng cột type)
-        // Ở đây giả định lưu số thực, cột type quyết định âm dương khi hiển thị
         
         $transData = [
             'user_id' => $this->getCurrentUserId(),
             'category_id' => $data['category_id'],
-            'amount' => $data['type'] == 'expense' ? -abs($cleanAmount) : abs($cleanAmount),
-            'date' => $data['date'],
+            'amount' => $type == 'expense' ? -abs($cleanAmount) : abs($cleanAmount),
+            'date' => $date,
             'description' => htmlspecialchars($data['description'] ?? ''),
             'type' => $type
         ];
 
-        // Gọi Model (Model sẽ tự động + tiền vào Goal nếu có link)
         if ($this->transactionModel->create($transData)) {
             Response::successResponse('Thêm giao dịch thành công!');
         } else {
-            Response::errorResponse('Có lỗi xảy ra, vui lòng thử lại.');
+            Response::errorResponse('Lỗi khi lưu vào Database.');
         }
     }
 
-    /**
-     * API: Xóa giao dịch
-     */
+    public function api_update($id)
+    {
+        if ($this->request->method() !== 'POST') return;
+        CsrfProtection::verify();
+
+        $data = $this->request->all();
+        if (empty($data)) {
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true) ?? [];
+        }
+
+        $cleanAmount = floatval(str_replace([',', '.'], '', $data['amount']));
+        $type = $data['type'] ?? 'expense';
+        $date = $data['date'] ?? $data['transaction_date'];
+
+        $updateData = [
+            'category_id' => $data['category_id'],
+            'amount' => $type == 'expense' ? -abs($cleanAmount) : abs($cleanAmount),
+            'date' => $date,
+            'description' => htmlspecialchars($data['description'] ?? ''),
+            'type' => $type
+        ];
+
+        if ($this->transactionModel->update($id, $updateData)) {
+            Response::successResponse('Cập nhật thành công');
+        } else {
+            Response::errorResponse('Lỗi cập nhật');
+        }
+    }
+
     public function api_delete($id)
     {
         if ($this->request->method() !== 'POST') return;
