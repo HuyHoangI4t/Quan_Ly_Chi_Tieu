@@ -490,6 +490,113 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    async function handleAddTransactionSubmit(e, isRetry = false, confirmed = false) {
+        if (e && e.preventDefault) e.preventDefault();
+        
+        const form = document.getElementById('addTransactionForm');
+        const btn = form.querySelector('button[type="submit"]');
+        
+        // Lưu trạng thái nút cũ để restore sau này
+        const oldBtnText = btn.getAttribute('data-original-text') || btn.innerHTML;
+        if (!btn.getAttribute('data-original-text')) {
+            btn.setAttribute('data-original-text', btn.innerHTML);
+        }
+
+        // Nếu đang submit mà không phải là retry (do confirm) thì chặn
+        if (btn.classList.contains('is-submitting') && !isRetry) {
+            console.log('Submit prevented: already sending');
+            return;
+        }
+        
+        btn.classList.add('is-submitting');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+
+        try {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Xử lý amount (xóa dấu chấm/phẩy, chỉ lấy số)
+            const amountRaw = document.getElementById('amount_display')?.value || '';
+            data.amount = amountRaw.replace(/\D/g, ''); 
+            
+            // Nếu là retry đã confirm, thêm cờ vào payload
+            if (confirmed) {
+                data.confirmed = true;
+            }
+
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
+            const resp = await fetch(`${BASE_URL}/transactions/api_add`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrf
+                },
+                body: JSON.stringify({ ...data, csrf_token: csrf })
+            });
+
+            const res = await resp.json();
+
+            // === LOGIC XỬ LÝ CẢNH BÁO / CONFIRM ===
+            if (res.success && res.data && res.data.requires_confirmation) {
+                // Mở khóa nút để user có thể bấm lại
+                btn.classList.remove('is-submitting');
+                btn.disabled = false;
+                btn.innerHTML = oldBtnText;
+
+                // Hiện Confirm Dialog
+                if (confirm(res.data.message)) {
+                    // Nếu User đồng ý -> Gọi đệ quy hàm này với cờ confirmed = true
+                    // Quan trọng: Truyền null vào tham số e để tránh lỗi preventDefault
+                    await handleAddTransactionSubmit(null, true, true);
+                }
+                return; // Dừng luồng hiện tại để chờ retry
+            }
+
+            if (res.success) {
+                // Thành công -> Reset form
+                form.reset();
+                if(document.getElementById('amount_display')) document.getElementById('amount_display').value = '';
+                
+                // Đóng modal
+                const modalEl = document.getElementById('addTransactionModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+
+                // Toast báo công
+                if (window.SmartSpending && window.SmartSpending.showToast) {
+                    window.SmartSpending.showToast(res.message, 'success');
+                } else {
+                    alert(res.message);
+                }
+                
+                loadTransactions();
+                window.dispatchEvent(new CustomEvent('jars:updated'));
+
+            } else {
+                // Lỗi từ server (ví dụ: không đủ tiền bù lỗ)
+                if (window.SmartSpending && window.SmartSpending.showToast) {
+                    window.SmartSpending.showToast(res.message, 'error');
+                } else {
+                    alert(res.message);
+                }
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi hệ thống hoặc lỗi kết nối!');
+        } finally {
+            // Chỉ reset nút nếu ĐÃ XONG VIỆC (Thành công hoặc Lỗi hẳn)
+            // Nếu đang chờ confirm (đã return ở trên) thì không chạy vào đây hoặc không ảnh hưởng
+            if (confirmed || !document.querySelector('.modal.show')) { 
+                 btn.classList.remove('is-submitting');
+                 btn.disabled = false;
+                 btn.innerHTML = oldBtnText;
+            }
+        }
+    }
+
     // Xử lý sự kiện Submit Form
     const addTransactionForm = document.getElementById('addTransactionForm');
     if (addTransactionForm) {

@@ -144,4 +144,31 @@ class Dashboard extends Controllers
         echo "</body>";
         exit;
     }
+
+    public function api_get_wallets()
+    {
+        // 1. Clean buffer & Set Header JSON
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        try {
+            $userId = $this->getCurrentUserId();
+            
+            // 2. Lấy số dư từ DB
+            $db = (new ConnectDB())->getConnection();
+            $stmt = $db->prepare("SELECT jar_code, balance FROM user_wallets WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            
+            // Trả về dạng Key-Value: ['nec' => 100000, 'play' => 50000, ...]
+            $wallets = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+            echo json_encode([
+                'success' => true,
+                'data' => $wallets
+            ]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
 }

@@ -117,6 +117,17 @@ CREATE TABLE `user_budget_settings` (
   CONSTRAINT `fk_settings_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `system_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `action` varchar(50) NOT NULL,
+  `target_id` int(11) DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_system_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- ==========================================================
 -- 3. INSERT DATA (SEED)
@@ -213,5 +224,10 @@ INSERT IGNORE INTO `user_wallets` (user_id, jar_code, balance) VALUES
 
 -- 3.6. INIT SETTINGS
 INSERT IGNORE INTO `user_budget_settings` (user_id) VALUES (2);
+
+ALTER TABLE users 
+ADD COLUMN notify_budget_limit TINYINT(1) DEFAULT 1,
+ADD COLUMN notify_goal_reminder TINYINT(1) DEFAULT 1,
+
 
 SET FOREIGN_KEY_CHECKS = 1;

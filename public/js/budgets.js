@@ -269,7 +269,7 @@ function formatInputMoney(input) {
         }
     }
 
-// [FIX LỆCH DÒNG VÀ BACKGROUND NÚT] Tối ưu hóa renderTable
+    // [FIX LỆCH DÒNG VÀ BACKGROUND NÚT] Tối ưu hóa renderTable
     function renderTable(budgets) {
         if (!tableBody) return;
         tableBody.innerHTML = '';
@@ -289,34 +289,34 @@ function formatInputMoney(input) {
             const alertThreshold = parseFloat(b.alert_threshold || 80);
 
             // Logic màu JARS và Tên Hũ
-            const jarCode = (b.category_group || 'none').toLowerCase(); 
+            const jarCode = (b.category_group || 'none').toLowerCase();
             const jarBgClass = `bg-${jarCode}-subtle`;
             const jarTextClass = `text-${jarCode}`;
-            
+
             // Tính toán màu sắc cho thanh tiến trình
-            let pColorClass = `bg-${jarCode}`; 
-            
+            let pColorClass = `bg-${jarCode}`;
+
             if (percent >= 100) {
-                pColorClass = 'bg-danger'; 
+                pColorClass = 'bg-danger';
             } else if (percent >= alertThreshold) {
-                pColorClass = 'bg-warning'; 
+                pColorClass = 'bg-warning';
             }
             if (jarCode === 'none') {
-                 pColorClass = percent >= 100 ? 'bg-danger' : (percent >= alertThreshold ? 'bg-warning' : 'bg-success');
+                pColorClass = percent >= 100 ? 'bg-danger' : (percent >= alertThreshold ? 'bg-warning' : 'bg-success');
             }
 
 
             const spentFormatted = formatCurrencyLocal(spent);
             const amountFormatted = formatCurrencyLocal(amount);
-            
+
             // Màu nền mờ cho nút Sửa (Vàng/Cam subtle)
-            const editBgClass = 'bg-ffa-subtle'; 
+            const editBgClass = 'bg-ffa-subtle';
             // Màu nền mờ cho nút Xóa (Đỏ subtle - dùng NEC)
-            const deleteBgClass = 'bg-nec-subtle'; 
-            
+            const deleteBgClass = 'bg-nec-subtle';
+
             // Kích thước nút hành động
             const actionStyle = "width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: background 0.3s;";
-            
+
 
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -324,7 +324,7 @@ function formatInputMoney(input) {
                     <div class="d-flex align-items-center">
                         
                         <div class="me-3 ${jarBgClass} ${jarTextClass}" 
-                             style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.1rem;">
+                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.1rem;">
                             <i class="fas ${b.category_icon || 'fa-circle'}"></i>
                         </div>
                         
@@ -341,8 +341,14 @@ function formatInputMoney(input) {
                 </td>
                 
                 <td class="ps-4 align-middle" style="min-width: 150px;">
-                    <div class="progress" style="height: 6px; border-radius: 3px;">
-                        <div class="progress-bar ${pColorClass}" style="width: ${percent}%"></div>
+                    <div class="progress" style="height: 18px; border-radius: 10px; position: relative; background-color: #e9ecef;">
+                        <div class="progress-bar ${pColorClass}" 
+                            role="progressbar" 
+                            style="width: ${Math.min(percent, 100)}%; border-radius: 10px;">
+                        </div>
+                        <span style="position: absolute; left: 0; width: 100%; text-align: center; color: #444; font-weight: 700; font-size: 11px; line-height: 18px; text-shadow: 0px 0px 2px #fff;">
+                            ${parseFloat(percent).toFixed(1)}%
+                        </span>
                     </div>
                 </td>
                 
@@ -368,7 +374,7 @@ function formatInputMoney(input) {
 
     // [HÀM MỚI] Xử lý mở modal để sửa ngân sách
     window.openEditBudget = function (budgetId) {
-        const budget = budgetsListCache.find(b => b.id === budgetId);
+        const budget = budgetsListCache.find(b => b.id == budgetId);
         const modalEl = document.getElementById('createBudgetModal');
         const modalTitle = document.getElementById('budgetModalTitle');
 
@@ -674,24 +680,24 @@ function formatInputMoney(input) {
     document.addEventListener('DOMContentLoaded', init);
 })();
 
-    /* --- Migrated SmartSpending.showToast from view (ensure it's available) --- */
-    if (typeof window.SmartSpending === 'undefined') window.SmartSpending = {};
+/* --- Migrated SmartSpending.showToast from view (ensure it's available) --- */
+if (typeof window.SmartSpending === 'undefined') window.SmartSpending = {};
 
-    window.SmartSpending.showToast = function(message, type = 'success') {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            document.body.appendChild(container);
-        }
+window.SmartSpending.showToast = function (message, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
 
-        let icon = 'fa-check-circle';
-        if (type === 'error') icon = 'fa-times-circle';
-        if (type === 'warning') icon = 'fa-exclamation-triangle';
+    let icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-times-circle';
+    if (type === 'warning') icon = 'fa-exclamation-triangle';
 
-        const toast = document.createElement('div');
-        toast.className = `custom-toast toast-${type}`;
-        toast.innerHTML = `
+    const toast = document.createElement('div');
+    toast.className = `custom-toast toast-${type}`;
+    toast.innerHTML = `
             <div class="toast-content">
                 <i class="fas ${icon} fa-lg"></i>
                 <span>${message}</span>
@@ -699,15 +705,15 @@ function formatInputMoney(input) {
             <i class="fas fa-times toast-close" onclick="this.parentElement.remove()"></i>
         `;
 
-        container.appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 10);
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => toast.remove(), 400);
-        }, 3000);
-    };
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 400);
+    }, 3000);
+};
 
-    console.log("✅ Toast System Loaded Successfully!");
+console.log("✅ Toast System Loaded Successfully!");
 
-    /* --- End migrated toast --- */
+/* --- End migrated toast --- */
