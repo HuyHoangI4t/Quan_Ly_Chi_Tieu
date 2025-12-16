@@ -43,13 +43,10 @@
                         Loại giao dịch
                     </label>
                     <select id="typeFilter" class="form-select">
-                        <option value="all" <?php echo ($current_type ?? 'all') === 'all' ? 'selected' : ''; ?>>
-                            Tất cả
-                        </option>
-                        <option value="expense" <?php echo ($current_type ?? 'all') === 'expense' ? 'selected' : ''; ?>>
+                        <option value="expense" <?php echo ($current_type ?? 'expense') === 'expense' ? 'selected' : ''; ?>>
                             Chi tiêu
                         </option>
-                        <option value="income" <?php echo ($current_type ?? 'all') === 'income' ? 'selected' : ''; ?>>
+                        <option value="income" <?php echo ($current_type ?? 'expense') === 'income' ? 'selected' : ''; ?>>
                             Thu nhập
                         </option>
                     </select>

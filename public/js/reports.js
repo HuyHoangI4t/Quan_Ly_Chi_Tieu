@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Current filter state
     let currentFilters = {
         period: document.getElementById('periodFilter')?.value || 'last_3_months',
-        type: document.getElementById('typeFilter')?.value || 'all'
+        type: document.getElementById('typeFilter')?.value || 'expense'
     };
 
     // Chart instances
