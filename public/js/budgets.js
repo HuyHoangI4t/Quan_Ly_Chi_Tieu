@@ -673,3 +673,41 @@ function formatInputMoney(input) {
 
     document.addEventListener('DOMContentLoaded', init);
 })();
+
+    /* --- Migrated SmartSpending.showToast from view (ensure it's available) --- */
+    if (typeof window.SmartSpending === 'undefined') window.SmartSpending = {};
+
+    window.SmartSpending.showToast = function(message, type = 'success') {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        let icon = 'fa-check-circle';
+        if (type === 'error') icon = 'fa-times-circle';
+        if (type === 'warning') icon = 'fa-exclamation-triangle';
+
+        const toast = document.createElement('div');
+        toast.className = `custom-toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${icon} fa-lg"></i>
+                <span>${message}</span>
+            </div>
+            <i class="fas fa-times toast-close" onclick="this.parentElement.remove()"></i>
+        `;
+
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 400);
+        }, 3000);
+    };
+
+    console.log("✅ Toast System Loaded Successfully!");
+
+    /* --- End migrated toast --- */
