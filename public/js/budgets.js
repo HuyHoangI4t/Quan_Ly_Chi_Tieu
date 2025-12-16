@@ -1,12 +1,12 @@
 function formatInputMoney(input) {
     // Lấy giá trị hiện tại, loại bỏ các ký tự không phải số
     let rawValue = (input.value || '').toString().replace(/\D/g, '');
-    
+
     if (rawValue) {
         // Định dạng lại số tiền (ví dụ: 1000000 -> 1.000.000)
         let formattedValue = new Intl.NumberFormat('vi-VN').format(rawValue);
         input.value = formattedValue;
-        
+
         // Cập nhật giá trị thực (chỉ số) vào input hidden
         const hiddenInputId = input.id.replace('_display', '');
         const hiddenInput = document.getElementById(hiddenInputId);
@@ -31,6 +31,7 @@ function formatInputMoney(input) {
 
     let trendChartInstance = null;
     let pieChartInstance = null;
+    let budgetsListCache = []; // Cache dữ liệu ngân sách
 
     function formatCurrencyLocal(amount) {
         if (window.SmartSpending && typeof window.SmartSpending.formatCurrency === 'function') {
@@ -92,7 +93,7 @@ function formatInputMoney(input) {
 
     // Hàm load Số dư Jars từ API và cập nhật UI (real-time)
     async function loadJarBalances() {
-        console.log("DEBUG: loadJarBalances() called to refresh JARS UI."); // DEBUG LOG
+        console.log("DEBUG: loadJarBalances() called to refresh JARS UI.");
         try {
             const response = await fetch(`${BASE_URL}/budgets/api_get_wallets`, { cache: 'no-store' });
             if (!response.ok) throw new Error('API error');
@@ -136,71 +137,74 @@ function formatInputMoney(input) {
             loadBudgets();
         });
 
+        const modalEl = document.getElementById('createBudgetModal');
+        const modalTitle = document.getElementById('budgetModalTitle');
+        const budgetIdInput = document.getElementById('budget_id');
+        const createForm = document.getElementById('createBudgetForm');
+
         document.getElementById('openCreateBudget')?.addEventListener('click', () => {
-            const modalEl = document.getElementById('createBudgetModal');
+            // Reset form và trạng thái khi mở modal tạo mới
+            createForm.reset();
+            if (modalTitle) modalTitle.innerText = 'Thiết lập ngân sách';
+            if (budgetIdInput) budgetIdInput.value = '';
+
             if (modalEl) {
                 const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
                 modalInstance.show();
             }
         });
 
-        const createForm = document.getElementById('createBudgetForm');
-        // [FIX LỖI TẠO 1 RA 3] Hủy đăng ký sự kiện trước khi đăng ký lại (đảm bảo hàm chỉ được gọi 1 lần)
+        // [FIX TẠO 1 RA 3 & ĐỔI TÊN HÀM] Hủy đăng ký sự kiện trước khi đăng ký lại (handleBudgetSubmit xử lý cả tạo và sửa)
         if (createForm) {
-            createForm.removeEventListener('submit', handleCreateBudget); 
-            createForm.addEventListener('submit', handleCreateBudget);
+            createForm.removeEventListener('submit', handleBudgetSubmit);
+            createForm.addEventListener('submit', handleBudgetSubmit);
         }
 
-        // [FIX LỖI XÓA] Cập nhật hàm deleteBudget để gọi API mới và xử lý tham số 'this'
+        // [FIX LỖI XÓA] (Giữ nguyên logic)
         window.deleteBudget = async function (id, btn) {
             if (!confirm('Đại ca có chắc chắn muốn xóa ngân sách này không?')) return;
-            
-            // [FIX SCOPE] Khai báo originalHtml ở phạm vi hàm
-            let originalHtml = null; 
+
+            let originalHtml = null;
 
             if (btn) {
                 btn.disabled = true;
-                originalHtml = btn.innerHTML; // Gán giá trị vào biến đã khai báo
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
+                originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             }
 
             try {
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                const resp = await fetch(`${BASE_URL}/budgets/api_delete_budget`, { // <-- Gọi API PHP mới
-                    method: 'POST', 
+                const resp = await fetch(`${BASE_URL}/budgets/api_delete_budget`, {
+                    method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-                    body: JSON.stringify({ id: id, csrf_token: csrf }) // Gửi ID qua body
+                    body: JSON.stringify({ id: id, csrf_token: csrf })
                 });
-                
+
                 let res;
                 try {
                     res = await resp.json();
                 } catch (e) {
-                    // Xử lý Lỗi JSON/HTML (lỗi <!)
                     console.error("Failed to parse JSON response on delete:", e);
-                    if (resp.status === 401 || resp.status === 403) {
-                         if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Phiên đăng nhập hết hạn. Vui lòng F5.', 'error');
-                    } else if (window.SmartSpending && window.SmartSpending.showToast) {
-                        window.SmartSpending.showToast('Lỗi server: Phản hồi không hợp lệ.', 'error');
-                    }
+                    if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Lỗi server: Phản hồi không hợp lệ.', 'error');
                     return;
                 }
 
                 if (res.success) {
                     if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Đã xóa ngân sách!', 'success');
                     loadBudgets();
-                    loadJarBalances(); // [QUAN TRỌNG] Tải lại số dư sau khi xóa (hoàn tiền)
+                    loadJarBalances();
+                    window.dispatchEvent(new CustomEvent('jars:updated'));
                 } else {
                     if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast(res.message, 'error');
                 }
-            } catch (e) { 
-                console.error(e); 
+            } catch (e) {
+                console.error(e);
             } finally {
-                 if (btn && originalHtml !== null) { // Khôi phục nếu nút tồn tại và HTML đã được lưu
+                if (btn && originalHtml !== null) {
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;
-                 }
+                }
             }
         };
 
@@ -232,16 +236,6 @@ function formatInputMoney(input) {
             });
         }
 
-        // Tự động load lại sau khi modal đóng hoàn toàn
-        const createBudgetModal = document.getElementById('createBudgetModal');
-        if (createBudgetModal) {
-            createBudgetModal.addEventListener('hidden.bs.modal', function () {
-                // Hủy bỏ việc gọi loadJarBalances() ở đây để tránh gọi 2 lần
-                // Ta sẽ gọi reload cứng sau khi API thành công
-                // console.log("DEBUG: Modal createBudgetModal hidden."); 
-            });
-        }
-
         const smartBudgetModal = document.getElementById('smartBudgetModal');
         if (smartBudgetModal) {
             smartBudgetModal.addEventListener('hidden.bs.modal', function () {
@@ -262,6 +256,7 @@ function formatInputMoney(input) {
             const data = await response.json();
 
             if (data.success && data.data) {
+                budgetsListCache = data.data; // Cache dữ liệu
                 renderTable(data.data);
                 loadCharts();
             } else {
@@ -274,6 +269,7 @@ function formatInputMoney(input) {
         }
     }
 
+// [FIX LỆCH DÒNG VÀ BACKGROUND NÚT] Tối ưu hóa renderTable
     function renderTable(budgets) {
         if (!tableBody) return;
         tableBody.innerHTML = '';
@@ -291,49 +287,137 @@ function formatInputMoney(input) {
             if (percent > 100) percent = 100;
 
             const alertThreshold = parseFloat(b.alert_threshold || 80);
-            let pClass = percent >= 100 ? 'bg-danger' : (percent >= alertThreshold ? 'bg-warning' : 'bg-success');
+
+            // Logic màu JARS và Tên Hũ
+            const jarCode = (b.category_group || 'none').toLowerCase(); 
+            const jarBgClass = `bg-${jarCode}-subtle`;
+            const jarTextClass = `text-${jarCode}`;
+            
+            // Tính toán màu sắc cho thanh tiến trình
+            let pColorClass = `bg-${jarCode}`; 
+            
+            if (percent >= 100) {
+                pColorClass = 'bg-danger'; 
+            } else if (percent >= alertThreshold) {
+                pColorClass = 'bg-warning'; 
+            }
+            if (jarCode === 'none') {
+                 pColorClass = percent >= 100 ? 'bg-danger' : (percent >= alertThreshold ? 'bg-warning' : 'bg-success');
+            }
+
 
             const spentFormatted = formatCurrencyLocal(spent);
             const amountFormatted = formatCurrencyLocal(amount);
-
+            
+            // Màu nền mờ cho nút Sửa (Vàng/Cam subtle)
+            const editBgClass = 'bg-ffa-subtle'; 
+            // Màu nền mờ cho nút Xóa (Đỏ subtle - dùng NEC)
+            const deleteBgClass = 'bg-nec-subtle'; 
+            
+            // Kích thước nút hành động
+            const actionStyle = "width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: background 0.3s;";
+            
 
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="ps-4">
                     <div class="d-flex align-items-center">
-                        <div class="me-3" style="width: 36px; height: 36px; background: ${b.category_color || '#ccc'}20; color: ${b.category_color || '#666'}; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        
+                        <div class="me-3 ${jarBgClass} ${jarTextClass}" 
+                             style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.1rem;">
                             <i class="fas ${b.category_icon || 'fa-circle'}"></i>
                         </div>
-                        <div><div class="fw-bold text-dark">${b.category_name}</div><small class="text-muted">${(b.category_group || '').toUpperCase()}</small></div>
+                        
+                        <div>
+                            <div class="fw-bold text-dark">${b.category_name}</div>
+                            <small class="fw-semibold ${jarTextClass}">${(jarCode).toUpperCase()}</small>
+                        </div>
                     </div>
                 </td>
-                <td class="text-end">
-                    <div class="fw-bold text-dark">${spentFormatted} ₫</div>
-                    <small class="text-muted">/ ${amountFormatted} ₫</small>
+                
+                <td class="text-end fw-semibold budget-amount-cell" style="white-space: nowrap;">
+                    <span class="text-danger">${spentFormatted} </span>
+                    <span class="text-muted"> / ${amountFormatted} </span>
                 </td>
-                <td class="ps-4 align-middle">
+                
+                <td class="ps-4 align-middle" style="min-width: 150px;">
                     <div class="progress" style="height: 6px; border-radius: 3px;">
-                        <div class="progress-bar ${pClass}" style="width: ${percent}%"></div>
+                        <div class="progress-bar ${pColorClass}" style="width: ${percent}%"></div>
                     </div>
                 </td>
-                <td class="text-end pe-4">
-                    <button class="btn btn-sm text-danger opacity-50 hover-opacity-100" onclick="deleteBudget(${b.id}, this)"><i class="fas fa-trash"></i></button>
+                
+                <td class="text-end pe-4 align-middle">
+                    <div class="d-flex gap-2 justify-content-end align-items-center">
+                        <span class="${editBgClass} text-ffa opacity-80 hover-opacity-100" style="${actionStyle}">
+                            <button class="btn btn-sm p-0 text-ffa" onclick="openEditBudget(${b.id})" style="line-height: 1;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </span>
+                        
+                        <span class="${deleteBgClass} text-danger opacity-80 hover-opacity-100" style="${actionStyle}">
+                            <button class="btn btn-sm p-0 text-danger" onclick="deleteBudget(${b.id}, this)" style="line-height: 1;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </span>
+                    </div>
                 </td>
             `;
             tableBody.appendChild(row);
         });
     }
 
+    // [HÀM MỚI] Xử lý mở modal để sửa ngân sách
+    window.openEditBudget = function (budgetId) {
+        const budget = budgetsListCache.find(b => b.id === budgetId);
+        const modalEl = document.getElementById('createBudgetModal');
+        const modalTitle = document.getElementById('budgetModalTitle');
 
-    async function handleCreateBudget(e) {
+        if (!budget || !modalEl) {
+            console.error('Budget data not found for ID:', budgetId);
+            return;
+        }
+
+        // Set form title
+        if (modalTitle) modalTitle.innerText = 'Sửa Ngân Sách';
+
+        // Đổ dữ liệu vào form
+        document.getElementById('budget_id').value = budget.id;
+        document.getElementById('budget_category').value = budget.category_id;
+        document.getElementById('budget_category_picker').value = budget.category_name;
+
+        // Đổ tiền vào input display (cần định dạng lại)
+        const formattedAmount = formatCurrencyLocal(budget.amount);
+        document.getElementById('budget_amount_display').value = formattedAmount;
+        document.getElementById('budget_amount').value = budget.amount;
+
+        document.getElementById('budget_period').value = budget.period;
+        document.getElementById('budget_threshold').value = budget.alert_threshold;
+
+        // Cập nhật giá trị hiển thị của thanh trượt cảnh báo
+        const thresholdValueEl = document.getElementById('thresholdValue');
+        if (thresholdValueEl) thresholdValueEl.innerText = budget.alert_threshold + '%';
+
+        // Mở modal
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInstance.show();
+    };
+
+
+    // [HÀM MỚI] Xử lý cả Tạo và Sửa Ngân sách
+    async function handleBudgetSubmit(e) {
         e.preventDefault();
         const btn = e.submitter;
         const oldText = btn.innerHTML;
-        
+
+        // Lấy ID ngân sách để xác định là Tạo mới hay Sửa
+        const budgetId = document.getElementById('budget_id')?.value || 0;
+        const isEdit = budgetId > 0;
+        const apiEndpoint = isEdit ? `${BASE_URL}/budgets/api_update` : `${BASE_URL}/budgets/api_create`;
+
         // --- HARD FIX: KIỂM TRA ĐĂNG KÝ TRÙNG LẶP ---
         if (btn.classList.contains('is-submitting')) {
-             console.warn("Submit ignored: Already processing.");
-             return; // Ngăn chặn nếu đã có submit đang chạy
+            console.warn("Submit ignored: Already processing.");
+            return;
         }
         btn.classList.add('is-submitting');
         // --- END HARD FIX ---
@@ -342,13 +426,12 @@ function formatInputMoney(input) {
         btn.innerHTML = 'Đang xử lý...';
 
         const fd = new FormData(e.target);
-
-        // Lấy giá trị thực từ input hidden (đã được formatInputMoney xử lý)
         const amountRaw = document.getElementById('budget_amount')?.value || '';
-        
+
         const data = {
+            budget_id: isEdit ? budgetId : undefined,
             category_id: fd.get('category_id'),
-            amount: amountRaw, // Dùng giá trị đã được làm sạch
+            amount: amountRaw,
             period: fd.get('period'),
             alert_threshold: document.getElementById('budget_threshold').value
         };
@@ -356,29 +439,27 @@ function formatInputMoney(input) {
         if (!data.category_id) {
             if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Vui lòng chọn danh mục.', 'warning');
             else alert('Vui lòng chọn danh mục.');
-            
-            btn.classList.remove('is-submitting'); // Khôi phục trạng thái
+
+            btn.classList.remove('is-submitting');
             btn.disabled = false; btn.innerHTML = oldText;
             return;
         }
 
         try {
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            const resp = await fetch(`${BASE_URL}/budgets/api_create`, {
+            const resp = await fetch(apiEndpoint, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
                 body: JSON.stringify(Object.assign({}, data, { csrf_token: csrf }))
             });
 
-            // [FIX LỖI STREAM] Đọc response text 1 lần duy nhất
             const responseText = await resp.text();
 
             let res;
             try {
                 res = JSON.parse(responseText);
             } catch (e) {
-                // Lỗi này xảy ra khi PHP bị Fatal Error và trả về HTML
                 console.error('Non-JSON response received (FATAL ERROR LIKELY):', responseText);
                 res = { success: false, message: 'Lỗi API Server hoặc Lỗi PHP nghiêm trọng (FATAL ERROR). Vui lòng kiểm tra PHP Error Log.' };
             }
@@ -386,16 +467,22 @@ function formatInputMoney(input) {
             if (res.success) {
                 const modal = document.getElementById('createBudgetModal');
                 if (modal) {
-                    // [FIX REAL-TIME] Không chỉ ẩn modal mà còn reload trang để cập nhật JARS
                     bootstrap.Modal.getInstance(modal)?.hide();
-                    setTimeout(() => window.location.reload(), 100); 
                 }
+                loadBudgets();
+                loadJarBalances();
+                window.dispatchEvent(new CustomEvent('jars:updated'));
+
                 e.target.reset();
-                if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast('Tạo ngân sách thành công!', 'success');
-                else alert('Tạo ngân sách thành công!');
+                // Reset modal state
+                if (document.getElementById('budgetModalTitle')) document.getElementById('budgetModalTitle').innerText = 'Thiết lập ngân sách';
+                document.getElementById('budget_id').value = '';
+
+                if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast(res.message, 'success');
+                else alert(res.message);
             } else {
                 let msg = res.message || 'Lỗi';
-                
+
                 // Hiển thị thông báo số dư chi tiết
                 if (res.data && res.data.jar_code) {
                     const balance = res.data.current_balance;
@@ -406,7 +493,7 @@ function formatInputMoney(input) {
                 } else if (res.data && res.data.message) {
                     msg += "\n" + res.data.message;
                 }
-                
+
                 if (window.SmartSpending && window.SmartSpending.showToast) window.SmartSpending.showToast(msg, 'error');
                 else alert(msg);
             }
@@ -415,10 +502,10 @@ function formatInputMoney(input) {
             else alert('Lỗi hệ thống');
             console.error(err);
         }
-        finally { 
-            btn.classList.remove('is-submitting'); // Khôi phục trạng thái
-            btn.disabled = false; 
-            btn.innerHTML = oldText; 
+        finally {
+            btn.classList.remove('is-submitting');
+            btn.disabled = false;
+            btn.innerHTML = oldText;
         }
     }
 
