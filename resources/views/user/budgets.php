@@ -122,6 +122,28 @@ $this->partial('header');
         background-color: #dcfce7;
         color: #16a34a;
     }
+
+    /* Style cho Category Chooser */
+    .category-item {
+        cursor: pointer;
+        padding: 10px 15px;
+        border-radius: 8px;
+        transition: background-color 0.2s;
+    }
+
+    .category-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .category-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
 </style>
 
 <?php echo CsrfProtection::getTokenMeta(); ?>
@@ -139,8 +161,6 @@ $this->partial('header');
                 </div>
             </div>
             <div class="d-flex gap-2">
-                <!-- "Nạp tiền" button removed per request -->
-
                 <button id="editSmartRatiosBtn" class="btn btn-outline-primary bg-white shadow-sm fw-medium" data-bs-toggle="modal" data-bs-target="#smartBudgetModal">
                     <i class="fas fa-sliders-h me-2"></i>Cấu hình
                 </button>
@@ -177,8 +197,8 @@ $this->partial('header');
                 if ($balance > 0 && $waterHeight < 15) $waterHeight = 15; // Min height để thấy màu
         ?>
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card jar-card h-100 shadow-sm">
-                        <div class="jar-bg-water bg-<?= $conf['style'] ?>" style="height: <?= $waterHeight ?>%"></div>
+                    <div class="card jar-card h-100 shadow-sm" data-jar-code="<?= $code ?>">
+                        <div class="jar-bg-water bg-<?= $conf['style'] ?>" id="jar-water-<?= $code ?>" style="height: <?= $waterHeight ?>%"></div>
 
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -186,12 +206,12 @@ $this->partial('header');
                                     <i class="fas <?= $conf['icon'] ?>"></i>
                                 </div>
                                 <span class="badge bg-white text-dark border shadow-sm rounded-pill px-3 py-2 fw-normal">
-                                    Tỷ lệ: <b><?= $percent ?>%</b>
+                                    Tỷ lệ: <b id="jar-percent-<?= $code ?>"><?= $percent ?>%</b>
                                 </span>
                             </div>
 
                             <h6 class="text-muted text-uppercase fw-bold small mb-1"><?= $conf['name'] ?></h6>
-                            <h3 class="fw-bold mb-3 text-dark"><?= number_format($balance, 0, ',', '.') ?> <small class="text-muted fs-6">₫</small></h3>
+                            <h3 class="fw-bold mb-3 text-dark" id="jar-balance-<?= $code ?>"><?= number_format($balance, 0, ',', '.') ?> <small class="text-muted fs-6">₫</small></h3>
                         </div>
                     </div>
                 </div>
@@ -224,24 +244,29 @@ $this->partial('header');
         </div>
     </div>
 
-    <div class="charts-row mt-4 d-flex gap-4">
-        <div class="card chart-card border-0 shadow-sm mb-4 rounded-4 flex-fill">
-            <div class="card-body p-4">
-                <h6 class="fw-bold text-dark mb-4">Xu hướng chi tiêu</h6>
-                <div class="chart-container"><canvas id="budgetTrend"></canvas></div>
+    <div class="row g-4 mt-4">
+        <div class="col-lg-6">
+            <div class="card chart-card border-0 shadow-sm h-100 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-dark mb-4">Xu hướng chi tiêu</h6>
+                    <div class="chart-container" style="height: 300px;"><canvas id="budgetTrend"></canvas></div>
+                </div>
             </div>
         </div>
-        <div class="card chart-card border-0 shadow-sm mb-4 rounded-4 flex-fill">
-            <div class="card-body p-4">
-                <h6 class="fw-bold text-dark mb-4">Phân bổ danh mục</h6>
-                <div class="chart-container"><canvas id="budgetPie"></canvas></div>
+
+        <div class="col-lg-6">
+            <div class="card chart-card border-0 shadow-sm h-100 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-dark mb-4">Phân bổ danh mục JARS</h6>
+                    <div class="chart-container" style="height: 300px;"><canvas id="budgetPie"></canvas></div>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="createBudgetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-content border-0 shadow-lg rounded-4">
                 <form id="createBudgetForm" novalidate>
                     <div class="modal-header border-0 pb-0 px-4 pt-4">
                         <h5 class="modal-title fw-bold" id="budgetModalTitle">Thiết lập ngân sách</h5>
@@ -252,10 +277,12 @@ $this->partial('header');
 
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-muted">DANH MỤC</label>
-                            <div class="input-group input-group-lg cursor-pointer" onclick="(function(){var e=document.getElementById('openCategoryChooser'); if(e) e.click();})()">
-                                <input type="text" id="budget_category_picker" class="form-control bg-light border-0 rounded-3 ps-3" placeholder="Chọn danh mục..." readonly style="cursor: pointer;">
+                            <div class="input-group input-group-lg cursor-pointer"
+                                data-bs-toggle="modal"
+                                data-bs-target="#categoryChooserModal"
+                                style="cursor: pointer;">
+                                <input type="text" id="budget_category_picker" class="form-control bg-light border-0 rounded-3 ps-3" placeholder="Chọn danh mục..." readonly>
                                 <input type="hidden" id="budget_category" name="category_id">
-                                <span class="input-group-text bg-light border-0 text-muted rounded-3 ms-1"><i class="fas fa-chevron-right"></i></span>
                             </div>
                         </div>
 
@@ -341,13 +368,59 @@ $this->partial('header');
         </div>
     </div>
 
-    <!-- Income distribution modal removed -->
+    <div class="modal fade" id="categoryChooserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold">Chọn Danh mục Chi tiêu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 pt-3 pb-4">
+                    <p class="text-muted small">Chỉ hiển thị các danh mục chi tiêu (Expense).</p>
+                    <div class="list-group list-group-flush" id="categoryList">
+                        <?php
+                        $cats = $categories ?? [];
+                        if (!empty($cats)):
+                            foreach ($cats as $cat):
+                                $catId = $cat['id'];
+                                $catName = htmlspecialchars($cat['name'] ?? 'Danh mục');
+                                $catColor = htmlspecialchars($cat['color'] ?? '#000000');
+                                $catIcon = htmlspecialchars($cat['icon'] ?? 'fa-question-circle');
+                        ?>
+                                <a href="#" class="list-group-item list-group-item-action py-3 category-item"
+                                    data-category-id="<?= $catId ?>"
+                                    data-category-name="<?= $catName ?>"
+                                    data-category-color="<?= $catColor ?>"
+                                    data-category-icon="<?= $catIcon ?>">
+
+                                    <div class="d-flex align-items-center">
+                                        <div class="category-icon me-3" style="background: <?= $catColor ?>20; color: <?= $catColor ?>;">
+                                            <i class="fas <?= $catIcon ?>"></i>
+                                        </div>
+                                        <div class="fw-bold text-dark"><?= $catName ?></div>
+                                    </div>
+                                </a>
+                            <?php
+                            endforeach;
+                        else:
+                            ?>
+                            <div class="alert alert-warning text-center">Chưa có danh mục chi tiêu nào được tạo.</div>
+                        <?php
+                        endif;
+                        ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 </main>
 
 <script>
     window.BASE_URL = "<?php echo BASE_URL; ?>";
     window.JARS_SETTINGS = <?php echo json_encode($settingsData); ?>;
+    window.EXPENSE_CATEGORIES = <?php echo json_encode($categories ?? []); ?>;
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="<?php echo BASE_URL; ?>/js/budgets.js"></script>
@@ -357,19 +430,20 @@ $this->partial('header');
 <style>
     #toast-container {
         position: fixed;
-        top: 80px; /* Thấp xuống xíu để không che Header */
+        top: 80px;
         right: 20px;
         z-index: 99999;
         display: flex;
         flex-direction: column;
         gap: 10px;
     }
+
     .custom-toast {
         min-width: 300px;
         background: #fff;
         border-left: 5px solid #28a745;
         border-radius: 8px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         padding: 15px 20px;
         display: flex;
         align-items: center;
@@ -379,24 +453,64 @@ $this->partial('header');
         transform: translateX(100%);
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .custom-toast.show { opacity: 1; transform: translateX(0); }
-    
-    .custom-toast.toast-success { border-color: #28a745; }
-    .custom-toast.toast-success i { color: #28a745; }
-    
-    .custom-toast.toast-error { border-color: #dc3545; }
-    .custom-toast.toast-error i { color: #dc3545; }
-    
-    .custom-toast.toast-warning { border-color: #ffc107; }
-    .custom-toast.toast-warning i { color: #ffc107; }
 
-    .toast-content { display: flex; align-items: center; gap: 12px; font-weight: 600; color: #333; }
-    .toast-close { cursor: pointer; color: #aaa; transition: 0.2s; }
-    .toast-close:hover { color: #000; }
+    .custom-toast.show {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .custom-toast.toast-success {
+        border-color: #28a745;
+    }
+
+    .custom-toast.toast-success i {
+        color: #28a745;
+    }
+
+    .custom-toast.toast-error {
+        border-color: #dc3545;
+    }
+
+    .custom-toast.toast-error i {
+        color: #dc3545;
+    }
+
+    .custom-toast.toast-warning {
+        border-color: #ffc107;
+    }
+
+    .custom-toast.toast-warning i {
+        color: #ffc107;
+    }
+
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .toast-close {
+        cursor: pointer;
+        color: #aaa;
+        transition: 0.2s;
+    }
+
+    .toast-close:hover {
+        color: #000;
+    }
 
     @keyframes slideInRight {
-        from { opacity: 0; transform: translateX(100%); }
-        to { opacity: 1; transform: translateX(0); }
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
     }
 </style>
 
@@ -416,8 +530,8 @@ $this->partial('header');
 
         // Icon tương ứng
         let icon = 'fa-check-circle';
-        if(type === 'error') icon = 'fa-times-circle';
-        if(type === 'warning') icon = 'fa-exclamation-triangle';
+        if (type === 'error') icon = 'fa-times-circle';
+        if (type === 'warning') icon = 'fa-exclamation-triangle';
 
         // Tạo phần tử Toast
         const toast = document.createElement('div');

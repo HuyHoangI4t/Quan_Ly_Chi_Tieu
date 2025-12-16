@@ -69,12 +69,28 @@ var SmartSpending = window.SmartSpending;
                 try { res = await resRaw.json(); } catch (e) { res = { success: false, message: 'Invalid JSON response' }; }
 
                 if (res.success) {
-                    SmartSpending.showModal('Đã lưu cấu hình!', 'Thành công', 'success', false);
-                    // hide modal after success
-                    if (modalInstance && typeof modalInstance.hide === 'function') {
-                        setTimeout(() => modalInstance.hide(), 200);
+                    SmartSpending.showModal('Đã lưu cấu hình! Đang đồng bộ lại ví...', 'Thành công', 'success', false);
+                    
+                    // [QUAN TRỌNG] CHỜ HÀM ĐỒNG BỘ HOÀN TẤT TRONG DB
+                    if (typeof window.syncJarsApi === 'function') {
+                        const syncResult = await window.syncJarsApi(); 
+
+                        if (syncResult.success) {
+                            SmartSpending.showModal('Đã lưu và đồng bộ ví thành công!', 'Hoàn tất', 'success', false);
+                        } else {
+                            SmartSpending.showModal('Lưu tỷ lệ thành công, nhưng đồng bộ ví thất bại. Vui lòng kiểm tra console.', 'Cảnh báo', 'warning', false);
+                        }
+                    } else {
+                         SmartSpending.showModal('Đã lưu cấu hình, nhưng không thể đồng bộ ví (syncJarsApi bị thiếu).', 'Cảnh báo', 'warning', false);
                     }
+
+                    // ĐÓNG MODAL. Việc này sẽ kích hoạt sự kiện 'hidden.bs.modal' -> loadJarBalances() -> Cập nhật số dư.
+                    if (modalInstance && typeof modalInstance.hide === 'function') {
+                        modalInstance.hide(); 
+                    }
+                    
                     try { window.dispatchEvent(new CustomEvent('smartbudget:ratios_updated', { detail: vals })); } catch (e) {}
+
                 } else {
                     SmartSpending.showModal('Lỗi: ' + (res.message || 'Không lưu được'), 'Lỗi', 'error', false);
                 }
@@ -152,7 +168,7 @@ var SmartSpending = window.SmartSpending;
 
             if(res.success) {
                 SmartSpending.showModal('Đã phân bổ thành công!', 'Thành công', 'success', false);
-                setTimeout(() => window.location.reload(), 500);
+                setTimeout(() => window.location.reload(), 500); 
             } else {
                 SmartSpending.showModal('Lỗi: ' + res.message, 'Lỗi', 'error', false);
             }
