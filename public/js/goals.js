@@ -160,6 +160,7 @@
         if (goalModalLabel) goalModalLabel.textContent = 'Thêm Mục Tiêu';
     }
 
+
     function handleEditGoal(goalId) {
         currentGoalId = goalId;
         if (goalModalLabel) goalModalLabel.textContent = 'Chỉnh Sửa Mục Tiêu';
@@ -185,9 +186,8 @@
         document.getElementById('goalName').value = name;
         document.getElementById('goalTargetAmount').value = formatNumber(targetAmount);
 
-        // Prefill linked category, dates, description, color, current amount when available on the card
+        // Prefill dates, description, color, current amount when available on the card
         try {
-            const catEl = document.getElementById('goalCategory');
             const startEl = document.getElementById('goalStartDate');
             const deadlineEl = document.getElementById('goalDeadline');
             const descEl = document.getElementById('goalDescription');
@@ -195,12 +195,6 @@
             const currentAmtEl = document.getElementById('goalCurrentAmount');
 
             const dataset = goalCard.dataset || {};
-            if (catEl && typeof dataset.categoryId !== 'undefined') {
-                // If the category exists in options, select it; otherwise leave as empty
-                const val = dataset.categoryId || '';
-                if (val && catEl.querySelector(`option[value="${val}"]`)) catEl.value = val;
-                else catEl.value = '';
-            }
             if (startEl && dataset.startDate) startEl.value = dataset.startDate;
             if (deadlineEl && dataset.deadline) deadlineEl.value = dataset.deadline;
             if (descEl && dataset.description) descEl.value = dataset.description;
@@ -468,14 +462,21 @@
         currentGoalId = null;
         const idEl = document.getElementById('goalId'); if (idEl) idEl.value = '';
         const amt = document.getElementById('goalTargetAmount'); if (amt) amt.value = '0';
-        // Clear linked fields
-        const catEl = document.getElementById('goalCategory'); if (catEl) catEl.value = '';
         const startEl = document.getElementById('goalStartDate'); if (startEl) startEl.value = '';
         const deadlineEl = document.getElementById('goalDeadline'); if (deadlineEl) deadlineEl.value = '';
         const descEl = document.getElementById('goalDescription'); if (descEl) descEl.value = '';
         const colorEl = document.getElementById('goalColor'); if (colorEl) colorEl.value = '';
         const currentAmtEl = document.getElementById('goalCurrentAmount'); if (currentAmtEl) currentAmtEl.value = '';
     }
+
+    // Ensure hidden start date defaults to today when creating a new goal
+    (function setDefaultStartDate() {
+        const startEl = document.getElementById('goalStartDate');
+        if (startEl && !startEl.value) {
+            const today = new Date().toISOString().split('T')[0];
+            startEl.value = today;
+        }
+    })();
 
     // Charts
     async function renderCharts() {
@@ -529,12 +530,6 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); 
     else init();
 
-    // Listen for external updates (e.g., creating a transaction linked to a goal)
-    window.addEventListener('goals:updated', function () {
-        // If we're on the goals page, perform a simple reload to refresh server-rendered list
-        if (document.getElementById('goalsContainer')) {
-            try { window.location.reload(); } catch (e) { /* ignore */ }
-        }
-    });
+    // (Removed goals:updated listener — goal linking feature disabled)
 
 })();

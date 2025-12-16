@@ -275,47 +275,7 @@ class Goals extends Controllers
         }
     }
 
-    /**
-     * API: Liên kết transaction với goal
-     */
-    public function api_link_transaction()
-    {
-        if ($this->request->method() !== 'POST') {
-            Response::errorResponse('Method not allowed', null, 405);
-            return;
-        }
-
-        // Verify CSRF token
-        CsrfProtection::verify();
-
-        try {
-            $goalId = $this->request->post('goal_id');
-            $transactionId = $this->request->post('transaction_id');
-
-            if (!$goalId || !$transactionId) {
-                Response::errorResponse('Goal ID and Transaction ID are required', null, 400);
-                return;
-            }
-
-            $userId = $this->getCurrentUserId();
-
-            // Verify ownership
-            $goal = $this->goalModel->getById($goalId, $userId);
-            if (!$goal) {
-                Response::errorResponse('Goal not found', null, 404);
-                return;
-            }
-
-            // Link transaction
-            if ($this->goalModel->linkTransaction($goalId, $transactionId)) {
-                Response::successResponse('Transaction linked to goal successfully');
-            } else {
-                Response::errorResponse('Failed to link transaction');
-            }
-        } catch (Exception $e) {
-            Response::errorResponse('Error: ' . $e->getMessage());
-        }
-    }
+    // NOTE: api_link_transaction removed — linking feature deleted
 
     /**
      * API: Cập nhật trạng thái mục tiêu

@@ -248,28 +248,13 @@
                         </div>
                     </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-bold small text-muted">NGÀY BẮT ĐẦU</label>
-                            <input type="date" class="form-control bg-light border-0" id="goalStartDate" name="start_date">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-bold small text-muted">HẠN CHÓT</label>
-                            <input type="date" class="form-control bg-light border-0" id="goalDeadline" name="deadline" required>
-                        </div>
+                    <input type="hidden" id="goalStartDate" name="start_date" value="<?php echo date('Y-m-d'); ?>">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">HẠN CHÓT</label>
+                        <input type="date" class="form-control bg-light border-0" id="goalDeadline" name="deadline" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">DANH MỤC LIÊN KẾT (Tùy chọn)</label>
-                            <select class="form-select bg-light border-0" id="goalCategory" name="category_id">
-                            <option value="">-- Không liên kết --</option>
-                            <?php if (!empty($categories)): foreach ($categories as $cat): ?>
-                                <option value="<?php echo $cat['id']; ?>" data-type="<?php echo $this->escape($cat['type'] ?? 'expense'); ?>"><?php echo $this->escape($cat['name']); ?></option>
-                            <?php endforeach;
-                            endif; ?>
-                        </select>
-                        <div class="form-text small">Giao dịch thuộc danh mục này sẽ tự động cộng vào mục tiêu.</div>
-                    </div>
+                    <!-- DANH MỤC LIÊN KẾT đã bị gỡ bỏ -->
 
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">MÔ TẢ</label>

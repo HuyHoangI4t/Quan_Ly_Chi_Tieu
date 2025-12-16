@@ -193,20 +193,7 @@ class Transaction
             ]);
             $newId = $this->db->lastInsertId();
 
-            // 2. Nếu category này liên kết tới 1 mục tiêu đang hoạt động thì tự động liên kết giao dịch
-            try {
-                $stmtGoal = $this->db->prepare("SELECT id FROM goals WHERE user_id = ? AND category_id = ? AND status = 'active' ORDER BY created_at ASC LIMIT 1");
-                $stmtGoal->execute([$data['user_id'], $data['category_id']]);
-                $g = $stmtGoal->fetch(PDO::FETCH_ASSOC);
-                if ($g && isset($g['id'])) {
-                    $ins = $this->db->prepare("INSERT INTO goal_transactions (goal_id, transaction_id, created_at) VALUES (:gid, :tid, NOW())");
-                    $ins->execute([':gid' => $g['id'], ':tid' => $newId]);
-                }
-            } catch (\Exception $e) {
-                // non-fatal: don't block transaction creation if linking fails
-            }
-
-            // 3. KÍCH HOẠT ROBOT: Cập nhật ví ngay lập tức!
+            // 2. KÍCH HOẠT ROBOT: Cập nhật ví ngay lập tức!
             $this->syncWallet($data['user_id'], $data['amount'], $data['type'], $data['category_id'], false);
 
             $this->db->commit();
@@ -240,24 +227,6 @@ class Transaction
             $data['id'] = $id;
             $this->db->prepare($sql)->execute($data);
 
-            // 4a. Cập nhật liên kết với mục tiêu: nếu có goal liên kết cũ, xóa; sau đó liên kết với goal mới nếu tồn tại
-            try {
-                // Xóa mọi liên kết cũ cho giao dịch này
-                $del = $this->db->prepare("DELETE FROM goal_transactions WHERE transaction_id = ?");
-                $del->execute([$id]);
-
-                // Nếu category mới có goal active, liên kết vào goal đó
-                $stmtGoal = $this->db->prepare("SELECT id FROM goals WHERE user_id = ? AND category_id = ? AND status = 'active' ORDER BY created_at ASC LIMIT 1");
-                $stmtGoal->execute([$oldTrans['user_id'], $data['category_id']]);
-                $g = $stmtGoal->fetch(PDO::FETCH_ASSOC);
-                if ($g && isset($g['id'])) {
-                    $ins = $this->db->prepare("INSERT INTO goal_transactions (goal_id, transaction_id, created_at) VALUES (:gid, :tid, NOW())");
-                    $ins->execute([':gid' => $g['id'], ':tid' => $id]);
-                }
-            } catch (\Exception $e) {
-                // ignore linking errors
-            }
-
             // 4. ROBOT: Trừ tiền mới từ ví
             $userId = $oldTrans['user_id'];
             $this->syncWallet($userId, $data['amount'], $data['type'], $data['category_id'], false);
@@ -281,14 +250,6 @@ class Transaction
 
             // 2. ROBOT: Trả lại tiền vào ví như chưa từng tiêu
             $this->syncWallet($userId, $oldTrans['amount'], $oldTrans['type'], $oldTrans['category_id'], true);
-
-            // 3a. Xóa liên kết với mục tiêu (nếu có)
-            try {
-                $delLink = $this->db->prepare("DELETE FROM goal_transactions WHERE transaction_id = ?");
-                $delLink->execute([$id]);
-            } catch (\Exception $e) {
-                // ignore
-            }
 
             // 3. Xóa giao dịch
             $stmt = $this->db->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
@@ -398,7 +359,11 @@ class Transaction
                 LEFT JOIN categories c ON t.category_id = c.id
                 WHERE t.user_id = ? AND t.date BETWEEN ? AND ?";
         $params = [$userId, $startDate, $endDate];
-        if ($type) { $sql .= " AND t.type = ?"; $params[] = $type; }
+        // Only apply type filter when it's explicitly 'income' or 'expense'
+        if ($type === 'income' || $type === 'expense') {
+            $sql .= " AND t.type = ?";
+            $params[] = $type;
+        }
         $sql .= " GROUP BY c.id ORDER BY total DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

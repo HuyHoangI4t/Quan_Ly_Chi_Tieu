@@ -10,23 +10,25 @@ class Goal {
     public function __construct() {
         $connectDB = new ConnectDB();
         $this->db = $connectDB->getConnection();
-        // Ensure goal_transactions table exists (some schemas may not include it)
+        // Ensure schema has current_amount column (added when removing goal_transactions)
+        $this->ensureCurrentAmountColumn();
+    }
+
+    /**
+     * Ensure goals table has `current_amount` column; add if missing.
+     */
+    private function ensureCurrentAmountColumn()
+    {
         try {
-            $check = $this->db->prepare("SHOW TABLES LIKE 'goal_transactions'");
-            $check->execute();
-            $exists = (bool)$check->fetch(PDO::FETCH_ASSOC);
-            if (!$exists) {
-                $createSql = "CREATE TABLE IF NOT EXISTS goal_transactions (
-                    id INT NOT NULL AUTO_INCREMENT,
-                    goal_id INT NOT NULL,
-                    transaction_id INT NOT NULL,
-                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (id)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-                $this->db->exec($createSql);
+            $stmt = $this->db->prepare("SHOW COLUMNS FROM goals LIKE 'current_amount'");
+            $stmt->execute();
+            $col = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$col) {
+                // Add column safely
+                $this->db->exec("ALTER TABLE goals ADD COLUMN current_amount DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER target_amount");
             }
         } catch (\Exception $e) {
-            // Ignore — operations will gracefully handle missing table later
+            // ignore failures; higher-level code will handle errors
         }
     }
     
@@ -34,21 +36,10 @@ class Goal {
      * Lấy danh sách mục tiêu (Logic THỦ CÔNG: Tính tổng từ bảng goal_transactions)
      */
     public function getByUserId($userId) {
-        $sql = "SELECT g.*, 
-                       -- Tính tổng tiền đã nạp vào mục tiêu này từ bảng goal_transactions
-                       -- Dùng ABS vì giao dịch chi ra thường là số âm
-                       COALESCE(SUM(ABS(t.amount)), 0) as current_amount, 
-                       CASE 
-                           WHEN g.target_amount > 0 THEN 
-                               ROUND((COALESCE(SUM(ABS(t.amount)), 0) / g.target_amount) * 100, 2)
-                           ELSE 0 
-                       END as progress_percentage
+        $sql = "SELECT g.*, COALESCE(g.current_amount, 0) as current_amount,
+                       CASE WHEN g.target_amount > 0 THEN ROUND((COALESCE(g.current_amount,0) / g.target_amount) * 100, 2) ELSE 0 END as progress_percentage
                 FROM goals g
-                -- Join bảng trung gian để lấy các giao dịch đã được nạp thủ công
-                LEFT JOIN goal_transactions gt ON g.id = gt.goal_id
-                LEFT JOIN transactions t ON gt.transaction_id = t.id
                 WHERE g.user_id = :user_id
-                GROUP BY g.id
                 ORDER BY g.created_at DESC";
         
         $stmt = $this->db->prepare($sql);
@@ -62,17 +53,10 @@ class Goal {
      * Lấy chi tiết 1 Goal (Logic thủ công)
      */
     public function getById($id, $userId) {
-        $sql = "SELECT g.*,
-                       COALESCE(SUM(ABS(t.amount)), 0) as current_amount,
-                       CASE
-                           WHEN g.target_amount > 0 THEN ROUND((COALESCE(SUM(ABS(t.amount)), 0) / g.target_amount) * 100, 2)
-                           ELSE 0
-                       END as progress_percentage
+        $sql = "SELECT g.*, COALESCE(g.current_amount,0) as current_amount,
+                       CASE WHEN g.target_amount > 0 THEN ROUND((COALESCE(g.current_amount,0) / g.target_amount) * 100, 2) ELSE 0 END as progress_percentage
                 FROM goals g
-                LEFT JOIN goal_transactions gt ON g.id = gt.goal_id
-                LEFT JOIN transactions t ON gt.transaction_id = t.id
                 WHERE g.id = :id AND g.user_id = :user_id
-                GROUP BY g.id
                 LIMIT 1";
 
         $stmt = $this->db->prepare($sql);
@@ -94,30 +78,34 @@ class Goal {
             $chk->execute([':uid' => $userId, ':amount' => -abs($amount), ':date' => $date]);
             $existing = $chk->fetch(PDO::FETCH_ASSOC);
             if ($existing) {
-                // Ensure link exists in goal_transactions
-                $existsLink = $this->db->prepare("SELECT id FROM goal_transactions WHERE goal_id = :gid AND transaction_id = :tid LIMIT 1");
-                $existsLink->execute([':gid' => $goalId, ':tid' => $existing['id']]);
-                if (!$existsLink->fetch(PDO::FETCH_ASSOC)) {
-                    $ins = $this->db->prepare("INSERT INTO goal_transactions (goal_id, transaction_id, created_at) VALUES (:gid, :tid, NOW())");
-                    $ins->execute([':gid' => $goalId, ':tid' => $existing['id']]);
-                }
                 return true;
             }
 
             $this->db->beginTransaction();
 
-            // 1. Lấy thông tin goal để biết category_id (nếu có)
-            $stmtGoal = $this->db->prepare("SELECT category_id, name FROM goals WHERE id = ?");
+            // 1. Lấy thông tin goal để biết target và tên
+            $stmtGoal = $this->db->prepare("SELECT target_amount, current_amount, name FROM goals WHERE id = ? FOR UPDATE");
             $stmtGoal->execute([$goalId]);
             $goal = $stmtGoal->fetch(PDO::FETCH_ASSOC);
-            
-            // Nếu goal ko có category, dùng category ID 1 (Hoặc tìm category "Tiết kiệm" nếu bạn có logic đó)
-            $catId = $goal['category_id'] ?? 1; 
+            if (!$goal) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            // Normalize and limit deposit so it doesn't exceed remaining
+            $current = floatval($goal['current_amount'] ?? 0);
+            $target = floatval($goal['target_amount'] ?? 0);
+            $remaining = max(0, $target - $current);
+            $originalAmount = $amount;
+            $wasAdjusted = false;
+            if ($amount > $remaining) {
+                $amount = $remaining;
+                $wasAdjusted = true;
+            }
 
             // 2. Tạo giao dịch Expense (để trừ tiền ví chính)
-            // Nạp vào heo đất = Chi tiền ra khỏi ví -> Type: expense, Số tiền âm
-            $transactionAmount = -abs($amount); 
-            
+            $transactionAmount = -abs($amount);
+            $catId = $goal['category_id'] ?? 1;
             $sqlTrans = "INSERT INTO transactions (user_id, category_id, amount, date, description, type, created_at) 
                          VALUES (:uid, :cid, :amount, :date, :desc, 'expense', NOW())";
             $stmtTrans = $this->db->prepare($sqlTrans);
@@ -130,10 +118,17 @@ class Goal {
             ]);
             $transactionId = $this->db->lastInsertId();
 
-            // 3. Liên kết giao dịch này vào bảng goal_transactions
-            $sqlLink = "INSERT INTO goal_transactions (goal_id, transaction_id, created_at) VALUES (:gid, :tid, NOW())";
-            $stmtLink = $this->db->prepare($sqlLink);
-            $stmtLink->execute([':gid' => $goalId, ':tid' => $transactionId]);
+            // 3. Cập nhật trực tiếp vào cột current_amount của bảng goals
+            $incStmt = $this->db->prepare("UPDATE goals SET current_amount = COALESCE(current_amount,0) + :inc WHERE id = :id");
+            $incStmt->execute([':inc' => $amount, ':id' => $goalId]);
+
+            // Nếu đã đạt mục tiêu thì đặt trạng thái completed
+            if ($target > 0) {
+                $newCurrent = $current + $amount;
+                if ($newCurrent >= $target) {
+                    $this->db->prepare("UPDATE goals SET status = 'completed' WHERE id = ?")->execute([$goalId]);
+                }
+            }
 
             $this->db->commit();
             return true;
@@ -243,29 +238,7 @@ class Goal {
     public function delete($id, $userId) {
         try {
             $this->db->beginTransaction();
-
-            // 1) Lấy danh sách transaction_id được liên kết với goal này
-            $stmt = $this->db->prepare("SELECT transaction_id FROM goal_transactions WHERE goal_id = :id");
-            $stmt->execute([':id' => $id]);
-            $rows = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
-
-            // 2) Xóa các giao dịch nạp mục tiêu liên quan (chỉ những giao dịch có mô tả 'Nạp mục tiêu:%' và của user)
-            if (!empty($rows)) {
-                // Tạo chuỗi placeholders an toàn
-                $placeholders = implode(',', array_fill(0, count($rows), '?'));
-                $params = $rows;
-                // Thêm userId làm tham số cuối
-                $params[] = $userId;
-                $delTransSql = "DELETE FROM transactions WHERE id IN ($placeholders) AND user_id = ? AND description LIKE 'Nạp mục tiêu:%'";
-                $delTrans = $this->db->prepare($delTransSql);
-                $delTrans->execute($params);
-            }
-
-            // 3) Xóa liên kết trong goal_transactions
-            $delLinks = $this->db->prepare("DELETE FROM goal_transactions WHERE goal_id = :id");
-            $delLinks->execute([':id' => $id]);
-
-            // 4) Xóa bản ghi mục tiêu
+            // Chỉ xóa bản ghi mục tiêu; không xóa giao dịch trong lịch sử
             $delGoal = $this->db->prepare("DELETE FROM goals WHERE id = :id AND user_id = :user_id");
             $delGoal->execute([':id' => $id, ':user_id' => $userId]);
 
@@ -323,23 +296,9 @@ class Goal {
             ]);
 
             // 2) Remove linked deposit transactions (those tied to this goal and with description 'Nạp mục tiêu:%')
-            $stmtLinks = $this->db->prepare("SELECT transaction_id FROM goal_transactions WHERE goal_id = ?");
-            $stmtLinks->execute([$goalId]);
-            $rows = $stmtLinks->fetchAll(PDO::FETCH_COLUMN, 0);
-
-            if (!empty($rows)) {
-                // Delete only transactions that match the deposit description and belong to user
-                $placeholders = implode(',', array_fill(0, count($rows), '?'));
-                $params = $rows;
-                $params[] = $userId;
-                $delSql = "DELETE FROM transactions WHERE id IN ($placeholders) AND user_id = ? AND description LIKE 'Nạp mục tiêu:%'";
-                $delStmt = $this->db->prepare($delSql);
-                $delStmt->execute($params);
-
-                // Remove goal_transactions links
-                $delLinks = $this->db->prepare("DELETE FROM goal_transactions WHERE goal_id = ?");
-                $delLinks->execute([$goalId]);
-            }
+            // Clear goal's saved amount without deleting user's transaction history
+            $update = $this->db->prepare("UPDATE goals SET current_amount = 0 WHERE id = ?");
+            $update->execute([$goalId]);
 
             $this->db->commit();
             return true;

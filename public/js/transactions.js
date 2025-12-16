@@ -721,9 +721,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         applyJarUpdatesToUI(respData.data.jar_updates);
                     }
                             loadTransactions(false);
-                            triggerTransactionChange();
-                            // Notify goals page to refresh (so linked-category transactions update goals)
-                            try { window.dispatchEvent(new CustomEvent('goals:updated')); } catch (e) { }
+                                triggerTransactionChange();
                 }
             } else {
                 // Trường hợp 3: Lỗi (Ví dụ: Không đủ số dư tổng hoặc validation)
@@ -810,9 +808,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     if (respData.success === true || respData.status === 'success' || response.ok) {
                         loadTransactions(false);
-                        triggerTransactionChange();
-                        // Notify goals page to refresh (so linked-category transactions update goals)
-                        try { window.dispatchEvent(new CustomEvent('goals:updated')); } catch (e) { }
+                            triggerTransactionChange();
 
                         SmartSpending.showToast(respData.message || 'Cập nhật giao dịch thành công!', 'success');
 
