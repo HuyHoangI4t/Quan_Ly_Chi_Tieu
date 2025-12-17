@@ -168,9 +168,33 @@ class Login extends Controllers
         }
     }
 
+    /**
+     * API: Đăng xuất (Trả về JSON, không redirect 302)
+     * [MỚI THÊM CHO ĐẠI CA]
+     */
+    public function api_logout()
+    {
+        try {
+            $sm = new SessionManager();
+            $sm->logout();
+            
+            // Xóa cookie thủ công để chắc chắn
+            if (isset($_COOKIE[session_name()])) {
+                setcookie(session_name(), '', time() - 42000, '/');
+            }
+
+            Response::successResponse('Đăng xuất thành công!');
+        } catch (\Exception $e) {
+            Response::errorResponse('Lỗi hệ thống: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Đăng xuất cho Web (Có redirect 302)
+     */
     public function logout()
     {
-        $sm = new \App\Core\SessionManager();
+        $sm = new SessionManager();
         // Debug logging: record session before logout
         try {
             $before = print_r($sm->all(), true);
@@ -354,7 +378,7 @@ class Login extends Controllers
      */
     public function debug_session()
     {
-        $sm = new \App\Core\SessionManager();
+        $sm = new SessionManager();
         header('Content-Type: text/plain; charset=utf-8');
         echo "=== SESSION DATA ===\n";
         try { print_r($sm->all()); } catch (\Throwable $e) { echo "(error reading session)\n"; }
@@ -449,7 +473,7 @@ class Login extends Controllers
      * Helper: Set Session tập trung
      */
     private function setLoginSession($user) {
-        $sm = new \App\Core\SessionManager();
+        $sm = new SessionManager();
         $sm->login($user);
     }
 }

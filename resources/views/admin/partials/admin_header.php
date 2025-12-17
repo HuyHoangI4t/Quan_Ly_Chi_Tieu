@@ -50,7 +50,7 @@
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminUserMenu">
               <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>/profile"><i class="fas fa-user me-2"></i>Hồ sơ</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>/auth/login/logout"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
+              <li><a class="dropdown-item" href="<?php echo BASE_URL; ?>/login/logout"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a></li>
             </ul>
           </div>
         </div>

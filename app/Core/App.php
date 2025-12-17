@@ -7,9 +7,9 @@ class App
     protected $method = 'index'; // Default method
     protected $params = [];
     
-        public function __construct()
-        {
-        }
+    public function __construct()
+    {
+    }
     
     public function run()
     {
@@ -17,6 +17,10 @@ class App
         // Use new location 'app/Controllers' with namespace 'App\Controllers'
         $preferredNamespace = 'App\\Controllers';
         $preferredFolder = '/Controllers';
+
+        // Keep track if we are using a fallback
+        $isFallback = false;
+        $intendedController = '';
 
         // If no controller is specified, use the default Auth\\Login controller
         if (empty($url[0])) {
@@ -49,7 +53,7 @@ class App
                 if (empty($url[0])) {
                     $this->controller = 'Login';
                 } else {
-                    $this->controller = ucfirst($url[0]);
+                    $this->controller = ucfirst($url[0]); // Ví dụ: Logout
                     unset($url[0]);
                 }
             } else {
@@ -76,6 +80,12 @@ class App
             if (file_exists($fallbackFile)) {
                 require_once $fallbackFile;
                 $controllerClassCandidates = [$preferredNamespace . '\\Auth\\Login'];
+                
+                // [FIX LOGOUT LOOP]
+                // Lưu lại tên controller mà user định gọi (ví dụ: Logout)
+                $intendedController = $this->controller;
+                $isFallback = true;
+                
                 $this->controller = 'Login';
             } else {
                 throw new \Exception('Controller file not found: ' . $controllerFilePreferred);
@@ -100,21 +110,27 @@ class App
             }
         }
 
+        // [FIX LOGOUT LOOP & METHOD RESOLUTION]
         if (isset($url[1])) {
             // Check if the method exists in the controller
             if (method_exists($this->controller, $url[1])) {
                 $this->method = $url[1];
                 unset($url[1]);
             } else {
-                // Method not found, default to index method
                 $this->method = 'index';
+            }
+        } elseif ($isFallback) {
+            // Nếu đang dùng Fallback (tức là gọi /auth/logout mà ko có file Logout.php)
+            // Thì thử tìm hàm 'logout()' trong Login controller
+            $fallbackMethod = lcfirst($intendedController); // Logout -> logout
+            if (method_exists($this->controller, $fallbackMethod)) {
+                $this->method = $fallbackMethod;
             }
         }
         
         $this->params = $url ? array_values($url) : [];
 
-        // If controller supports receiving params via setParams(), inject them for controller code that
-        // expects $this->params to be available.
+        // Inject params if controller supports it
         if (is_object($this->controller) && method_exists($this->controller, 'setParams')) {
             try {
                 $this->controller->setParams($this->params);
@@ -123,8 +139,21 @@ class App
             }
         }
 
+        // [SECURITY FIX] Prevent calling private/protected methods or magic methods
+        if (!method_exists($this->controller, $this->method)) {
+             // Fallback to index if method doesn't exist (double check)
+             $this->method = 'index';
+        }
+
+        $reflection = new \ReflectionMethod($this->controller, $this->method);
+        if (!$reflection->isPublic() || $reflection->isConstructor() || $reflection->isDestructor()) {
+            throw new \Exception("Method not allowed");
+        }
+
         call_user_func_array([$this->controller, $this->method], $this->params);
-    }    public function parseUrl()
+    }
+
+    public function parseUrl()
     {
         $url = [];
         if (isset($_GET['url'])) {
@@ -132,7 +161,7 @@ class App
         } else {
             // Fallback for when $_GET['url'] is not populated by mod_rewrite
             $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-            $baseUrl = BASE_URL; // BASE_URL is defined in public/index.php
+            $baseUrl = defined('BASE_URL') ? BASE_URL : ''; 
 
             // Remove BASE_URL from REQUEST_URI to get the clean path
             if ($baseUrl !== '' && strpos($requestUri, $baseUrl) === 0) {
