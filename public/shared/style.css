@@ -49,6 +49,11 @@ h4,
 h5,
 h6 {
     font-weight: 600;
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+table { width: 100%; border-collapse: collapse; }
+table th, table td { padding: 8px 12px; }
+
     color: var(--text-dark);
 }
 
@@ -100,6 +105,35 @@ header.navbar {
     position: sticky;
     top: 0;
     z-index: 100;
+}
+
+/* Mobile menu toggle styles */
+.mobile-menu-toggle {
+    border: none;
+    color: var(--text-dark);
+}
+
+.nav-links {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+}
+
+/* When mobile menu is active, show nav as full-width column */
+.show-mobile-nav {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-white);
+    border-top: 1px solid var(--border);
+}
+
+/* Ensure nav links are tappable on small devices */
+.show-mobile-nav a {
+    padding: 8px 0;
+    display: block;
 }
 
 .brand {

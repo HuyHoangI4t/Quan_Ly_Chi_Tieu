@@ -88,7 +88,20 @@ class Login extends Controllers
             $errors = [];
             if (empty($fullName)) $errors[] = 'Họ tên không được để trống.';
             if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email không hợp lệ.';
-            if (empty($password) || strlen($password) < 6) $errors[] = 'Mật khẩu phải từ 6 ký tự.';
+            // Password complexity: at least 8 chars, include upper + lower + digit
+            if (empty($password) || strlen($password) < 8) {
+                $errors[] = 'Mật khẩu phải có ít nhất 8 ký tự.';
+            } else {
+                $hasLower = preg_match('/[a-z]/', $password);
+                $hasUpper = preg_match('/[A-Z]/', $password);
+                $hasDigit = preg_match('/\d/', $password);
+                // optional: require special char
+                //$hasSpecial = preg_match('/[\W_]/', $password);
+
+                if (!($hasLower && $hasUpper && $hasDigit)) {
+                    $errors[] = 'Mật khẩu phải gồm chữ hoa, chữ thường và số (ví dụ: Abc12345).';
+                }
+            }
             if ($password !== $confirmPassword) $errors[] = 'Mật khẩu nhập lại không khớp.';
 
             if ($this->userModel->getUserByEmail($email)) {

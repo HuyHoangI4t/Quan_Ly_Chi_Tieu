@@ -198,6 +198,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // initial set and update on resize
     setHeaderHeightVar();
     window.addEventListener('resize', function () { setHeaderHeightVar(); });
+
+    // Mobile nav toggle
+    try {
+        var toggle = document.getElementById('mobileMenuToggle');
+        var mainNav = document.getElementById('mainNav');
+        if (toggle && mainNav) {
+            toggle.addEventListener('click', function (e) {
+                e.preventDefault();
+                mainNav.classList.toggle('d-none');
+                mainNav.classList.toggle('show-mobile-nav');
+                // prevent body scroll when menu open
+                document.body.style.overflow = mainNav.classList.contains('show-mobile-nav') ? 'hidden' : '';
+            });
+        }
+    } catch (e) { /* no-op */ }
 });
 
 // Export for use in other files

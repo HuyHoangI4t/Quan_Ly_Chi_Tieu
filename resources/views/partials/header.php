@@ -73,7 +73,11 @@
             <h2><i class="fas fa-wallet me-2"></i>Smart<span>Spending</span></h2>
         </div>
 
-        <nav class="nav-links">
+        <button class="btn btn-link d-md-none mobile-menu-toggle" id="mobileMenuToggle" aria-label="Mở menu">
+            <i class="bi bi-list" style="font-size:22px"></i>
+        </button>
+
+        <nav class="nav-links d-none d-md-flex" id="mainNav">
             <?php
             $isActive = function ($name) use ($page) {
                 return $page === $name ? 'active' : '';

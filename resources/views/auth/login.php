@@ -249,6 +249,21 @@
 				return;
 			}
 
+			// Client-side password complexity check (match server rules)
+			function checkPasswordComplexity(pw) {
+				if (!pw || pw.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự.';
+				if (!/[a-z]/.test(pw) || !/[A-Z]/.test(pw) || !/\d/.test(pw)) {
+					return 'Mật khẩu phải gồm chữ hoa, chữ thường và số (ví dụ: Abc12345).';
+				}
+				return true;
+			}
+
+			const pwCheck = checkPasswordComplexity(data.password);
+			if (pwCheck !== true) {
+				showAlert(pwCheck, 'error');
+				return;
+			}
+
 			try {
 				const response = await fetch('<?= BASE_URL; ?>/auth/login/api_register', {
 					method: 'POST',
@@ -286,7 +301,12 @@
 						}, 1000);
 					}
 				} else {
-					showAlert(respData.message || 'Đăng ký thất bại', 'error');
+					// If server returned detailed errors, show them joined
+					if (respData.errors && Array.isArray(respData.errors) && respData.errors.length) {
+						showAlert(respData.errors.join(' \n'), 'error');
+					} else {
+						showAlert(respData.message || 'Đăng ký thất bại', 'error');
+					}
 				}
 			} catch (error) {
 				console.error('Error:', error);

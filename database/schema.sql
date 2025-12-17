@@ -162,54 +162,54 @@ CREATE TABLE `system_logs` (
 
 -- 3.1. Insert Admin User
 INSERT INTO `users` (id, username, email, password, full_name, role, notify_budget_limit, notify_goal_reminder) VALUES
-(1, 'Admin', 'admin@gmail.com', '$2y$10$M12D3rP.nNSdTxDMq/FQbeJfKwrPHoJSq9.itE/N3gZVt.afkEft.', 'Admin Vip Pro', 'admin', 1, 1);
+(1, 'Admin', 'admin@test.com', '$2y$10$M12D3rP.nNSdTxDMq/FQbeJfKwrPHoJSq9.itE/N3gZVt.afkEft.', 'Admin Vip Pro', 'admin', 1, 1);
 
--- 3.2. INSERT CATEGORIES
-INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
-(1, NULL, 'Khoản Chi', 'expense', 'none', '#E74C3C', 'fa-wallet', 1);
+-- -- 3.2. INSERT CATEGORIES
+-- INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
+-- (1, NULL, 'Khoản Chi', 'expense', 'none', '#E74C3C', 'fa-wallet', 1);
 
-INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES
-(2, 2, 'Hoá đơn', 'expense', 'nec', '#3498DB', 'fa-file-invoice-dollar', 1),
-(3, 2, 'Thực phẩm ăn uống', 'expense', 'nec', '#E67E22', 'fa-utensils', 1),
-(4, 2, 'Du lịch di chuyển', 'expense', 'play', '#F1C40F', 'fa-plane-departure', 1),
-(5, 2, 'Sức khoẻ', 'expense', 'nec', '#2ECC71', 'fa-heartbeat', 1),
-(6, 2, 'Chi tiêu cá nhân', 'expense', 'nec', '#9B59B6', 'fa-user-circle', 1),
-(7, 2, 'Mua sắm', 'expense', 'play', '#FF9FF3', 'fa-shopping-bag', 1),
-(8, 2, 'Giáo dục', 'expense', 'edu', '#34495E', 'fa-graduation-cap', 1),
-(9, 2, 'Giải trí', 'expense', 'play', '#D35400', 'fa-gamepad', 1),
-(10, 2, 'Đầu tư tiết kiệm', 'expense', 'ffa', '#27AE60', 'fa-piggy-bank', 1),
-(11, 2, 'Kinh doanh', 'expense', 'nec', '#7F8C8D', 'fa-briefcase', 1),
-(12, 2, 'Trả nợ', 'expense', 'nec', '#C0392B', 'fa-money-bill-wave', 1),
-(13, 2, 'Từ thiện', 'expense', 'give', '#FF6B6B', 'fa-hand-holding-heart', 1),
-(14, 2, 'Dịch vụ tiện ích', 'expense', 'nec', '#1ABC9C', 'fa-bolt', 1);
+-- INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES
+-- (2, 2, 'Hoá đơn', 'expense', 'nec', '#3498DB', 'fa-file-invoice-dollar', 1),
+-- (3, 2, 'Thực phẩm ăn uống', 'expense', 'nec', '#E67E22', 'fa-utensils', 1),
+-- (4, 2, 'Du lịch di chuyển', 'expense', 'play', '#F1C40F', 'fa-plane-departure', 1),
+-- (5, 2, 'Sức khoẻ', 'expense', 'nec', '#2ECC71', 'fa-heartbeat', 1),
+-- (6, 2, 'Chi tiêu cá nhân', 'expense', 'nec', '#9B59B6', 'fa-user-circle', 1),
+-- (7, 2, 'Mua sắm', 'expense', 'play', '#FF9FF3', 'fa-shopping-bag', 1),
+-- (8, 2, 'Giáo dục', 'expense', 'edu', '#34495E', 'fa-graduation-cap', 1),
+-- (9, 2, 'Giải trí', 'expense', 'play', '#D35400', 'fa-gamepad', 1),
+-- (10, 2, 'Đầu tư tiết kiệm', 'expense', 'ffa', '#27AE60', 'fa-piggy-bank', 1),
+-- (11, 2, 'Kinh doanh', 'expense', 'nec', '#7F8C8D', 'fa-briefcase', 1),
+-- (12, 2, 'Trả nợ', 'expense', 'nec', '#C0392B', 'fa-money-bill-wave', 1),
+-- (13, 2, 'Từ thiện', 'expense', 'give', '#FF6B6B', 'fa-hand-holding-heart', 1),
+-- (14, 2, 'Dịch vụ tiện ích', 'expense', 'nec', '#1ABC9C', 'fa-bolt', 1);
 
-INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
-(15, NULL, 'Khoản Thu', 'income', 'none', '#2ECC71', 'fa-hand-holding-usd', 1);
+-- INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
+-- (15, NULL, 'Khoản Thu', 'income', 'none', '#2ECC71', 'fa-hand-holding-usd', 1);
 
-INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES
-(16, 15, 'Lương', 'income', 'none', '#27AE60', 'fa-money-bill', 1),
-(17, 15, 'Thưởng', 'income', 'none', '#F1C40F', 'fa-gift', 1),
-(18, 15, 'Lãi suất', 'income', 'none', '#E67E22', 'fa-percent', 1),
-(19, 15, 'Thu nhập khác', 'income', 'none', '#3498DB', 'fa-coins', 1);
+-- INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES
+-- (16, 15, 'Lương', 'income', 'none', '#27AE60', 'fa-money-bill', 1),
+-- (17, 15, 'Thưởng', 'income', 'none', '#F1C40F', 'fa-gift', 1),
+-- (18, 15, 'Lãi suất', 'income', 'none', '#E67E22', 'fa-percent', 1),
+-- (19, 15, 'Thu nhập khác', 'income', 'none', '#3498DB', 'fa-coins', 1);
 
-INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
-(20, NULL, 'Vay & Nợ', 'income', 'none', '#95A5A6', 'fa-balance-scale', 1);
-INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
-(21, 20, 'Đi vay', 'income', 'none', '#7F8C8D', 'fa-hand-holding-medical', 1),
-(22, 20, 'Thu nợ', 'income', 'none', '#27AE60', 'fa-check-circle', 1);
+-- INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
+-- (20, NULL, 'Vay & Nợ', 'income', 'none', '#95A5A6', 'fa-balance-scale', 1);
+-- INSERT INTO `categories` (id, parent_id, name, type, group_type, color, icon, is_default) VALUES 
+-- (21, 20, 'Đi vay', 'income', 'none', '#7F8C8D', 'fa-hand-holding-medical', 1),
+-- (22, 20, 'Thu nợ', 'income', 'none', '#27AE60', 'fa-check-circle', 1);
 
--- 3.3. INSERT TRANSACTIONS (Dữ liệu mẫu cho Admin test)
-INSERT INTO `transactions` (user_id, category_id, amount, date, description, type) VALUES
-(2, 16, 20000000, '2025-11-01', 'Lương tháng 11', 'income'),
-(2, 3, -500000, '2025-11-02', 'Đi chợ', 'expense'),
-(2, 3, -100000, '2025-11-03', 'Ăn sáng', 'expense'),
-(2, 3, -200000, '2025-11-05', 'Tiền điện', 'expense');
+-- -- 3.3. INSERT TRANSACTIONS (Dữ liệu mẫu cho Admin test)
+-- INSERT INTO `transactions` (user_id, category_id, amount, date, description, type) VALUES
+-- (2, 16, 20000000, '2025-11-01', 'Lương tháng 11', 'income'),
+-- (2, 3, -500000, '2025-11-02', 'Đi chợ', 'expense'),
+-- (2, 3, -100000, '2025-11-03', 'Ăn sáng', 'expense'),
+-- (2, 3, -200000, '2025-11-05', 'Tiền điện', 'expense');
 
--- 3.4. INIT WALLETS
-INSERT IGNORE INTO `user_wallets` (user_id, jar_code, balance) VALUES 
-(2, 'nec', 0), (2, 'ffa', 0), (2, 'ltss', 0), (2, 'edu', 0), (2, 'play', 0), (2, 'give', 0);
+-- -- 3.4. INIT WALLETS
+-- INSERT IGNORE INTO `user_wallets` (user_id, jar_code, balance) VALUES 
+-- (2, 'nec', 0), (2, 'ffa', 0), (2, 'ltss', 0), (2, 'edu', 0), (2, 'play', 0), (2, 'give', 0);
 
--- 3.5. INIT SETTINGS
-INSERT IGNORE INTO `user_budget_settings` (user_id) VALUES (2);
+-- -- 3.5. INIT SETTINGS
+-- INSERT IGNORE INTO `user_budget_settings` (user_id) VALUES (2);
 
 SET FOREIGN_KEY_CHECKS = 1;

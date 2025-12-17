@@ -84,24 +84,3 @@ define('CACHE_DURATION', 3600); // 1 hour
 define('CHART_COLORS_INCOME', '#4caf50');
 define('CHART_COLORS_EXPENSE', '#f44336');
 define('CHART_COLORS_BALANCE', '#2196f3');
-
-// Default categories
-define('DEFAULT_CATEGORIES_INCOME', [
-    'Lương',
-    'Thưởng',
-    'Đầu tư',
-    'Khác'
-]);
-
-define('DEFAULT_CATEGORIES_EXPENSE', [
-    'Ăn uống',
-    'Giao thông',
-    'Mua sắm',
-    'Giải trí',
-    'Nhà ở',
-    'Tiện ích',
-    'Sức khỏe',
-    'Giáo dục',
-    'Gia đình',
-    'Khác'
-]);

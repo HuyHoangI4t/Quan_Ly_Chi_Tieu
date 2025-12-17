@@ -22,34 +22,38 @@
 
 
 
-<footer class="site-footer simple-footer">
-    <!-- <div class="footer-inner">
-        <div class="footer-left">© <?php echo date('Y'); ?> SmartSpending</div>
+<!-- <footer class="site-footer simple-footer">
+    <div class="container py-3">
+        <div class="row align-items-center">
+            <div class="col-12 col-md-4 text-center text-md-start mb-2 mb-md-0">
+                <small>© <?php echo date('Y'); ?> SmartSpending</small>
+            </div>
 
-        <div class="footer-center">
-            <a href="<?php echo BASE_URL; ?>/privacy">Chính sách</a>
-            <span class="sep">·</span>
-            <a href="<?php echo BASE_URL; ?>/terms">Điều khoản</a>
-            <span class="sep">·</span>
-            <a href="<?php echo BASE_URL; ?>/contact">Liên hệ</a>
-        </div>
+            <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
+                <nav class="d-inline-block">
+                    <a class="mx-2" href="<?php echo BASE_URL; ?>/privacy">Chính sách</a>
+                    <span class="text-muted">·</span>
+                    <a class="mx-2" href="<?php echo BASE_URL; ?>/terms">Điều khoản</a>
+                    <span class="text-muted">·</span>
+                    <a class="mx-2" href="<?php echo BASE_URL; ?>/contact">Liên hệ</a>
+                </nav>
+            </div>
 
-        <div class="footer-right">
-            <a href="mailto:huyhoangpro187@gmail.com" class="footer-email">huyhoangpro187@gmail.com</a>
-            <span class="social-row">
-                <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook" class="social-icon"><i class="bi bi-facebook"></i></a>
-                <a href="https://twitter.com" target="_blank" rel="noopener" aria-label="Twitter" class="social-icon"><i class="bi bi-twitter"></i></a>
-                <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram" class="social-icon"><i class="bi bi-instagram"></i></a>
-            </span>
+            <div class="col-12 col-md-4 text-center text-md-end">
+                <a href="mailto:huyhoangpro187@gmail.com" class="me-3">huyhoangpro187@gmail.com</a>
+                <span class="social-row">
+                    <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook" class="social-icon me-2"><i class="bi bi-facebook"></i></a>
+                    <a href="https://twitter.com" target="_blank" rel="noopener" aria-label="Twitter" class="social-icon me-2"><i class="bi bi-twitter"></i></a>
+                    <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram" class="social-icon"><i class="bi bi-instagram"></i></a>
+                </span>
+            </div>
         </div>
-    </div> -->
-</footer>
+    </div>
+</footer> -->
 
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Bootstrap Icons CSS (for footer/social icons) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 <!-- Chart.js for visualizations -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 

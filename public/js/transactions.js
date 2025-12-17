@@ -817,6 +817,35 @@ document.addEventListener('DOMContentLoaded', function () {
                             applyJarUpdatesToUI(respData.data.jar_updates);
                         }
 
+                        // Hide the edit transaction modal if it's open
+                        try {
+                            const editModalEl = document.getElementById('editTransactionModal');
+                            if (editModalEl && typeof bootstrap !== 'undefined') {
+                                const editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
+                                if (editModal) editModal.hide();
+                            }
+
+                            // Also hide any budget warning modal if present
+                            const warningEl = document.getElementById('budgetWarningModal');
+                            if (warningEl && typeof bootstrap !== 'undefined') {
+                                const warningModal = bootstrap.Modal.getOrCreateInstance(warningEl);
+                                if (warningModal) warningModal.hide();
+                            }
+
+                            // Reset and re-enable edit form controls if present
+                            try {
+                                const ef = document.getElementById('editTransactionForm');
+                                if (ef) {
+                                    ef.reset();
+                                    const submitBtn = ef.querySelector('button[type="submit"]');
+                                    if (submitBtn) {
+                                        submitBtn.disabled = false;
+                                        submitBtn.classList.remove('is-submitting');
+                                    }
+                                }
+                            } catch (e) { /* ignore */ }
+                        } catch (e) { /* ignore if bootstrap not available */ }
+
                         loadTransactions(false);
                         triggerTransactionChange();
                     } else {
