@@ -5,6 +5,7 @@ namespace App\Controllers\Auth;
 use App\Core\Controllers;
 use App\Core\Response;
 use App\Core\ConnectDB;
+use App\Core\SessionManager;
 
 class Login extends Controllers
 {
@@ -19,8 +20,9 @@ class Login extends Controllers
     public function index()
     {
         // Nếu đã login thì chuyển hướng
-        if ($this->request->session('user_id')) {
-            if (($this->request->session('role') ?? 'user') === 'admin') {
+        $sm = new SessionManager();
+        if ($sm->isLoggedIn()) {
+            if ($sm->getRole() === 'admin') {
                 $this->redirect('/admin/dashboard');
             } else {
                 $this->redirect('/dashboard');
@@ -168,8 +170,43 @@ class Login extends Controllers
 
     public function logout()
     {
-        session_unset();
-        session_destroy();
+        $sm = new \App\Core\SessionManager();
+        // Debug logging: record session before logout
+        try {
+            $before = print_r($sm->all(), true);
+            @file_put_contents(__DIR__ . '/../../../storage/logs/logout.log', "[".date('Y-m-d H:i:s')."] Before logout: " . $before . "\n", FILE_APPEND);
+        } catch (\Throwable $e) {}
+
+        $sm->logout();
+
+        // Ensure session cookie removed on client side (defensive)
+        try {
+            $cookieName = session_name();
+            $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+            // try several variants (domain + no domain) to maximize chance of clearing
+            $paths = ['/', (dirname($_SERVER['SCRIPT_NAME']) !== '\\' ? dirname($_SERVER['SCRIPT_NAME']) : '/')];
+            $domain = $_SERVER['HTTP_HOST'] ?? '';
+            foreach ($paths as $p) {
+                // without domain
+                setcookie($cookieName, '', time() - 42000, $p, '', $secure, true);
+                // with domain
+                if (!empty($domain)) setcookie($cookieName, '', time() - 42000, $p, $domain, $secure, true);
+            }
+
+            // unset session superglobals and regenerate id defensively
+            if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+            $_SESSION = [];
+            session_unset();
+            session_regenerate_id(true);
+            session_write_close();
+        } catch (\Throwable $e) {}
+
+        // Log after logout
+        try {
+            $after = print_r($sm->all(), true);
+            @file_put_contents(__DIR__ . '/../../../storage/logs/logout.log', "[".date('Y-m-d H:i:s')."] After logout: " . $after . "\n", FILE_APPEND);
+        } catch (\Throwable $e) {}
+
         $this->redirect('/login');
     }
 
@@ -311,6 +348,25 @@ class Login extends Controllers
     }
 
     /**
+     * Temporary debug endpoint to inspect session and cookies.
+     * Visit: /auth/login/debug_session
+     * REMOVE this method in production.
+     */
+    public function debug_session()
+    {
+        $sm = new \App\Core\SessionManager();
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "=== SESSION DATA ===\n";
+        try { print_r($sm->all()); } catch (\Throwable $e) { echo "(error reading session)\n"; }
+        echo "\n=== COOKIES ===\n";
+        print_r($_COOKIE);
+        echo "\n=== SERVER REQUEST ===\n";
+        echo 'REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? '') . "\n";
+        echo 'SCRIPT_NAME: ' . ($_SERVER['SCRIPT_NAME'] ?? '') . "\n";
+        exit;
+    }
+
+    /**
      * Helper: Lấy Token từ Google (Đã FIX lỗi URI và cURL)
      */
     private function getAccessToken($code)
@@ -393,10 +449,7 @@ class Login extends Controllers
      * Helper: Set Session tập trung
      */
     private function setLoginSession($user) {
-        $this->request->setSession('user_id', $user['id']);
-        $this->request->setSession('email', $user['email']);
-        $this->request->setSession('full_name', $user['full_name']);
-        $this->request->setSession('role', $user['role']);
-        $this->request->setSession('avatar', $user['avatar'] ?? 'default_avatar.png');
+        $sm = new \App\Core\SessionManager();
+        $sm->login($user);
     }
 }

@@ -156,11 +156,8 @@ class Users extends Controllers
 
         if ($targetUser) {
             // 5. TRÁO ĐỔI SESSION (Biến Admin thành User)
-            $_SESSION['user_id'] = $targetUser['id'];
-            $_SESSION['username'] = $targetUser['username'];
-            $_SESSION['email'] = $targetUser['email'];
-            $_SESSION['role'] = $targetUser['role'];
-            $_SESSION['full_name'] = $targetUser['full_name'];
+            $sm = new \App\Core\SessionManager();
+            $sm->login($targetUser);
 
             // Trả về thành công
             Response::successResponse('Chuyển đổi thành công');

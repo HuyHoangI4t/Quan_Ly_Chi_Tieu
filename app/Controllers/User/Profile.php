@@ -9,6 +9,7 @@ use App\Middleware\CsrfProtection;
 use App\Middleware\AuthCheck;
 use App\Models\User;
 use App\Models\Transaction;
+use App\Core\SessionManager;
 use Exception;
 
 class Profile extends Controllers
@@ -113,8 +114,9 @@ class Profile extends Controllers
             ]);
 
             if ($success) {
-                $this->request->setSession('user_name', $validData['name']);
-                $this->request->setSession('full_name', $validData['name']);
+                $sm = new SessionManager();
+                $sm->set('user_name', $validData['name']);
+                $sm->set('full_name', $validData['name']);
                 Response::successResponse('Cập nhật thành công', ['user' => $validData]);
             } else {
                 Response::errorResponse('Không thể cập nhật thông tin');

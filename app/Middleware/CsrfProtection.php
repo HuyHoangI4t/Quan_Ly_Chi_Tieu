@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Core\Request;
+use App\Core\SessionManager;
 
 final class CsrfProtection
 {
@@ -13,9 +14,9 @@ final class CsrfProtection
 
     public static function generateToken(): string
     {
-        $request = new Request();
+        $sm = new SessionManager();
         $token = bin2hex(random_bytes(32));
-        $request->setSession(self::$sessionKey, [
+        $sm->set(self::$sessionKey, [
             'token' => $token,
             'time' => time(),
         ]);
@@ -25,8 +26,8 @@ final class CsrfProtection
 
     public static function getToken(): string
     {
-        $request = new Request();
-        $tokenData = $request->session(self::$sessionKey);
+        $sm = new SessionManager();
+        $tokenData = $sm->get(self::$sessionKey);
 
         if (!empty($tokenData)) {
             if ((time() - ($tokenData['time'] ?? 0)) < self::$tokenLifetime && !empty($tokenData['token'])) {
@@ -57,13 +58,14 @@ final class CsrfProtection
             return false;
         }
 
-        $tokenData = $request->session(self::$sessionKey);
+        $sm = new SessionManager();
+        $tokenData = $sm->get(self::$sessionKey);
         if (empty($tokenData) || empty($tokenData['token'])) {
             return false;
         }
 
         if ((time() - ($tokenData['time'] ?? 0)) >= self::$tokenLifetime) {
-            $request->unsetSession(self::$sessionKey);
+            $sm->remove(self::$sessionKey);
             return false;
         }
 
@@ -107,8 +109,8 @@ final class CsrfProtection
 
     public static function refreshToken(): string
     {
-        $request = new Request();
-        $request->unsetSession(self::$sessionKey);
+        $sm = new SessionManager();
+        $sm->remove(self::$sessionKey);
         return self::generateToken();
     }
 }

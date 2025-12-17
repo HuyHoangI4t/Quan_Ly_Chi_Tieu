@@ -3,6 +3,7 @@ namespace App\Middleware;
 
 use App\Core\SessionManager;
 use App\Core\Container;
+use App\Models\User;
 
 /**
  * AuthCheck - Kiểm tra quyền truy cập
@@ -61,6 +62,17 @@ class AuthCheck
             header('Location: ' . BASE_URL . '/dashboard');
             exit('Access Denied: Admin only');
         }
+
+        // Double-check against database in case role changed since login
+        $userId = $session->getUserId();
+        if ($userId) {
+            $userModel = new User();
+            if (!$userModel->isAdmin($userId)) {
+                http_response_code(403);
+                header('Location: ' . BASE_URL . '/dashboard');
+                exit('Access Denied: Admin only');
+            }
+        }
     }
 
     /**
@@ -79,9 +91,19 @@ class AuthCheck
 
         // Nếu là admin, chuyển về trang admin
         if ($session->isAdmin()) {
-            http_response_code(403);
-            header('Location: ' . BASE_URL . '/admin/dashboard');
-            exit('Access Denied: User only');
+            // Double-check DB role to avoid stale session privilege
+            $userId = $session->getUserId();
+            $isAdminDb = false;
+            if ($userId) {
+                $userModel = new User();
+                $isAdminDb = $userModel->isAdmin($userId);
+            }
+
+            if ($isAdminDb) {
+                http_response_code(403);
+                header('Location: ' . BASE_URL . '/admin/dashboard');
+                exit('Access Denied: User only');
+            }
         }
     }
 

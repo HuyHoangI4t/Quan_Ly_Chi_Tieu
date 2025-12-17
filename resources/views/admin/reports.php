@@ -16,7 +16,7 @@
             <div class="page-title">
                 <h1>Báo cáo Hệ thống</h1>
             </div>
-            <form class="d-flex gap-2 align-items-center bg-white p-2 rounded shadow-sm border">
+            <form method="get" class="d-flex gap-2 align-items-center bg-white p-2 rounded shadow-sm border">
                 <input type="date" name="start" value="<?php echo $range['start']; ?>" class="form-control form-control-sm">
                 <span>-</span>
                 <input type="date" name="end" value="<?php echo $range['end']; ?>" class="form-control form-control-sm">
@@ -45,20 +45,45 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php 
-                            $maxTotal = !empty($category_breakdown) ? $category_breakdown[0]['total'] : 1;
-                            foreach($category_breakdown as $cat): 
-                                $percent = ($cat['total'] / $maxTotal) * 100;
+                            <?php
+                            // Use grouped categories prepared by controller
+                            $maxTotal = $category_max_total ?? 1;
+                            foreach($category_groups as $group):
+                                $pPercent = ($group['total'] / $maxTotal) * 100;
                             ?>
-                            <tr>
-                                <td class="fw-bold"><?php echo htmlspecialchars($cat['name']); ?></td>
-                                <td class="text-end text-danger fw-bold"><?php echo number_format($cat['total']); ?> đ</td>
+                            <tr class="fw-bold">
+                                <td>
+                                    <?php echo htmlspecialchars($group['parent_name']); ?>
+                                    <?php if (!empty($group['parent_type']) && $group['parent_type'] === 'expense'): ?>
+                                        <span class="badge bg-danger ms-2">Chi tiêu</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end text-danger fw-bold"><?php echo number_format($group['total']); ?> đ</td>
                                 <td style="width: 40%;">
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-danger" style="width: <?php echo $percent; ?>%"></div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-danger" style="width: <?php echo $pPercent; ?>%"></div>
                                     </div>
                                 </td>
                             </tr>
+                                <?php if (!empty($group['children'])): foreach($group['children'] as $child):
+                                    // skip if child has no parent (we already counted it in parent own_total)
+                                    if (empty($child['parent_name'])) continue;
+                                    $cPercent = ($child['total'] / $maxTotal) * 100;
+                                ?>
+                            <tr class="text-muted small">
+                                <td style="padding-left:20px;">- <?php echo htmlspecialchars($child['name']); ?>
+                                    <?php if (!empty($child['category_type']) && $child['category_type'] === 'expense'): ?>
+                                        <span class="badge bg-danger ms-2">Chi tiêu</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end"><?php echo number_format($child['total']); ?> đ</td>
+                                <td style="width: 40%;">
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-danger" style="width: <?php echo $cPercent; ?>%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                                <?php endforeach; endif; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>

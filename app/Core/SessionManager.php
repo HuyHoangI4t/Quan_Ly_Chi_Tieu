@@ -68,7 +68,24 @@ class SessionManager
     public function destroy()
     {
         $this->start();
+        // Clear session array
         $_SESSION = [];
+
+        // Delete session cookie if present
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params['path'] ?? '/',
+                $params['domain'] ?? '',
+                $params['secure'] ?? false,
+                $params['httponly'] ?? true
+            );
+        }
+
+        // Finally destroy session data on server
         session_destroy();
     }
 

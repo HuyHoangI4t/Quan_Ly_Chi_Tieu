@@ -22,6 +22,8 @@ class Transactions extends Controllers
 
     public function transactions()
     {
+        try {
+
         $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
         $limit = 15;
         $offset = ($page - 1) * $limit;
@@ -81,9 +83,20 @@ class Transactions extends Controllers
         $this->view->set('current_page', $page);
         $this->view->set('total_pages', $totalPages);
         $this->view->render('admin/transactions');
+
+        } catch (\Throwable $e) {
+            $root = dirname(__DIR__, 3);
+            $logFile = $root . '/storage/logs/admin_transactions_error.log';
+            $msg = "[" . date('Y-m-d H:i:s') . "] Admin/Transactions error: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
+            @file_put_contents($logFile, $msg, FILE_APPEND);
+            http_response_code(500);
+            // Minimal response for debug; replace with friendly page in production
+            echo 'Internal Server Error';
+            exit;
+        }
     }
 
-    public function new()
+    public function create()
     {
         $catStmt = $this->db->query("SELECT id, name FROM categories ORDER BY name ASC");
         $categories = $catStmt->fetchAll(\PDO::FETCH_ASSOC);
