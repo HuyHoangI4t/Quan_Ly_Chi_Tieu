@@ -15,10 +15,12 @@
     color: var(--text-dark);
     letter-spacing: -0.5px;
 }
+
 .page-subtitle {
     font-size: 0.9rem;
     color: var(--text-muted);
 }
+
 .header-icon-box {
     width: 48px;
     height: 48px;
@@ -31,7 +33,7 @@
 /* === JAR CARDS (HIỆU ỨNG HŨ NƯỚC) === */
 .jar-card {
     position: relative;
-    border: 1px solid rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 20px;
     background: #fff;
     overflow: hidden;
@@ -42,7 +44,7 @@
 
 .jar-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Hiệu ứng nước dâng */
@@ -76,34 +78,88 @@
 
 /* === MÀU SẮC 6 HŨ (JARS COLORS) === */
 /* 1. NEC - Thiết yếu (Đỏ) */
-.bg-nec { background-color: #ef4444; }
-.text-nec { color: #ef4444; }
-.bg-nec-subtle { background-color: #fee2e2; color: #ef4444; }
+.bg-nec {
+    background-color: #ef4444;
+}
+
+.text-nec {
+    color: #ef4444;
+}
+
+.bg-nec-subtle {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
 
 /* 2. FFA - Tự do TC (Vàng/Cam) */
-.bg-ffa { background-color: #f59e0b; }
-.text-ffa { color: #f59e0b; }
-.bg-ffa-subtle { background-color: #fef3c7; color: #d97706; }
+.bg-ffa {
+    background-color: #f59e0b;
+}
+
+.text-ffa {
+    color: #f59e0b;
+}
+
+.bg-ffa-subtle {
+    background-color: #fef3c7;
+    color: #d97706;
+}
 
 /* 3. LTSS - Tiết kiệm dài hạn (Xanh dương) */
-.bg-ltss { background-color: #3b82f6; }
-.text-ltss { color: #3b82f6; }
-.bg-ltss-subtle { background-color: #dbeafe; color: #2563eb; }
+.bg-ltss {
+    background-color: #3b82f6;
+}
+
+.text-ltss {
+    color: #3b82f6;
+}
+
+.bg-ltss-subtle {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
 
 /* 4. EDU - Giáo dục (Xanh Cyan) */
-.bg-edu { background-color: #06b6d4; }
-.text-edu { color: #06b6d4; }
-.bg-edu-subtle { background-color: #cffafe; color: #0891b2; }
+.bg-edu {
+    background-color: #06b6d4;
+}
+
+.text-edu {
+    color: #06b6d4;
+}
+
+.bg-edu-subtle {
+    background-color: #cffafe;
+    color: #0891b2;
+}
 
 /* 5. PLAY - Hưởng thụ (Hồng/Tím) */
-.bg-play { background-color: #ec4899; }
-.text-play { color: #ec4899; }
-.bg-play-subtle { background-color: #fce7f3; color: #db2777; }
+.bg-play {
+    background-color: #ec4899;
+}
+
+.text-play {
+    color: #ec4899;
+}
+
+.bg-play-subtle {
+    background-color: #fce7f3;
+    color: #db2777;
+}
 
 /* 6. GIVE - Cho đi (Xanh lá) */
-.bg-give { background-color: #10b981; }
-.text-give { color: #10b981; }
-.bg-give-subtle { background-color: #d1fae5; color: #059669; }
+.bg-give {
+    background-color: #10b981;
+}
+
+.text-give {
+    color: #10b981;
+}
+
+.bg-give-subtle {
+    background-color: #d1fae5;
+    color: #059669;
+}
 
 
 /* === BUDGET TABLE LIST === */
@@ -124,7 +180,7 @@
 
 /* === INPUT RANGE (SLIDER) === */
 input[type=range] {
-    accent-color: var(--primary); 
+    accent-color: var(--primary);
     cursor: pointer;
 }
 
@@ -133,10 +189,13 @@ input[type=range] {
     border: none;
     border-radius: 20px;
 }
+
 .modal-header {
     border-bottom: 1px solid #f1f5f9;
 }
-.form-control:focus, .form-select:focus {
+
+.form-control:focus,
+.form-select:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(26, 188, 156, 0.1);
 }
@@ -177,29 +236,104 @@ input[type=range] {
     transition: height 1s ease-in-out;
 }
 
-.bg-nec { background-color: #dc3545; }
-.text-nec { color: #dc3545; }
-.bg-ffa { background-color: #f59e0b; }
-.text-ffa { color: #f59e0b; }
-.bg-ltss { background-color: #0d6efd; }
-.text-ltss { color: #0d6efd; }
-.bg-edu { background-color: #0dcaf0; }
-.text-edu { color: #0dcaf0; }
-.bg-play { background-color: #d63384; }
-.text-play { color: #d63384; }
-.bg-give { background-color: #198754; }
-.text-give { color: #198754; }
+.bg-nec {
+    background-color: #dc3545;
+}
 
-.bg-nec-subtle { background-color: #fee2e2; color: #dc3545; }
-.bg-ffa-subtle { background-color: #fef3c7; color: #d97706; }
-.bg-ltss-subtle { background-color: #dbeafe; color: #0d6efd; }
-.bg-edu-subtle { background-color: #cffafe; color: #0891b2; }
-.bg-play-subtle { background-color: #fce7f3; color: #d63384; }
-.bg-give-subtle { background-color: #dcfce7; color: #16a34a; }
+.text-nec {
+    color: #dc3545;
+}
 
-.category-item { cursor: pointer; padding: 10px 15px; border-radius: 8px; transition: background-color 0.2s; }
-.category-item:hover { background-color: #f8f9fa; }
-.category-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.bg-ffa {
+    background-color: #f59e0b;
+}
+
+.text-ffa {
+    color: #f59e0b;
+}
+
+.bg-ltss {
+    background-color: #0d6efd;
+}
+
+.text-ltss {
+    color: #0d6efd;
+}
+
+.bg-edu {
+    background-color: #0dcaf0;
+}
+
+.text-edu {
+    color: #0dcaf0;
+}
+
+.bg-play {
+    background-color: #d63384;
+}
+
+.text-play {
+    color: #d63384;
+}
+
+.bg-give {
+    background-color: #198754;
+}
+
+.text-give {
+    color: #198754;
+}
+
+.bg-nec-subtle {
+    background-color: #fee2e2;
+    color: #dc3545;
+}
+
+.bg-ffa-subtle {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.bg-ltss-subtle {
+    background-color: #dbeafe;
+    color: #0d6efd;
+}
+
+.bg-edu-subtle {
+    background-color: #cffafe;
+    color: #0891b2;
+}
+
+.bg-play-subtle {
+    background-color: #fce7f3;
+    color: #d63384;
+}
+
+.bg-give-subtle {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+.category-item {
+    cursor: pointer;
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.category-item:hover {
+    background-color: #f8f9fa;
+}
+
+.category-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
 
 /* Toast styles migrated from view */
 #toast-container {
@@ -228,22 +362,63 @@ input[type=range] {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.custom-toast.show { opacity: 1; transform: translateX(0); }
-.custom-toast.toast-success { border-color: #28a745; }
-.custom-toast.toast-success i { color: #28a745; }
-.custom-toast.toast-error { border-color: #dc3545; }
-.custom-toast.toast-error i { color: #dc3545; }
-.custom-toast.toast-warning { border-color: #ffc107; }
-.custom-toast.toast-warning i { color: #ffc107; }
-.toast-content { display: flex; align-items: center; gap: 12px; font-weight: 600; color: #333; }
-.toast-close { cursor: pointer; color: #aaa; transition: 0.2s; }
-.toast-close:hover { color: #000; }
+.custom-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.custom-toast.toast-success {
+    border-color: #28a745;
+}
+
+.custom-toast.toast-success i {
+    color: #28a745;
+}
+
+.custom-toast.toast-error {
+    border-color: #dc3545;
+}
+
+.custom-toast.toast-error i {
+    color: #dc3545;
+}
+
+.custom-toast.toast-warning {
+    border-color: #ffc107;
+}
+
+.custom-toast.toast-warning i {
+    color: #ffc107;
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: #333;
+}
+
+.toast-close {
+    cursor: pointer;
+    color: #aaa;
+    transition: 0.2s;
+}
+
+.toast-close:hover {
+    color: #000;
+}
 
 @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(100%); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 /* --- End migrated styles --- */
-
-

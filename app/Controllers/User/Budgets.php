@@ -128,6 +128,28 @@ class Budgets extends Controllers
         exit;
     }
 
+    /**
+     * API trả về các ngân sách đã đạt ngưỡng cảnh báo
+     */
+    public function api_get_alerts()
+    {
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        try {
+            $userId = $this->getCurrentUserId();
+            $period = $this->request->get('period') ?? 'monthly';
+
+            $alerts = $this->budgetModel->getAlerts($userId, $period) ?? [];
+
+            echo json_encode(['success' => true, 'data' => $alerts]);
+        } catch (\Exception $e) {
+            error_log("API Get Alerts Error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     public function api_create()
     {
         if (ob_get_length()) ob_clean();

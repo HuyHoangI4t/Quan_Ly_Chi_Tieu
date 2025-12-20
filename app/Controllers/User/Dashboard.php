@@ -50,7 +50,7 @@ class Dashboard extends Controllers
             $jar['balance'] = round($rawBalances[$code] ?? 0); 
         }
 
-        $lineChartSubtitle = '3 tháng gần nhất';
+        // $lineChartSubtitle = '3 tháng gần nhất';
 
         $data = [
             'title' => 'Tổng quan',
@@ -59,7 +59,7 @@ class Dashboard extends Controllers
             'recentTransactions' => $dashboardData['recentTransactions'],
             'pieChartData' => json_encode($dashboardData['pieChartData']),
             'lineChartData' => json_encode($dashboardData['lineChartData']),
-            'lineChartSubtitle' => $lineChartSubtitle,
+            // 'lineChartSubtitle' => $lineChartSubtitle,
             'jars' => $jars
         ];
 

@@ -1,6 +1,6 @@
 /*
- * Input Masking Utility
- * Formats number inputs with thousand separators
+ * Tiện ích định dạng input (Input Masking)
+ * Định dạng ô nhập số với phân cách hàng nghìn
  */
 
 class InputMasking {
@@ -9,7 +9,7 @@ class InputMasking {
     }
 
     /**
-     * Initialize all amount inputs with masking
+     * Khởi tạo tất cả input tiền tệ với định dạng
      */
     init() {
         // Find all amount inputs
@@ -20,88 +20,88 @@ class InputMasking {
     }
 
     /**
-     * Apply masking to a specific input
+     * Áp dụng định dạng cho một input cụ thể
      */
     applyMask(input) {
-        // Change type to text to allow formatting
+        // Đổi type thành text để cho phép định dạng
         input.setAttribute('type', 'text');
         input.setAttribute('inputmode', 'numeric');
         input.setAttribute('pattern', '[0-9,]*');
 
-        // Store the actual numeric value
+        // Lưu giá trị số thực
         let actualValue = input.value ? parseFloat(input.value) || 0 : 0;
         
-        // Format initial value if it exists
+        // Định dạng giá trị ban đầu nếu có
         if (actualValue) {
             input.value = this.formatNumber(actualValue);
         }
 
-        // Add placeholder if not exists
+        // Thêm placeholder nếu chưa có
         if (!input.placeholder) {
             input.placeholder = '0';
         }
 
-        // Handle input event
+        // Xử lý sự kiện input
         input.addEventListener('input', (e) => {
             const cursorPosition = e.target.selectionStart;
             const oldLength = e.target.value.length;
 
-            // Remove all non-numeric characters except dots
+            // Loại bỏ mọi ký tự không phải số
             let value = e.target.value.replace(/[^\d]/g, '');
             
-            // Convert to number
+            // Chuyển về số nguyên
             actualValue = value ? parseInt(value, 10) : 0;
             
-            // Format with thousand separators
+            // Định dạng với phân cách hàng nghìn
             const formattedValue = this.formatNumber(actualValue);
             e.target.value = formattedValue;
 
-            // Restore cursor position
+            // Khôi phục vị trí con trỏ
             const newLength = formattedValue.length;
             const lengthDiff = newLength - oldLength;
             const newPosition = cursorPosition + lengthDiff;
             
             e.target.setSelectionRange(newPosition, newPosition);
 
-            // Store actual value in a data attribute
+            // Lưu giá trị thực trong thuộc tính data
             e.target.dataset.numericValue = actualValue.toString();
         });
 
-        // Handle focus event - select all
+        // Xử lý sự kiện focus - chọn toàn bộ
         input.addEventListener('focus', (e) => {
             setTimeout(() => {
                 e.target.select();
             }, 0);
         });
 
-        // Handle blur event - ensure valid format
+        // Xử lý sự kiện blur - đảm bảo định dạng hợp lệ
         input.addEventListener('blur', (e) => {
             const value = parseInt(e.target.value.replace(/[^\d]/g, ''), 10) || 0;
             e.target.value = this.formatNumber(value);
             e.target.dataset.numericValue = value.toString();
         });
 
-        // Handle form submission - convert back to numeric
+        // Xử lý submit form - chuyển giá trị về dạng số
         const form = input.closest('form');
         if (form && !form.dataset.maskingHandled) {
             form.dataset.maskingHandled = 'true';
             form.addEventListener('submit', (e) => {
-                // Find all masked inputs in this form
+                // Tìm tất cả input đã được định dạng trong form này
                 const maskedInputs = form.querySelectorAll('input[data-numeric-value]');
                 maskedInputs.forEach(maskedInput => {
-                    // Create a hidden input with the numeric value
+                    // Tạo input ẩn chứa giá trị số
                     const hiddenInput = document.createElement('input');
                     hiddenInput.type = 'hidden';
                     hiddenInput.name = maskedInput.name;
                     hiddenInput.value = maskedInput.dataset.numericValue || '0';
                     
-                    // Temporarily disable the formatted input
+                    // Tạm thời vô hiệu hóa input đã định dạng
                     maskedInput.disabled = true;
                     
-                    // Add hidden input
+                    // Thêm input ẩn vào form
                     form.appendChild(hiddenInput);
 
-                    // Re-enable after submission
+                    // Bật lại input đã định dạng sau khi submit
                     setTimeout(() => {
                         maskedInput.disabled = false;
                         hiddenInput.remove();
@@ -112,7 +112,7 @@ class InputMasking {
     }
 
     /**
-     * Format number with thousand separators
+     * Định dạng số với phân cách hàng nghìn
      */
     formatNumber(num) {
         if (isNaN(num) || num === null || num === undefined) return '0';
@@ -125,7 +125,7 @@ class InputMasking {
     }
 
     /**
-     * Parse formatted string to number
+     * Chuyển chuỗi đã định dạng sang số
      */
     parseNumber(str) {
         if (typeof str !== 'string') return Number(str) || 0;
@@ -133,14 +133,14 @@ class InputMasking {
     }
 
     /**
-     * Reinitialize masking (useful for dynamically added inputs)
+     * Khởi tạo lại định dạng (hữu ích khi thêm input động)
      */
     reinit() {
         this.init();
     }
 
     /**
-     * Apply masking to a newly added input
+     * Áp định dạng cho input mới được thêm
      */
     addMaskToInput(input) {
         if (input && input.tagName === 'INPUT') {
@@ -156,7 +156,7 @@ class InputMasking {
     }
 }
 
-// Initialize when DOM is ready
+// Khởi tạo khi DOM sẵn sàng
 let inputMaskingInstance;
 
 if (document.readyState === 'loading') {

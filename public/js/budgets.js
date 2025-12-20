@@ -203,6 +203,7 @@ function formatInputMoney(input) {
                 budgetsListCache = data.data;
                 renderTable(data.data);
                 loadCharts();
+                await loadAlerts();
             } else {
                 console.error('API Error:', data.message);
                 renderTable([]);
@@ -210,6 +211,28 @@ function formatInputMoney(input) {
         } catch (error) {
             console.error('Error loading budgets:', error);
             renderTable([]);
+        }
+    }
+
+    // Load server-side alerts (budgets that reached alert threshold)
+    async function loadAlerts() {
+        try {
+            const resp = await fetch(`${BASE_URL}/budgets/api_get_alerts?period=${currentPeriod}`, { cache: 'no-store' });
+            if (!resp.ok) return;
+            const res = await resp.json();
+            if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+                res.data.forEach(a => {
+                    const pct = parseFloat(a.percentage_used || ((a.spent && a.amount) ? (a.spent / a.amount * 100) : 0)).toFixed(1);
+                    const msg = `⚠️ Ngân sách ${a.category_name} đã đạt ${pct}% (${formatCurrencyLocal(a.spent)} / ${formatCurrencyLocal(a.amount)})`;
+                    if (window.SmartSpending && window.SmartSpending.showToast) {
+                        window.SmartSpending.showToast(msg, 'warning');
+                    } else {
+                        console.warn(msg);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error loading budget alerts:', e);
         }
     }
 
